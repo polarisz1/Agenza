@@ -10,12 +10,16 @@ __pycache__/
 venv/
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
 
 # Build outputs
 dist/
 build/
-*.spec.js
-*.spec.ts
+# electron 的图标目录叫 build/，需要从上面的忽略里救回来
+!electron/build/
+*.spec
+# PyInstaller 中间产物
+.build/
 
 # IDE
 .vscode/
@@ -27,11 +31,13 @@ build/
 .env.local
 .env.*.local
 
-# Electron
+# Electron（构建产物目录，别把几百 MB 塞进仓库）
 electron/release/
 electron/out/
+electron/resources/
+electron/dist_electron/
 
-# AgentFlow runtime
+# AgentFlow runtime（库 / 主密钥 / 导出文件）
 data/
 *.db
 *.db-journal
