@@ -173,7 +173,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
             config: {
               script:
                 'import json\n' +
-                'data = json.load(open("input.json"))\n' +
+                'from pathlib import Path\n' +
+                "data = json.loads(Path('input.json').read_text(encoding='utf-8'))\n" +
                 'text = data["inputs"].get("text", "")\n' +
                 'agentflow_result = {"length": len(text), "upper": text.upper()}\n',
             },

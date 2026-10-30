@@ -168,9 +168,10 @@ export const DEFAULT_CONFIG: Record<NodeType, Record<string, any>> = {
   python: {
     ...COMMON_CONFIG,
     script:
-      '# 输入：data["inputs"] / data["upstream"]\n' +
+      '# 输入：data["inputs"] / data["upstream"]（input.json 为 UTF-8）\n' +
       'import json\n' +
-      'data = json.load(open("input.json"))\n' +
+      'from pathlib import Path\n' +
+      "data = json.loads(Path('input.json').read_text(encoding='utf-8'))\n" +
       'agentflow_result = {"ok": True, "inputs": data["inputs"]}\n',
     timeout_s: 60,
   },
