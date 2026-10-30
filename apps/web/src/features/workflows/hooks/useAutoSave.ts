@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { updateWorkflow } from '../api';
 import { serializeGraph } from '../types';
@@ -8,17 +8,20 @@ const AUTO_SAVE_DELAY = 2000;
 
 /**
  * 自动保存：内容变更后 2s 无新输入 → PUT /api/workflows/{id}。
- * 保存失败保留 dirty，由工具栏“保存失败 · 重试”手动触发。
+ * 保存失败保留 dirty，由工具栏"保存失败 · 重试"手动触发。
+ *
+ * `saveNow` 可被校验/运行/调试/返回列表复用：并发调用会**共享同一个进行中的请求**，
+ * 而不是第二个调用直接返回 false（后者会被上层误判成"保存失败"）。
  */
 export function useAutoSave(workflowId: string | null, delay = AUTO_SAVE_DELAY) {
   const dirty = useEditorStore((s) => s.dirty);
   const rev = useEditorStore((s) => s.rev);
   const saveState = useEditorStore((s) => s.saveState);
+  const inflightRef = useRef<Promise<boolean> | null>(null);
 
-  const saveNow = useCallback(async (): Promise<boolean> => {
+  const doSave = useCallback(async (): Promise<boolean> => {
     const state = useEditorStore.getState();
     if (!state.workflowId) return false;
-    if (state.saveState === 'saving') return false;
 
     const revAtStart = state.rev;
     const graph = serializeGraph(state.nodes, state.edges);
@@ -38,6 +41,18 @@ export function useAutoSave(workflowId: string | null, delay = AUTO_SAVE_DELAY) 
       return false;
     }
   }, []);
+
+  const saveNow = useCallback(async (): Promise<boolean> => {
+    // 已有保存在飞：等同一次结果，不要另起请求
+    if (inflightRef.current) return inflightRef.current;
+    const task = doSave();
+    inflightRef.current = task;
+    try {
+      return await task;
+    } finally {
+      inflightRef.current = null;
+    }
+  }, [doSave]);
 
   useEffect(() => {
     if (!workflowId || !dirty) return;

@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { message } from 'antd';
 
 import { CONDITION_OPS, NODE_META, isVariableSafeLabel } from '../types';
 import { listProviderOptions, type NodeTestResult, type ProviderOption } from '../api';
+import { registerDraftFlusher } from '../hooks/draftBridge';
 import type { VariableItem } from '../hooks/useVariables';
 import { useEditorStore } from '../hooks/useEditorStore';
 
@@ -52,44 +53,73 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
   const [providers, setProviders] = useState<ProviderOption[]>([]);
   const refs = useRef<Record<string, FieldElement | null>>({});
 
+  // 用 ref 保住"最新草稿 + 它属于哪个节点"，供切换节点/外部 flush 时立刻提交
+  const draftRef = useRef<{ nodeId: string | null; config: Record<string, any>; label: string }>({
+    nodeId: null,
+    config: {},
+    label: '',
+  });
+
+  /** 立刻把草稿写进 store（防抖还没到点也不会丢）。 */
+  const commitDraft = useCallback(() => {
+    const current = draftRef.current;
+    if (!current.nodeId) return;
+    const store = useEditorStore.getState();
+    store.updateNodeConfig(current.nodeId, current.config);
+    const node = store.nodes.find((n) => n.id === current.nodeId);
+    const type = node?.data.type ?? 'python';
+    store.updateLabel(current.nodeId, current.label.trim() || NODE_META[type].label);
+  }, []);
+
   // 切换节点 / 撤销重做后，同步表单草稿
   useEffect(() => {
     if (!selected) {
       setDraft({});
       setLabelDraft('');
       setDebugResult(null);
+      draftRef.current = { nodeId: null, config: {}, label: '' };
       return;
     }
     setDraft({ ...selected.data.config });
     setLabelDraft(selected.data.label);
     setDebugResult(null);
     setTab('params');
+    draftRef.current = {
+      nodeId: selected.id,
+      config: { ...selected.data.config },
+      label: selected.data.label,
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, historyVersion]);
+
+  // 切换节点时，先把上一个节点的草稿提交掉，避免最后几次输入被丢弃（F2）
+  useEffect(() => {
+    return () => {
+      commitDraft();
+    };
+  }, [selectedId, commitDraft]);
+
+  // 让画布侧（校验/运行/调试/返回列表前）能立刻提交草稿
+  useEffect(() => {
+    registerDraftFlusher(commitDraft);
+    return () => registerDraftFlusher(null);
+  }, [commitDraft]);
 
   // 参数输入 300ms 防抖提交到 store
   useEffect(() => {
     if (!selectedId) return;
-    const timer = window.setTimeout(() => {
-      useEditorStore.getState().updateNodeConfig(selectedId, draft);
-    }, 300);
+    draftRef.current = { ...draftRef.current, nodeId: selectedId, config: draft };
+    const timer = window.setTimeout(commitDraft, 300);
     return () => window.clearTimeout(timer);
-  }, [draft, selectedId]);
+  }, [draft, selectedId, commitDraft]);
 
   // 名称同样防抖
   useEffect(() => {
     if (!selectedId) return;
-    const timer = window.setTimeout(() => {
-      useEditorStore
-        .getState()
-        .updateLabel(
-          selectedId,
-          labelDraft.trim() || NODE_META[selected?.data.type ?? 'python'].label,
-        );
-    }, 300);
+    draftRef.current = { ...draftRef.current, nodeId: selectedId, label: labelDraft };
+    const timer = window.setTimeout(commitDraft, 300);
     return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [labelDraft, selectedId]);
+  }, [labelDraft, selectedId, commitDraft]);
 
   useEffect(() => {
     listProviderOptions()

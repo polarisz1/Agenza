@@ -22,6 +22,7 @@ import {
 interface Snapshot {
   nodes: EditorNode[];
   edges: Edge[];
+  viewport: Viewport | null;
 }
 
 export type SaveState = 'idle' | 'saving' | 'error';
@@ -56,7 +57,7 @@ interface EditorState {
 
   load(payload: LoadPayload): void;
   setName(name: string): void;
-  setViewport(viewport: Viewport): void;
+  setViewport(viewport: Viewport, markDirty?: boolean): void;
   select(id: string | null): void;
   onNodesChange(changes: NodeChange<EditorNode>[]): void;
   onEdgesChange(changes: EdgeChange[]): void;
@@ -124,7 +125,17 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     set({ name, dirty: true, rev: get().rev + 1 });
   },
 
-  setViewport: (viewport) => set({ viewport }),
+  /**
+   * 更新视口。`markDirty` 只在用户真的平移/缩放时传 true
+   * （程序化 fitView 传 false，否则打开工作流就立刻变"未保存"）。
+   */
+  setViewport: (viewport, markDirty = false) => {
+    if (markDirty) {
+      set({ viewport, dirty: true, rev: get().rev + 1 });
+      return;
+    }
+    set({ viewport });
+  },
 
   select: (id) => {
     if (id === get().selectedId) return;
@@ -238,8 +249,12 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   },
 
   beginHistory: () => {
-    const { nodes, edges, past } = get();
-    const snapshot: Snapshot = { nodes: clone(nodes), edges: clone(edges) };
+    const { nodes, edges, viewport, past } = get();
+    const snapshot: Snapshot = {
+      nodes: clone(nodes),
+      edges: clone(edges),
+      viewport: viewport ? { ...viewport } : null,
+    };
     set({
       past: [...past, snapshot].slice(-MAX_HISTORY),
       future: [],
@@ -247,14 +262,18 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   },
 
   undo: () => {
-    const { past, future, nodes, edges } = get();
+    const { past, future, nodes, edges, viewport } = get();
     if (!past.length) return;
     const previous = past[past.length - 1];
     set({
       past: past.slice(0, -1),
-      future: [{ nodes: clone(nodes), edges: clone(edges) }, ...future].slice(0, MAX_HISTORY),
+      future: [
+        { nodes: clone(nodes), edges: clone(edges), viewport: viewport ? { ...viewport } : null },
+        ...future,
+      ].slice(0, MAX_HISTORY),
       nodes: previous.nodes,
       edges: previous.edges,
+      viewport: previous.viewport ?? viewport,
       selectedId: previous.nodes.some((n) => n.id === get().selectedId) ? get().selectedId : null,
       dirty: true,
       rev: get().rev + 1,
@@ -263,14 +282,18 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   },
 
   redo: () => {
-    const { past, future, nodes, edges } = get();
+    const { past, future, nodes, edges, viewport } = get();
     if (!future.length) return;
     const next = future[0];
     set({
-      past: [...past, { nodes: clone(nodes), edges: clone(edges) }].slice(-MAX_HISTORY),
+      past: [
+        ...past,
+        { nodes: clone(nodes), edges: clone(edges), viewport: viewport ? { ...viewport } : null },
+      ].slice(-MAX_HISTORY),
       future: future.slice(1),
       nodes: next.nodes,
       edges: next.edges,
+      viewport: next.viewport ?? viewport,
       selectedId: next.nodes.some((n) => n.id === get().selectedId) ? get().selectedId : null,
       dirty: true,
       rev: get().rev + 1,

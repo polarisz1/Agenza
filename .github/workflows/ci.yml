@@ -76,5 +76,7 @@ jobs:
         run: pnpm --filter @agentflow/web lint
       - name: format check
         run: pnpm --filter @agentflow/web format:check
+      - name: unit tests
+        run: pnpm --filter @agentflow/web test
       - name: build
         run: pnpm --filter @agentflow/web build

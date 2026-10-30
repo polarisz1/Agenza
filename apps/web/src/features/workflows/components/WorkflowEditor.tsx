@@ -38,6 +38,7 @@ import {
   type RuntimeStatus,
   type ValidateIssue,
 } from '../types';
+import { flushDraft } from '../hooks/draftBridge';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useEditorStore } from '../hooks/useEditorStore';
 import { useVariables } from '../hooks/useVariables';
@@ -298,6 +299,7 @@ function EditorInner() {
     if (!wfId) return [];
     setValidating(true);
     try {
+      flushDraft();
       const saved = await saveNow();
       if (!saved) {
         message.error('保存失败，无法校验');
@@ -334,6 +336,7 @@ function EditorInner() {
     if (!wfId) return;
     setStarting(true);
     try {
+      flushDraft();
       const saved = await saveNow();
       if (!saved) {
         message.error('保存失败，未发起运行');
@@ -393,6 +396,7 @@ function EditorInner() {
     async (nodeId: string): Promise<NodeTestResult> => {
       const wfId = useEditorStore.getState().workflowId;
       if (!wfId) throw new Error('工作流尚未保存');
+      flushDraft();
       const saved = await saveNow();
       if (!saved) throw new Error('保存失败，无法调试');
       return testNode(wfId, nodeId);
@@ -404,10 +408,19 @@ function EditorInner() {
 
   const inputFields = useMemo(() => extractWorkflowInputs(nodes), [nodes]);
 
+  const handleBack = useCallback(async () => {
+    // 返回前先把防抖窗口里的编辑提交并保存，否则这 2s 内的改动会丢（F4）
+    flushDraft();
+    if (useEditorStore.getState().dirty) {
+      await saveNow();
+    }
+    navigate('/workflows');
+  }, [navigate, saveNow]);
+
   return (
     <div className="afe-root">
       <div className="afe-header">
-        <button className="afe-back" onClick={() => navigate('/workflows')}>
+        <button className="afe-back" onClick={() => void handleBack()}>
           ← 返回
         </button>
 
@@ -500,7 +513,7 @@ function EditorInner() {
               onConnect={onConnect}
               onNodeDragStart={beginHistory}
               onSelectionChange={handleSelectionChange}
-              onMoveEnd={(_, next) => setViewport(next)}
+              onMoveEnd={(event, next) => setViewport(next, Boolean(event))}
               isValidConnection={isValidConnection}
               defaultViewport={viewport ?? undefined}
               fitView={!viewport}
