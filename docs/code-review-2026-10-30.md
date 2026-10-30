@@ -136,8 +136,8 @@ F1–F9 以外没有其他前端 P1；构建阻断见 B6。桌面/打包类问�
 | G6 | `runs/service.py:73-75` | "同工作流已有 running 则 409"是读后写，**非原子**；双击"运行"可能起两次 |
 | G7 | `workflows/router.py:96` | `POST /{wf_id}/validate` 的 `wf_id` 声明为可空（`str` 或 `None`），但它是路径参数、永远不为 None；与 `/validate` 端点语义重叠；OpenAPI 里同时 required + nullable |
 | G8 | `executors/http.py:44-57`、`runs/service.py:288-292` | HTTP 响应与节点输出全文入 `output_json`，**无大小上限**；一次下载大文件就撑爆 SQLite |
-| G9 | 全仓 | `datetime.utcnow()`（3.12 已弃用）+ 无时区标记，靠前端 `datetime.ts` 补偿 |
-| G10 | `executors/python.py:56-68` | 子进程未做环境变量白名单、stdout/stderr 无上限、超时 kill 后未 `await proc.wait()` |
+| G9 | 全仓 | `datetime.utcnow()`（3.12 已弃用）+ 无时区标记，靠前端 `datetime.ts` 补偿（已修，见 §10.4） |
+| G10 | `executors/python.py` | 子进程未做环境变量白名单、stdout/stderr 无上限、超时/取消后未 `await proc.wait()`（已修，见 §10.4） |
 | G11 | `.gitignore:14-18` | `*.spec.ts` 会静默忽略前端测试；`build/` 误伤 `electron/build/icon.ico`；`electron/resources/`、`dist_electron/`、`.build/` **未被忽略**（构建产物可被提交） |
 | G12 | `pyproject.toml:17` | `apscheduler` 已声明但无任何定时调度代码；`dev` extra 声明 pytest 却无测试 |
 | G13 | 根 `package.json` | `dev:api` 仍是 `uv run python -m app.run`，与 roadmap §1.2"uv 缓存无权限 → 改用 `.venv\Scripts\python.exe`"的结论冲突 |
@@ -331,6 +331,11 @@ Node 22.23.4 / pnpm 9.12.0 / Python 3.12.13（uv 管理），全部安装在 **E
 | F1–F5、F7–F9 | 前端一致性问题 | ⬜ T10 | — |
 | F6 | SSE 游标跨运行复用 | ✅ 已修 | `6a6d66f`：url 变化即重置 last_event_id（浏览器复验待做） |
 | G7 | `wf_id` 可空路径参数 | ✅ 已修 | `f6860cd` |
+| G9 | `datetime.utcnow()` 弃用 | ✅ 已修 | `776ec0e`：`core/time.py::utcnow()`（naive UTC），12 处收口 |
+| G10 | 子进程环境/回收 | ✅ 已修 | `1704a67` + `776ec0e`：env 白名单、UTF-8、超时与取消都 kill+wait、输出截断 |
+| G11 | `.gitignore` 漏项与误伤 | ✅ 已修 | `a102461`：补构建产物、`*.spec` 替换、`!electron/build/` |
+| G13 | `dev:api` 不跨平台 | ✅ 已修 | `a102461`：`uv run --directory apps/api` |
+| G14 | README 只有一行且是 UTF-16 | ✅ 已修 | `a102461`：转 UTF-8 并写清快速开始/命令/文档索引 |
 | G15 | `condition._coerce` 空实现 | ⬜ 待排 | xfail 守着 |
 | G18 | 密钥解密失败静默空串 | ✅ 已修 | `2fd0515`：抛 `KeyDecryptError` + `UnusableProvider` + 掩码提示 |
 | G35 | `vite-env.d.ts` 悬空类型引用 | ✅ 已修 | `2439e09` |

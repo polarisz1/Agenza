@@ -218,8 +218,8 @@
 | T6 运行链健壮性 | ✅ | 四小步各自提交/验证：节点异常兜底+全跳过判定（`8f38cbf`）、provider 快照（`83b2ffa`）、SSE 不占 Session+回放 seq（`e007a1e`）、前端 SSE 游标重置（`6a6d66f`）。74 passed / 2 xfailed |
 | T7 Provider 适配 | ✅ | Ollama 仅在 json 模式带 `format`；Anthropic 加 `tool_choice` 并解析 `tool_use`；密钥解密失败改为显式 `KeyDecryptError` + `UnusableProvider`（节点错误直接可读）。适配器新增 `transport` 注入，用 `httpx.MockTransport` 断言请求体。87 passed / 2 xfailed |
 | T8 数据一致性与迁移 | ✅ | 三小步：alembic `0001_baseline` 取代 create_all（`b835868`，`alembic check` 无漂移、老库自动 stamp）；清空运行级联 + retention/default_timeout 生效（`93f7de6`）；数据目录修正为 `<repo>/data` 并支持 env 注入与旧目录搬迁（`86ba121`）。101 passed / 2 xfailed |
-| T9 工程收口 | ⬜ 下一步 | `.gitignore` 漏项、README 快速开始、`dev:api`、`auto_save` 设置 |
-| T10 前端一致性 | ⬜ | — |
+| T9 工程收口 | ✅ | `.gitignore` 补构建产物/去掉误伤/救回图标目录；README 从 UTF-16 单行改成 UTF-8 完整快速开始；根脚本加 `test`/`lint:api`/`typecheck`/`format:check` 与聚合 `check`（`a102461`）。附带修 G9 `utcnow` 与 G10 子进程取消回收（`776ec0e`）。108 passed / 2 xfailed；`pnpm check` 端到端 0 |
+| T10 前端一致性 | ⬜ 下一步 | F1–F5、F7–F9；`auto_save` 设置生效 |
 
 **T1 期间新发现（已并入评审）**：CI 后端 job 原本是红的（ruff 207 错 + 52 文件未格式化）；`contracts:check` 在 Windows 因 CRLF 逐字节比较而假失败（已修脚本）；根级数组下标 `{{ a[0] }}` 不可用（记为 S14）。
 
