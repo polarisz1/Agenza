@@ -77,16 +77,22 @@ class Scheduler:
 
             tasks = [
                 asyncio.create_task(
-                    self._run_one(
+                    self._guarded(
                         node_id=nid,
-                        node_map=node_map,
-                        node_names=node_names,
-                        parent_edges=parent_edges,
+                        node=node_map.get(nid, {}),
+                        inner=self._run_one(
+                            node_id=nid,
+                            node_map=node_map,
+                            node_names=node_names,
+                            parent_edges=parent_edges,
+                            results=results,
+                            inputs=inputs,
+                            registry=registry,
+                            providers_registry=providers_registry,
+                            on_node_started=on_node_started,
+                            on_node_finished=on_node_finished,
+                        ),
                         results=results,
-                        inputs=inputs,
-                        registry=registry,
-                        providers_registry=providers_registry,
-                        on_node_started=on_node_started,
                         on_node_finished=on_node_finished,
                     ),
                     name=f"node:{self.run_id}:{nid}",
@@ -97,7 +103,47 @@ class Scheduler:
             await asyncio.gather(*tasks, return_exceptions=True)
             self._node_tasks.difference_update(tasks)
 
+            # 兜底：`_run_one` 若没留下结果（极端情况），补一条 failed，
+            # 否则该节点会从记录里凭空消失、而运行仍可能被判为成功。
+            if not self._cancel_event.is_set():
+                for nid in layer:
+                    if nid not in results:
+                        await self._finish(
+                            node_id=nid,
+                            node=node_map.get(nid, {}),
+                            result=NodeResult(status="failed", error="节点未产生结果"),
+                            duration_ms=0,
+                            results=results,
+                            on_node_finished=on_node_finished,
+                        )
+
         return results
+
+    async def _guarded(
+        self,
+        *,
+        node_id: str,
+        node: dict,
+        inner,
+        results: dict[str, NodeResult],
+        on_node_finished,
+    ) -> None:
+        """执行节点并把意外异常记成节点失败，避免被 gather 静默吞掉。"""
+        try:
+            await inner
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            log.exception(f"Node {node_id} crashed")
+            if node_id not in results:
+                await self._finish(
+                    node_id=node_id,
+                    node=node,
+                    result=NodeResult(status="failed", error=f"节点执行异常：{exc}"),
+                    duration_ms=0,
+                    results=results,
+                    on_node_finished=on_node_finished,
+                )
 
     async def _run_one(
         self,

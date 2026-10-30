@@ -163,7 +163,13 @@ class RunManager:
 
 
 def _summarize(scheduler: Scheduler, results: dict[str, NodeResult]) -> tuple[str, str | None]:
-    """根据节点结果汇总运行状态。"""
+    """根据节点结果汇总运行状态。
+
+    - 取消优先：调度器被取消就是 cancelled
+    - 有失败 → failed（取第一条错误）
+    - 全部节点被跳过（禁用 / 分支未激活）→ success：没有失败，但也没有产出。
+      这里**不能**判成 cancelled，否则"全部禁用"的工作流会显示"已取消"，误导用户。
+    """
     if scheduler.cancelled:
         return "cancelled", "Run cancelled"
 
@@ -171,7 +177,7 @@ def _summarize(scheduler: Scheduler, results: dict[str, NodeResult]) -> tuple[st
     if failed:
         return "failed", next((r.error for r in failed if r.error), "Run failed")
 
-    if results and all(r.status in ("cancelled", "skipped") for r in results.values()):
+    if results and all(r.status == "cancelled" for r in results.values()):
         return "cancelled", "Run cancelled"
 
     return "success", None
