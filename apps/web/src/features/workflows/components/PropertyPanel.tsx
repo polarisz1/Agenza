@@ -3,11 +3,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { message } from 'antd';
 
-import {
-  CONDITION_OPS,
-  NODE_META,
-  isVariableSafeLabel,
-} from '../types';
+import { CONDITION_OPS, NODE_META, isVariableSafeLabel } from '../types';
 import { listProviderOptions, type NodeTestResult, type ProviderOption } from '../api';
 import type { VariableItem } from '../hooks/useVariables';
 import { useEditorStore } from '../hooks/useEditorStore';
@@ -84,22 +80,30 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
   useEffect(() => {
     if (!selectedId) return;
     const timer = window.setTimeout(() => {
-      useEditorStore.getState().updateLabel(selectedId, labelDraft.trim() || NODE_META[selected?.data.type ?? 'python'].label);
+      useEditorStore
+        .getState()
+        .updateLabel(
+          selectedId,
+          labelDraft.trim() || NODE_META[selected?.data.type ?? 'python'].label,
+        );
     }, 300);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [labelDraft, selectedId]);
 
   useEffect(() => {
-    listProviderOptions().then(setProviders).catch(() => setProviders([]));
+    listProviderOptions()
+      .then(setProviders)
+      .catch(() => setProviders([]));
   }, []);
 
-  const setField = (key: string, value: unknown) =>
-    setDraft((prev) => ({ ...prev, [key]: value }));
+  const setField = (key: string, value: unknown) => setDraft((prev) => ({ ...prev, [key]: value }));
 
-  const register = (field: string): FieldRef => (el) => {
-    refs.current[field] = el;
-  };
+  const register =
+    (field: string): FieldRef =>
+    (el) => {
+      refs.current[field] = el;
+    };
 
   const insertToken = (field: string, token: string) => {
     const el = refs.current[field];
@@ -223,11 +227,7 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
                 <button
                   type="button"
                   aria-pressed={draft.enabled !== false}
-                  className={
-                    draft.enabled === false
-                      ? 'afe-switch'
-                      : 'afe-switch afe-switch--on'
-                  }
+                  className={draft.enabled === false ? 'afe-switch' : 'afe-switch afe-switch--on'}
                   onClick={() => {
                     beginHistory();
                     setField('enabled', draft.enabled === false);
@@ -343,7 +343,10 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
                 <Field label="模型名">
                   <input
                     className="afe-input"
-                    placeholder={providers.find((p) => p.id === draft.provider_id)?.default_model || '如 gpt-4o-mini'}
+                    placeholder={
+                      providers.find((p) => p.id === draft.provider_id)?.default_model ||
+                      '如 gpt-4o-mini'
+                    }
                     value={draft.model ?? ''}
                     onChange={(e) => setField('model', e.target.value)}
                   />
@@ -620,9 +623,7 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
           <>
             <div className="afe-props-group">
               <div className="afe-props-group-title">最近一次运行输出</div>
-              <pre className="afe-output-json">
-                {pretty(latestOutputs[selected.id])}
-              </pre>
+              <pre className="afe-output-json">{pretty(latestOutputs[selected.id])}</pre>
             </div>
 
             <div className="afe-props-group">
@@ -641,9 +642,7 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
                     ) : null}
                     {debugResult.model ? <span>{debugResult.model}</span> : null}
                   </div>
-                  {debugResult.error && (
-                    <div className="afe-debug-error">{debugResult.error}</div>
-                  )}
+                  {debugResult.error && <div className="afe-debug-error">{debugResult.error}</div>}
                   <pre className="afe-output-json">{pretty(debugResult.output)}</pre>
                 </>
               ) : (

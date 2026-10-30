@@ -1,7 +1,9 @@
 """Python script executor - runs in isolated subprocess."""
+
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import sys
 import tempfile
@@ -31,14 +33,14 @@ class PythonExecutor(BaseExecutor):
         (tmp / "input.json").write_text(json.dumps(input_data, ensure_ascii=False))
         (tmp / "script.py").write_text(script, encoding="utf-8")
 
-        runner = f"""
+        runner = """
 import json, sys
 from pathlib import Path
 
 def main():
     data = json.loads(Path('input.json').read_text())
     # User script should call: agentflow.submit(result_dict)
-    namespace = {{}}
+    namespace = {}
     exec(Path('script.py').read_text(encoding='utf-8'), namespace)
     # convention: agentflow_result variable or agentflow.submit()
     result = namespace.get('agentflow_result', None)
@@ -54,16 +56,17 @@ sys.exit(main())
 
         try:
             proc = await asyncio.create_subprocess_exec(
-                sys.executable, "-I", "-S", str(tmp / "runner.py"),
+                sys.executable,
+                "-I",
+                "-S",
+                str(tmp / "runner.py"),
                 cwd=str(tmp),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    proc.communicate(), timeout=timeout
-                )
-            except asyncio.TimeoutError:
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+            except TimeoutError:
                 proc.kill()
                 return NodeResult(status="failed", error=f"Script timed out after {timeout}s")
 
@@ -74,16 +77,12 @@ sys.exit(main())
                 )
 
             output_path = tmp / "output.json"
-            if output_path.exists():
-                out = json.loads(output_path.read_text())
-            else:
-                out = stdout.decode()
+            out = json.loads(output_path.read_text()) if output_path.exists() else stdout.decode()
 
             return NodeResult(status="success", output=out)
         finally:
             # best-effort cleanup
             import shutil
-            try:
+
+            with contextlib.suppress(Exception):
                 shutil.rmtree(str(tmp), ignore_errors=True)
-            except Exception:
-                pass

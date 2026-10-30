@@ -1,8 +1,9 @@
 """Workflow repository - SQLAlchemy queries."""
+
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
-from typing import Sequence
 
 from sqlalchemy.orm import Session
 
@@ -11,7 +12,9 @@ from app.modules.workflows.models import Workflow
 
 class WorkflowRepository:
     @staticmethod
-    def create(session: Session, wf_id: str, name: str, description: str | None, graph_json: str) -> Workflow:
+    def create(
+        session: Session, wf_id: str, name: str, description: str | None, graph_json: str
+    ) -> Workflow:
         obj = Workflow(id=wf_id, name=name, description=description, graph_json=graph_json)
         session.add(obj)
         session.commit()

@@ -1,6 +1,8 @@
 """OpenAI-compatible provider (gpt-4o, gpt-4o-mini, deepseek-chat etc)."""
+
 from __future__ import annotations
 
+import contextlib
 import json
 
 import httpx
@@ -52,10 +54,8 @@ class OpenAICompatProvider(ProviderAdapter):
         usage = data.get("usage", {})
 
         if response_format == "json" and isinstance(content, str):
-            try:
+            with contextlib.suppress(Exception):
                 content = json.loads(content)
-            except Exception:
-                pass
 
         return ChatResult(
             content=content,

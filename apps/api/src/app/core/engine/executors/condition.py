@@ -1,11 +1,11 @@
 """Condition executor - evaluates comparison, outputs boolean."""
+
 from __future__ import annotations
 
 from typing import Any
 
 from app.core.engine.contexts import NodeContext, NodeResult
 from app.core.engine.executors.base import BaseExecutor
-
 
 _OPS = {
     "eq": lambda a, b: a == b,
@@ -39,4 +39,6 @@ class ConditionExecutor(BaseExecutor):
         except Exception as exc:
             return NodeResult(status="failed", error=f"Comparison error: {exc}")
 
-        return NodeResult(status="success", output={"condition": bool(result), "true_branch": bool(result)})
+        return NodeResult(
+            status="success", output={"condition": bool(result), "true_branch": bool(result)}
+        )

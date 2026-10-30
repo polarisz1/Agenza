@@ -9,12 +9,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import {
-  listWorkflows,
-  deleteWorkflow,
-  duplicateWorkflow,
-  createWorkflow,
-} from '../api';
+import { listWorkflows, deleteWorkflow, duplicateWorkflow, createWorkflow } from '../api';
 import type { WorkflowListItem } from '../api';
 import { WORKFLOW_TEMPLATES } from '../templates';
 import { formatDateTime } from '@/shared/utils/datetime';
@@ -141,9 +136,7 @@ export default function WorkflowList() {
           {
             title: '名称',
             dataIndex: 'name',
-            render: (text, record) => (
-              <a onClick={() => nav(`/workflows/${record.id}`)}>{text}</a>
-            ),
+            render: (text, record) => <a onClick={() => nav(`/workflows/${record.id}`)}>{text}</a>,
           },
           { title: '描述', dataIndex: 'description', ellipsis: true },
           {

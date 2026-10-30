@@ -1,4 +1,5 @@
 """Settings service."""
+
 from __future__ import annotations
 
 import json
@@ -9,7 +10,6 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.modules.settings.models import AppSetting
 from app.modules.workflows.service import WorkflowService
-
 
 DEFAULTS = {
     "auto_save": True,
@@ -51,9 +51,9 @@ class SettingsService:
 
     @staticmethod
     def update(session: Session, data: dict) -> dict:
-        ALLOWED_KEYS = set(DEFAULTS.keys())
+        allowed_keys = set(DEFAULTS.keys())
         for k, v in data.items():
-            if k in ALLOWED_KEYS:
+            if k in allowed_keys:
                 SettingsService._set_json(session, k, v)
         return SettingsService.get_all(session)
 

@@ -1,9 +1,10 @@
 """Workflow SQLAlchemy model."""
+
 from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Integer, String, Text
+from sqlalchemy import Column, DateTime, String, Text
 
 from app.db.database import Base
 

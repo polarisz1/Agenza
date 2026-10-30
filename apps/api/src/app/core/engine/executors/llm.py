@@ -1,4 +1,5 @@
 """LLM executor - delegates to providers registry."""
+
 from __future__ import annotations
 
 import httpx
@@ -14,7 +15,9 @@ class LLMExecutor(BaseExecutor):
     async def _run(self, ctx: NodeContext, config: dict) -> NodeResult:
         provider_id = config.get("provider_id")
         if not provider_id or ctx.providers is None:
-            return NodeResult(status="failed", error="服务商未配置：请到「模型配置」添加并选择服务商")
+            return NodeResult(
+                status="failed", error="服务商未配置：请到「模型配置」添加并选择服务商"
+            )
 
         provider = ctx.providers.get(provider_id)
         if provider is None:
@@ -50,5 +53,5 @@ class LLMExecutor(BaseExecutor):
             return NodeResult(status="failed", error="模型服务超时")
         except httpx.ConnectError:
             return NodeResult(status="failed", error="无法连接到模型服务地址")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return NodeResult(status="failed", error=str(exc))

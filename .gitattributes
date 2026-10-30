@@ -1,0 +1,18 @@
+# 统一换行：仓库内一律 LF（.editorconfig 也要求 lf）。
+# 之前 core.autocrlf=true 让工作区变成 CRLF，导致 Prettier/diff 满屏噪声。
+* text=auto eol=lf
+
+# Windows 脚本保留 CRLF（cmd/bat 对 LF 敏感）
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 二进制
+*.ico binary
+*.png binary
+*.jpg binary
+*.gif binary
+*.exe binary
+*.dll binary
+*.pyd binary
+*.db binary
+*.zip binary

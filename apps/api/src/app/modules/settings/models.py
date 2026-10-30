@@ -1,4 +1,5 @@
 """App setting model."""
+
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, String, Text

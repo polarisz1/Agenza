@@ -1,4 +1,5 @@
 """Input executor - emits the configured input value."""
+
 from __future__ import annotations
 
 from app.core.engine.contexts import NodeContext, NodeResult

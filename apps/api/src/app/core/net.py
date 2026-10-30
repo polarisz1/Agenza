@@ -1,4 +1,5 @@
 """Network helpers - 本地地址不走系统代理。"""
+
 from __future__ import annotations
 
 from urllib.parse import urlparse

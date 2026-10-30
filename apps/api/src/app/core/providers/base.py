@@ -1,11 +1,11 @@
 """Provider base adapter."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
 
 import httpx
-
 
 ChatRole = Literal["system", "user", "assistant"]
 ResponseFormat = Literal["text", "json"]

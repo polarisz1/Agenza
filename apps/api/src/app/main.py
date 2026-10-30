@@ -1,8 +1,7 @@
 """AgentFlow - FastAPI Application Entry Point"""
+
 from __future__ import annotations
 
-import asyncio
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -11,9 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
-from app.core.exceptions import AppException
+from app.core.exceptions import AppError
 from app.core.logger import log
-from app.db.database import Base, engine, init_db
+from app.db.database import init_db
 
 # main.py → app → src → api → apps，前端产物在 apps/web/dist
 FRONTEND_DIST = Path(__file__).resolve().parents[3] / "web" / "dist"
@@ -65,17 +64,14 @@ async def request_logging(request, call_next):
         raise
 
     duration = round((time.time() - start) * 1000, 1)
-    log.info(
-        f"{request.method:6s} {request.url.path:<40s} "
-        f"{response.status_code} {duration:>8}ms"
-    )
+    log.info(f"{request.method:6s} {request.url.path:<40s} {response.status_code} {duration:>8}ms")
     response.headers["X-Process-Time"] = f"{duration}ms"
     return response
 
 
 # ============ Exception Handlers ============
-@app.exception_handler(AppException)
-async def app_exception_handler(request, exc: AppException):
+@app.exception_handler(AppError)
+async def app_exception_handler(request, exc: AppError):
     """Business exception → unified error response."""
     return JSONResponse(
         status_code=exc.code,
@@ -94,10 +90,10 @@ async def global_exception_handler(request, exc: Exception):
 
 
 # ============ Router Registration ============
-from app.modules.workflows.router import router as workflows_router
-from app.modules.runs.router import router as runs_router
 from app.modules.providers.router import router as providers_router
+from app.modules.runs.router import router as runs_router
 from app.modules.settings.router import router as settings_router
+from app.modules.workflows.router import router as workflows_router
 
 app.include_router(workflows_router, prefix="/api/workflows", tags=["workflows"])
 app.include_router(runs_router, prefix="/api/runs", tags=["runs"])

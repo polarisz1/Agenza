@@ -1,7 +1,6 @@
 """Node executor registry."""
-from __future__ import annotations
 
-from collections.abc import Callable
+from __future__ import annotations
 
 from app.core.engine.contexts import NodeExecutor
 
@@ -24,14 +23,14 @@ class ExecutorRegistry:
 
 def build_default_registry() -> ExecutorRegistry:
     """Register all built-in executors."""
-    from app.core.engine.executors.input import InputExecutor
-    from app.core.engine.executors.llm import LLMExecutor
+    from app.core.engine.executors.condition import ConditionExecutor
     from app.core.engine.executors.extract import ExtractExecutor
     from app.core.engine.executors.http import HttpExecutor
-    from app.core.engine.executors.python import PythonExecutor
-    from app.core.engine.executors.condition import ConditionExecutor
+    from app.core.engine.executors.input import InputExecutor
+    from app.core.engine.executors.llm import LLMExecutor
     from app.core.engine.executors.merge import MergeExecutor
     from app.core.engine.executors.output import OutputExecutor
+    from app.core.engine.executors.python import PythonExecutor
 
     reg = ExecutorRegistry()
     reg.register("input", InputExecutor())

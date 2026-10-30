@@ -152,7 +152,12 @@ export default function RunDetail() {
         />
       )}
 
-      <Descriptions bordered size="small" column={3} style={{ background: '#fff', borderRadius: 10 }}>
+      <Descriptions
+        bordered
+        size="small"
+        column={3}
+        style={{ background: '#fff', borderRadius: 10 }}
+      >
         <Descriptions.Item label="工作流">{run.workflow_name}</Descriptions.Item>
         <Descriptions.Item label="触发方式">{run.trigger}</Descriptions.Item>
         <Descriptions.Item label="总耗时">
@@ -160,10 +165,12 @@ export default function RunDetail() {
         </Descriptions.Item>
         <Descriptions.Item label="开始时间">{formatTime(run.started_at)}</Descriptions.Item>
         <Descriptions.Item label="结束时间">{formatTime(run.finished_at)}</Descriptions.Item>
-        <Descriptions.Item label="Token 总量">{run.total_tokens.toLocaleString()}</Descriptions.Item>
+        <Descriptions.Item label="Token 总量">
+          {run.total_tokens.toLocaleString()}
+        </Descriptions.Item>
         <Descriptions.Item label="节点结果" span={3}>
-          成功 {counts.success ?? 0} · 失败 {counts.failed ?? 0} · 跳过 {counts.skipped ?? 0} ·
-          取消 {counts.cancelled ?? 0} · 运行中 {counts.running ?? 0}
+          成功 {counts.success ?? 0} · 失败 {counts.failed ?? 0} · 跳过 {counts.skipped ?? 0} · 取消{' '}
+          {counts.cancelled ?? 0} · 运行中 {counts.running ?? 0}
         </Descriptions.Item>
       </Descriptions>
 

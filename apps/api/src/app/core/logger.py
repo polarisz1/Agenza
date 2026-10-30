@@ -1,4 +1,5 @@
 """Loguru config."""
+
 from __future__ import annotations
 
 import re
@@ -26,8 +27,8 @@ logger.add(
     sys.stdout,
     level=settings.LOG_LEVEL,
     format="<green>{time:HH:mm:ss}</green> | "
-           "<level>{level:<7}</level> | "
-           "<cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",
+    "<level>{level:<7}</level> | "
+    "<cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",
     colorize=True,
 )
 log = logger.patch(lambda record: record.update(message=_redact(record["message"])))

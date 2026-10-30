@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
-/// <reference types="electron" />
 
+// Electron 由 preload 注入，不依赖 electron 包的 npm 类型（该包不在 web workspace 内）
 interface Window {
   electronAPI?: {
     getBackendPort: () => Promise<number>;

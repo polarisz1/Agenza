@@ -1,4 +1,5 @@
 """Run service - orchestrates engine + repository."""
+
 from __future__ import annotations
 
 import json
@@ -12,7 +13,7 @@ from app.core.config import settings
 from app.core.engine.contexts import NodeResult
 from app.core.engine.manager import RunManager, get_run_manager
 from app.core.engine.validators import validate_graph
-from app.core.exceptions import AppException
+from app.core.exceptions import AppError
 from app.core.logger import log
 from app.core.providers import get_providers_registry
 from app.db.database import SessionLocal
@@ -37,7 +38,7 @@ class RunService:
     ) -> RunResponse:
         wf = WorkflowService.get(session, workflow_id)
         if not wf:
-            raise AppException(404, "Workflow not found")
+            raise AppError(404, "Workflow not found")
         return await RunService._start(session, wf, wf.graph, inputs, trigger)
 
     @staticmethod
@@ -45,17 +46,17 @@ class RunService:
         """基于历史运行的图快照 + 输入重新发起一次运行。"""
         run = RunRepository.get(session, run_id)
         if not run:
-            raise AppException(404, "Run not found")
+            raise AppError(404, "Run not found")
 
         try:
             graph = json.loads(run.graph_snapshot)
             inputs = json.loads(run.inputs_json) if run.inputs_json else {}
-        except Exception as exc:  # noqa: BLE001
-            raise AppException(422, f"Invalid run snapshot: {exc}") from exc
+        except Exception as exc:
+            raise AppError(422, f"Invalid run snapshot: {exc}") from exc
 
         wf = WorkflowService.get(session, run.workflow_id)
         if not wf:
-            raise AppException(404, "Workflow not found")
+            raise AppError(404, "Workflow not found")
 
         return await RunService._start(session, wf, graph, inputs, "manual")
 
@@ -72,15 +73,15 @@ class RunService:
         # 同一工作流默认串行：已有运行中则拒绝（TBD 多实例并发的默认策略）
         running = RunRepository.list(session, workflow_id=wf.id, status="running", limit=1)
         if running:
-            raise AppException(409, "Workflow already has a running run")
+            raise AppError(409, "Workflow already has a running run")
 
         if not graph.get("nodes"):
-            raise AppException(422, "Workflow is empty")
+            raise AppError(422, "Workflow is empty")
 
         check = validate_graph(nodes=graph.get("nodes", []), edges=graph.get("edges", []))
         if not check["ok"]:
             issues = "; ".join(i["message"] for i in check["issues"])
-            raise AppException(422, f"Invalid graph: {issues}")
+            raise AppError(422, f"Invalid graph: {issues}")
 
         missing = [
             f["key"]
@@ -88,7 +89,7 @@ class RunService:
             if f.get("required") and f["key"] not in (inputs or {})
         ]
         if missing:
-            raise AppException(400, f"Missing required inputs: {', '.join(missing)}")
+            raise AppError(400, f"Missing required inputs: {', '.join(missing)}")
 
         run_id = f"r_{uuid.uuid4().hex[:10]}"
         run = Run(
@@ -194,7 +195,7 @@ class RunService:
             if nr.status == "success" and nr.output_json:
                 try:
                     outputs[nr.node_id] = json.loads(nr.output_json)
-                except Exception:  # noqa: BLE001
+                except Exception:
                     continue
         return outputs
 
@@ -209,7 +210,7 @@ def _to_node_detail(nr: NodeRun) -> NodeRunDetail:
     if nr.output_json:
         try:
             output = json.loads(nr.output_json)
-        except Exception:  # noqa: BLE001
+        except Exception:
             output = nr.output_json
     return NodeRunDetail(
         id=nr.id,
@@ -230,6 +231,7 @@ def _to_node_detail(nr: NodeRun) -> NodeRunDetail:
 
 
 # ---- Engine callbacks（每次独立 Session，避免复用已关闭的请求级 Session）----
+
 
 def _make_node_started(run_id: str):
     async def _on_node_started(node_id: str, node: dict) -> None:
@@ -252,7 +254,7 @@ def _make_node_started(run_id: str):
                     )
                 )
                 db.commit()
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.exception(f"Failed to persist node start {run_id}/{node_id}")
 
     return _on_node_started
@@ -291,7 +293,7 @@ def _make_node_finished(run_id: str):
                     else None
                 )
                 db.commit()
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.exception(f"Failed to persist node finish {run_id}/{node_id}")
 
     return _on_node_finished
@@ -322,7 +324,7 @@ def _make_run_finished(run_id: str, workflow_id: str):
                 old_ids = RunRepository.list_older_run_ids(db, workflow_id, keep)
                 if old_ids:
                     RunRepository.delete_runs(db, old_ids)
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.exception(f"Failed to finalize run {run_id}")
 
     return _on_run_finished

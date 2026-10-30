@@ -1,7 +1,6 @@
 """Anthropic-compatible provider."""
-from __future__ import annotations
 
-import json
+from __future__ import annotations
 
 import httpx
 
@@ -35,10 +34,12 @@ class AnthropicCompatProvider(ProviderAdapter):
             "temperature": temperature,
         }
         if response_format == "json":
-            payload["tools"] = [{
-                "name": "output_json",
-                "input_schema": {"type": "object"},
-            }]
+            payload["tools"] = [
+                {
+                    "name": "output_json",
+                    "input_schema": {"type": "object"},
+                }
+            ]
 
         headers = {
             "x-api-key": self.api_key,

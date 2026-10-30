@@ -3,14 +3,7 @@ import type { components } from '@agentflow/contracts';
 
 /** 八类节点（与后端执行器一一对应） */
 export type NodeType =
-  | 'input'
-  | 'llm'
-  | 'extract'
-  | 'http'
-  | 'python'
-  | 'condition'
-  | 'merge'
-  | 'output';
+  'input' | 'llm' | 'extract' | 'http' | 'python' | 'condition' | 'merge' | 'output';
 
 /** 节点运行态（PRD §7：排队 / 运行中 / 成功 / 失败 / 已跳过 / 已取消） */
 export type RuntimeStatus = 'queued' | 'running' | 'success' | 'failed' | 'skipped' | 'cancelled';
@@ -41,36 +34,84 @@ export interface NodeMeta {
 
 export const NODE_META: Record<NodeType, NodeMeta> = {
   input: {
-    label: '输入', group: '基础', desc: '工作流输入字段', color: '#3d5a80',
-    hasInput: false, hasOutput: true, outputKind: 'json', accepts: [],
+    label: '输入',
+    group: '基础',
+    desc: '工作流输入字段',
+    color: '#3d5a80',
+    hasInput: false,
+    hasOutput: true,
+    outputKind: 'json',
+    accepts: [],
   },
   output: {
-    label: '输出', group: '基础', desc: '最终结果展示', color: '#1f4e3d',
-    hasInput: true, hasOutput: false, outputKind: null, accepts: ['text', 'json', 'bool'],
+    label: '输出',
+    group: '基础',
+    desc: '最终结果展示',
+    color: '#1f4e3d',
+    hasInput: true,
+    hasOutput: false,
+    outputKind: null,
+    accepts: ['text', 'json', 'bool'],
   },
   llm: {
-    label: 'LLM 调用', group: '模型', desc: '大模型文本生成', color: '#1f4e3d',
-    hasInput: true, hasOutput: true, outputKind: 'text', accepts: ['text', 'json', 'bool'],
+    label: 'LLM 调用',
+    group: '模型',
+    desc: '大模型文本生成',
+    color: '#1f4e3d',
+    hasInput: true,
+    hasOutput: true,
+    outputKind: 'text',
+    accepts: ['text', 'json', 'bool'],
   },
   extract: {
-    label: '结构化抽取', group: '模型', desc: '提取为 JSON 对象', color: '#6b4e8a',
-    hasInput: true, hasOutput: true, outputKind: 'json', accepts: ['text', 'json'],
+    label: '结构化抽取',
+    group: '模型',
+    desc: '提取为 JSON 对象',
+    color: '#6b4e8a',
+    hasInput: true,
+    hasOutput: true,
+    outputKind: 'json',
+    accepts: ['text', 'json'],
   },
   http: {
-    label: 'HTTP 请求', group: '工具', desc: '调用外部 API', color: '#a86612',
-    hasInput: true, hasOutput: true, outputKind: 'json', accepts: ['text', 'json'],
+    label: 'HTTP 请求',
+    group: '工具',
+    desc: '调用外部 API',
+    color: '#a86612',
+    hasInput: true,
+    hasOutput: true,
+    outputKind: 'json',
+    accepts: ['text', 'json'],
   },
   python: {
-    label: 'Python 脚本', group: '工具', desc: '子进程执行', color: '#b03a3a',
-    hasInput: true, hasOutput: true, outputKind: 'json', accepts: ['text', 'json', 'bool'],
+    label: 'Python 脚本',
+    group: '工具',
+    desc: '子进程执行',
+    color: '#b03a3a',
+    hasInput: true,
+    hasOutput: true,
+    outputKind: 'json',
+    accepts: ['text', 'json', 'bool'],
   },
   condition: {
-    label: '条件分支', group: '流程控制', desc: '布尔判断分流', color: '#2c7a7b',
-    hasInput: true, hasOutput: true, outputKind: 'bool', accepts: ['text', 'json', 'bool'],
+    label: '条件分支',
+    group: '流程控制',
+    desc: '布尔判断分流',
+    color: '#2c7a7b',
+    hasInput: true,
+    hasOutput: true,
+    outputKind: 'bool',
+    accepts: ['text', 'json', 'bool'],
   },
   merge: {
-    label: '合并', group: '流程控制', desc: '汇聚多路输出', color: '#5a5a5a',
-    hasInput: true, hasOutput: true, outputKind: 'json', accepts: ['text', 'json', 'bool'],
+    label: '合并',
+    group: '流程控制',
+    desc: '汇聚多路输出',
+    color: '#5a5a5a',
+    hasInput: true,
+    hasOutput: true,
+    outputKind: 'json',
+    accepts: ['text', 'json', 'bool'],
   },
 };
 
@@ -125,10 +166,10 @@ export const DEFAULT_CONFIG: Record<NodeType, Record<string, any>> = {
   python: {
     ...COMMON_CONFIG,
     script:
-      '# 输入：data["inputs"] / data["upstream"]\n'
-      + 'import json\n'
-      + 'data = json.load(open("input.json"))\n'
-      + 'agentflow_result = {"ok": True, "inputs": data["inputs"]}\n',
+      '# 输入：data["inputs"] / data["upstream"]\n' +
+      'import json\n' +
+      'data = json.load(open("input.json"))\n' +
+      'agentflow_result = {"ok": True, "inputs": data["inputs"]}\n',
     timeout_s: 60,
   },
   condition: {
@@ -195,14 +236,22 @@ export function createNodeData(type: NodeType, seq: number): NodeData {
 
 function labelPrefix(type: NodeType): string {
   switch (type) {
-    case 'input': return '输入';
-    case 'llm': return 'LLM';
-    case 'extract': return '抽取';
-    case 'http': return 'HTTP';
-    case 'python': return '脚本';
-    case 'condition': return '条件';
-    case 'merge': return '合并';
-    case 'output': return '输出';
+    case 'input':
+      return '输入';
+    case 'llm':
+      return 'LLM';
+    case 'extract':
+      return '抽取';
+    case 'http':
+      return 'HTTP';
+    case 'python':
+      return '脚本';
+    case 'condition':
+      return '条件';
+    case 'merge':
+      return '合并';
+    case 'output':
+      return '输出';
   }
 }
 
@@ -215,7 +264,9 @@ export function nodeSummary(data: NodeData): string {
     case 'llm':
       return c.model ? `${c.model} · T=${c.temperature ?? 0.7}` : '未选择模型';
     case 'extract':
-      return c.fields_text ? `${String(c.fields_text).split('\n').filter(Boolean).length} 个目标字段` : '未设置目标字段';
+      return c.fields_text
+        ? `${String(c.fields_text).split('\n').filter(Boolean).length} 个目标字段`
+        : '未设置目标字段';
     case 'http':
       return `${c.method || 'GET'} ${c.url || '未填写地址'}`;
     case 'python':

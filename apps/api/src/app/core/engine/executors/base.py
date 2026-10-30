@@ -1,4 +1,5 @@
 """Base executor - shared resolve + error handling."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -18,7 +19,7 @@ class BaseExecutor:
             return await self._run(ctx, resolved)
         except VariableError as exc:
             return NodeResult(status="failed", error=f"Variable resolution error: {exc}")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return NodeResult(status="failed", error=str(exc))
 
     async def _run(self, ctx: NodeContext, config: dict) -> NodeResult:

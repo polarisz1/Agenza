@@ -1,4 +1,5 @@
 """Output executor - surfaces final result."""
+
 from __future__ import annotations
 
 from app.core.engine.contexts import NodeContext, NodeResult
@@ -10,6 +11,8 @@ class OutputExecutor(BaseExecutor):
 
     async def _run(self, ctx: NodeContext, config: dict) -> NodeResult:
         # Output = reference to the primary upstream
-        primary = config.get("source") or list(ctx.upstream.values())[0] if ctx.upstream else None
+        primary = (
+            config.get("source") or next(iter(ctx.upstream.values())) if ctx.upstream else None
+        )
         field = config.get("field") or "result"
         return NodeResult(status="success", output={field: primary})

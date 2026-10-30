@@ -1,4 +1,5 @@
 """Provider service."""
+
 from __future__ import annotations
 
 import uuid
@@ -7,14 +8,19 @@ from datetime import datetime
 import httpx
 from sqlalchemy.orm import Session
 
-from app.core.providers.base import describe_http_error
-from app.core.providers.openai_compat import OpenAICompatProvider
-from app.core.providers.ollama import OllamaProvider
 from app.core.providers.anthropic_compat import AnthropicCompatProvider
+from app.core.providers.base import describe_http_error
+from app.core.providers.ollama import OllamaProvider
+from app.core.providers.openai_compat import OpenAICompatProvider
 from app.core.security import KeyManager
 from app.modules.providers.models import Provider
 from app.modules.providers.repository import ProviderRepository
-from app.modules.providers.schemas import ProviderCreate, ProviderResponse, ProviderTestResult, ProviderUpdate
+from app.modules.providers.schemas import (
+    ProviderCreate,
+    ProviderResponse,
+    ProviderTestResult,
+    ProviderUpdate,
+)
 
 
 def _masked(key_enc: str | None) -> str:
@@ -33,9 +39,13 @@ def _adapter(kind: str, base_url: str, api_key: str | None, default_model: str |
     if kind == "ollama":
         return OllamaProvider(base_url=base_url, default_model=default_model)
     if kind == "openai-compat":
-        return OpenAICompatProvider(base_url=base_url, api_key=api_key or "", default_model=default_model)
+        return OpenAICompatProvider(
+            base_url=base_url, api_key=api_key or "", default_model=default_model
+        )
     if kind == "anthropic-compat":
-        return AnthropicCompatProvider(base_url=base_url, api_key=api_key or "", default_model=default_model)
+        return AnthropicCompatProvider(
+            base_url=base_url, api_key=api_key or "", default_model=default_model
+        )
     return None
 
 
@@ -45,9 +55,13 @@ class ProviderService:
         pid = f"pv_{uuid.uuid4().hex[:10]}"
         key_enc = KeyManager.encrypt(body.api_key) if body.api_key else None
         obj = Provider(
-            id=pid, kind=body.kind, name=body.name,
-            base_url=body.base_url, api_key_enc=key_enc,
-            default_model=body.default_model, enabled=True,
+            id=pid,
+            kind=body.kind,
+            name=body.name,
+            base_url=body.base_url,
+            api_key_enc=key_enc,
+            default_model=body.default_model,
+            enabled=True,
             created_at=datetime.utcnow(),
         )
         created = ProviderRepository.create(session, obj)
@@ -105,14 +119,18 @@ class ProviderService:
             return ProviderTestResult(ok=False, message="连接超时：服务地址无响应")
         except httpx.ConnectError:
             return ProviderTestResult(ok=False, message="无法连接到服务地址：请检查地址与网络")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return ProviderTestResult(ok=False, message=str(exc))
 
 
 def _to_response(p: Provider) -> ProviderResponse:
     return ProviderResponse(
-        id=p.id, kind=p.kind, name=p.name, base_url=p.base_url,
+        id=p.id,
+        kind=p.kind,
+        name=p.name,
+        base_url=p.base_url,
         api_key_masked=_masked(p.api_key_enc),
-        default_model=p.default_model, enabled=p.enabled,
+        default_model=p.default_model,
+        enabled=p.enabled,
         created_at=p.created_at,
     )

@@ -1,4 +1,5 @@
 """Back-end tests conftest."""
+
 from __future__ import annotations
 
 import sys

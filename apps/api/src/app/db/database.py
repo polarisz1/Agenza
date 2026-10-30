@@ -1,14 +1,13 @@
 """SQLAlchemy engine + session."""
+
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Iterator
+from collections.abc import Iterator
 
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, sessionmaker, declarative_base
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.core.config import settings
-
 
 connect_args = {}
 if settings.effective_database_url.startswith("sqlite"):
@@ -49,10 +48,11 @@ def get_db() -> Iterator[Session]:
 
 def init_db() -> None:
     """Create all tables on startup and clean up interrupted runs."""
-    from app.modules.workflows import models  # noqa: F401
-    from app.modules.runs import models  # noqa: F401
-    from app.modules.providers import models  # noqa: F401
-    from app.modules.settings import models  # noqa: F401
+    from importlib import import_module
+
+    # 副作用导入：把各 feature 的 models 注册到 Base.metadata 后再建表
+    for feature in ("providers", "runs", "settings", "workflows"):
+        import_module(f"app.modules.{feature}.models")
 
     Base.metadata.create_all(bind=engine)
     _ensure_node_run_columns()

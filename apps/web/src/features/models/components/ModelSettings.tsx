@@ -1,8 +1,26 @@
-import { Button, Table, Tag, Space, Modal, Form, Input, Select, Switch, message, Popconfirm } from 'antd';
+import {
+  Button,
+  Table,
+  Tag,
+  Space,
+  Modal,
+  Form,
+  Input,
+  Select,
+  Switch,
+  message,
+  Popconfirm,
+} from 'antd';
 import { PlusOutlined, LinkOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { useCallback, useEffect, useState } from 'react';
 
-import { listProviders, createProvider, updateProvider, deleteProvider, testProvider } from '../api';
+import {
+  listProviders,
+  createProvider,
+  updateProvider,
+  deleteProvider,
+  testProvider,
+} from '../api';
 import type { ProviderResponse } from '../api';
 
 const KINDS: { value: string; label: string }[] = [
@@ -37,7 +55,15 @@ export default function ModelSettings() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <div style={{ fontSize: 20, fontWeight: 600 }}>模型与密钥</div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingId(null); form.resetFields(); setOpen(true); }}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => {
+            setEditingId(null);
+            form.resetFields();
+            setOpen(true);
+          }}
+        >
           添加服务商
         </Button>
       </div>
@@ -50,7 +76,7 @@ export default function ModelSettings() {
           {
             title: '类型',
             dataIndex: 'kind',
-            render: (k) => <Tag>{KINDS.find(x => x.value === k)?.label || k}</Tag>,
+            render: (k) => <Tag>{KINDS.find((x) => x.value === k)?.label || k}</Tag>,
           },
           { title: '服务地址', dataIndex: 'base_url', ellipsis: true },
           { title: '默认模型', dataIndex: 'default_model' },
@@ -70,9 +96,16 @@ export default function ModelSettings() {
                     setTesting(true);
                     try {
                       const res = await testProvider({
-                        kind: r.kind, name: r.name, base_url: r.base_url, default_model: r.default_model,
+                        kind: r.kind,
+                        name: r.name,
+                        base_url: r.base_url,
+                        default_model: r.default_model,
                       });
-                      message.success(res.ok ? `连接成功${res.model ? `（${res.model}）` : ''}` : `连接失败：${res.message}`);
+                      message.success(
+                        res.ok
+                          ? `连接成功${res.model ? `（${res.model}）` : ''}`
+                          : `连接失败：${res.message}`,
+                      );
                     } finally {
                       setTesting(false);
                     }

@@ -92,18 +92,14 @@ export default function RunInputsModal({ open, fields, loading, onCancel, onSubm
                   rows={4}
                   placeholder='{"key": "value"}'
                   value={values[field.key] ?? ''}
-                  onChange={(e) =>
-                    setValues((prev) => ({ ...prev, [field.key]: e.target.value }))
-                  }
+                  onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
                 />
               ) : (
                 <input
                   className="afe-input"
                   type={field.type === 'number' ? 'number' : 'text'}
                   value={values[field.key] ?? ''}
-                  onChange={(e) =>
-                    setValues((prev) => ({ ...prev, [field.key]: e.target.value }))
-                  }
+                  onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
                 />
               )}
             </div>

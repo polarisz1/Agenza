@@ -3,12 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { buildSseUrl } from '@/shared/lib/http';
 import { useEventSource } from '@/shared/hooks/useEventSource';
 
-export type LiveStatus =
-  | 'idle'
-  | 'running'
-  | 'success'
-  | 'failed'
-  | 'cancelled';
+export type LiveStatus = 'idle' | 'running' | 'success' | 'failed' | 'cancelled';
 
 export interface RunNodeState {
   nodeId: string;
@@ -29,12 +24,7 @@ export interface RunLogEntry {
   at: number;
 }
 
-const STREAM_EVENTS = [
-  'run.started',
-  'node.started',
-  'node.finished',
-  'run.finished',
-];
+const STREAM_EVENTS = ['run.started', 'node.started', 'node.finished', 'run.finished'];
 
 const MAX_LOGS = 300;
 
@@ -103,10 +93,7 @@ export function useRunStream(runId: string | null) {
     }
   }, []);
 
-  const url = useMemo(
-    () => (runId ? buildSseUrl(`/api/runs/${runId}/events`) : null),
-    [runId],
-  );
+  const url = useMemo(() => (runId ? buildSseUrl(`/api/runs/${runId}/events`) : null), [runId]);
 
   useEventSource({
     url,

@@ -1,6 +1,8 @@
 """Local Ollama provider - localhost:11434."""
+
 from __future__ import annotations
 
+import contextlib
 import json
 
 import httpx
@@ -12,7 +14,9 @@ from app.core.providers.base import ChatResult, ProviderAdapter, ResponseFormat
 class OllamaProvider(ProviderAdapter):
     kind = "ollama"
 
-    def __init__(self, base_url: str = "http://localhost:11434", default_model: str | None = None) -> None:
+    def __init__(
+        self, base_url: str = "http://localhost:11434", default_model: str | None = None
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.default_model = default_model or "qwen2.5:7b"
 
@@ -41,10 +45,8 @@ class OllamaProvider(ProviderAdapter):
 
         content = data.get("message", {}).get("content", "")
         if response_format == "json" and isinstance(content, str):
-            try:
+            with contextlib.suppress(Exception):
                 content = json.loads(content)
-            except Exception:
-                pass
 
         return ChatResult(
             content=content,

@@ -5,9 +5,11 @@
 - 事件历史（用于 Last-Event-ID 断线重连补齐）
 - 递增序号（作为 SSE 的 id 字段）
 """
+
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 from collections import deque
 
@@ -62,14 +64,10 @@ class EventBus:
                 queue.put_nowait(payload)
             except asyncio.QueueFull:
                 # 客户端消费过慢：丢弃最旧事件后重试
-                try:
+                with contextlib.suppress(asyncio.QueueEmpty):
                     queue.get_nowait()
-                except asyncio.QueueEmpty:
-                    pass
-                try:
+                with contextlib.suppress(asyncio.QueueFull):
                     queue.put_nowait(payload)
-                except asyncio.QueueFull:
-                    pass
 
     def _prune(self) -> None:
         """控制内存占用：只保留最近 N 个 run 的事件历史。"""

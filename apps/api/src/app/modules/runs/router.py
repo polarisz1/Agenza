@@ -1,10 +1,11 @@
 """Run FastAPI router + SSE endpoint."""
+
 from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import AsyncIterator
 
 from fastapi import APIRouter, Depends, Header, Query
 from fastapi.responses import StreamingResponse
@@ -12,11 +13,10 @@ from sqlalchemy.orm import Session
 
 from app.api_deps import get_session
 from app.core.engine.event_bus import get_event_bus
-from app.core.exceptions import AppException
+from app.core.exceptions import AppError
 from app.core.response import ApiResponse, CancelResult, success
 from app.db.database import SessionLocal
 from app.modules.runs.repository import RunRepository
-from app.modules.runs.service import RunService
 from app.modules.runs.schemas import (
     NodeRunDetail,
     RunCreate,
@@ -24,6 +24,7 @@ from app.modules.runs.schemas import (
     RunListData,
     RunResponse,
 )
+from app.modules.runs.service import RunService
 
 router = APIRouter()
 
@@ -52,9 +53,7 @@ def list_runs(
 
 
 @router.post("", response_model=ApiResponse[RunResponse])
-async def create_run(
-    workflow_id: str, body: RunCreate, session: Session = Depends(get_session)
-):
+async def create_run(workflow_id: str, body: RunCreate, session: Session = Depends(get_session)):
     run = await RunService.start_run(session, workflow_id, body.inputs)
     return success(run)
 
@@ -63,7 +62,7 @@ async def create_run(
 def get_run(run_id: str, session: Session = Depends(get_session)):
     run = RunService.get(session, run_id)
     if not run:
-        raise AppException(404, "Run not found")
+        raise AppError(404, "Run not found")
     return success(run)
 
 
@@ -71,7 +70,7 @@ def get_run(run_id: str, session: Session = Depends(get_session)):
 def get_node_run(run_id: str, node_id: str, session: Session = Depends(get_session)):
     nr = RunService.get_node(session, run_id, node_id)
     if not nr:
-        raise AppException(404, "Node run not found")
+        raise AppError(404, "Node run not found")
     return success(nr)
 
 
@@ -103,7 +102,7 @@ async def run_events(
     """
     run = RunRepository.get(session, run_id)
     if not run:
-        raise AppException(404, "Run not found")
+        raise AppError(404, "Run not found")
 
     raw_last = last_event_id or last_event_id_header
     try:
@@ -130,7 +129,7 @@ async def run_events(
             while True:
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=_HEARTBEAT_SECONDS)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     yield ": heartbeat\n\n"
                     continue
                 yield _to_sse(event)

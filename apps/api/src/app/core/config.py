@@ -1,12 +1,11 @@
 """AgentFlow config - pydantic-settings."""
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
 
 ROOT_DIR = Path(__file__).resolve().parents[4]  # AgentFlow/
 DATA_DIR = ROOT_DIR / "data"
@@ -23,7 +22,7 @@ class Settings(BaseSettings):
     PORT: int = 8000
 
     # ---- CORS ----
-    CORS_ORIGINS: List[str] = ["http://localhost:5173"]
+    CORS_ORIGINS: list[str] = ["http://localhost:5173"]
 
     # ---- Database ----
     DATABASE_URL: str = ""
@@ -61,6 +60,7 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             try:
                 import json
+
                 return json.loads(v)
             except Exception:
                 return [o.strip() for o in v.split(",")]

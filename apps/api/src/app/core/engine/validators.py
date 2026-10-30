@@ -1,4 +1,5 @@
 """DAG validator - cycle detection + required fields + variable refs."""
+
 from __future__ import annotations
 
 import re
@@ -69,7 +70,7 @@ def detect_cycle(nodes: list[dict], edges: list[dict]) -> list[list[str]]:
             if color[nxt] == GRAY:
                 # cycle found
                 start = stack.index(nxt)
-                cycles.append(stack[start:] + [nxt])
+                cycles.append([*stack[start:], nxt])
             elif color[nxt] == WHITE:
                 dfs(nxt, stack)
         stack.pop()
@@ -111,7 +112,9 @@ def validate_graph(nodes: list[dict], edges: list[dict]) -> dict[str, Any]:
 
     cycles = detect_cycle(nodes, edges)
     for cyc in cycles:
-        issues.append({"code": "CYCLE", "node_id": cyc[0], "message": f"Cycle detected: {' → '.join(cyc)}"})
+        issues.append(
+            {"code": "CYCLE", "node_id": cyc[0], "message": f"Cycle detected: {' → '.join(cyc)}"}
+        )
 
     # Isolated nodes
     connected: set[str] = set()
@@ -120,14 +123,28 @@ def validate_graph(nodes: list[dict], edges: list[dict]) -> dict[str, Any]:
         connected.add(e.get("target", ""))
     for n in nodes:
         if n["id"] not in connected and n.get("type") not in ("input", "output"):
-            issues.append({"code": "ISOLATED", "node_id": n["id"], "message": "Node is not connected to the main flow"})
+            issues.append(
+                {
+                    "code": "ISOLATED",
+                    "node_id": n["id"],
+                    "message": "Node is not connected to the main flow",
+                }
+            )
 
     # Required node types
     node_types = {n["id"]: n.get("type") for n in nodes}
     if "input" not in node_types.values():
-        issues.append({"code": "MISSING_INPUT", "node_id": "", "message": "At least one Input node required"})
+        issues.append(
+            {"code": "MISSING_INPUT", "node_id": "", "message": "At least one Input node required"}
+        )
     if "output" not in node_types.values():
-        issues.append({"code": "MISSING_OUTPUT", "node_id": "", "message": "At least one Output node required"})
+        issues.append(
+            {
+                "code": "MISSING_OUTPUT",
+                "node_id": "",
+                "message": "At least one Output node required",
+            }
+        )
 
     issues.extend(validate_variables(nodes))
 

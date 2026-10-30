@@ -1,15 +1,15 @@
 """Workflow FastAPI router."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api_deps import get_session
+from app.core.exceptions import AppError
 from app.core.response import ApiResponse, DeleteResult, success
-from app.core.exceptions import AppException
 from app.modules.runs.schemas import RunCreate, RunResponse
 from app.modules.runs.service import RunService
-from app.modules.workflows.service import WorkflowService
 from app.modules.workflows.schemas import (
     DuplicateResult,
     GraphDef,
@@ -23,6 +23,7 @@ from app.modules.workflows.schemas import (
     WorkflowResponse,
     WorkflowUpdate,
 )
+from app.modules.workflows.service import WorkflowService
 
 router = APIRouter()
 
@@ -62,7 +63,7 @@ def validate_graph_body(body: GraphDef, session: Session = Depends(get_session))
 def get_workflow(wf_id: str, session: Session = Depends(get_session)):
     wf = WorkflowService.get(session, wf_id)
     if not wf:
-        raise AppException(404, "Workflow not found")
+        raise AppError(404, "Workflow not found")
     return success(wf)
 
 
@@ -70,17 +71,19 @@ def get_workflow(wf_id: str, session: Session = Depends(get_session)):
 def update_workflow(wf_id: str, body: WorkflowUpdate, session: Session = Depends(get_session)):
     wf = WorkflowService.update(session, wf_id, body)
     if not wf:
-        raise AppException(404, "Workflow not found")
+        raise AppError(404, "Workflow not found")
     return success(wf)
 
 
 @router.delete("/{wf_id}", response_model=ApiResponse[DeleteResult])
-def delete_workflow(wf_id: str, confirm: bool = Query(default=False), session: Session = Depends(get_session)):
+def delete_workflow(
+    wf_id: str, confirm: bool = Query(default=False), session: Session = Depends(get_session)
+):
     if not confirm:
-        raise AppException(400, "Pass ?confirm=true to delete")
+        raise AppError(400, "Pass ?confirm=true to delete")
     ok = WorkflowService.delete(session, wf_id)
     if not ok:
-        raise AppException(404, "Workflow not found")
+        raise AppError(404, "Workflow not found")
     return success({"deleted": True})
 
 
@@ -88,18 +91,20 @@ def delete_workflow(wf_id: str, confirm: bool = Query(default=False), session: S
 def duplicate_workflow(wf_id: str, session: Session = Depends(get_session)):
     dup = WorkflowService.duplicate(session, wf_id)
     if not dup:
-        raise AppException(404, "Workflow not found")
+        raise AppError(404, "Workflow not found")
     return success(dup)
 
 
 @router.post("/{wf_id}/validate", response_model=ApiResponse[ValidateResult])
-def validate_workflow(wf_id: str | None = None, body: GraphDef | None = None, session: Session = Depends(get_session)):
+def validate_workflow(
+    wf_id: str | None = None, body: GraphDef | None = None, session: Session = Depends(get_session)
+):
     if body is None and wf_id is None:
-        raise AppException(400, "Provide body or wf_id")
+        raise AppError(400, "Provide body or wf_id")
     if body is None:
         wf = WorkflowService.get(session, wf_id)
         if not wf:
-            raise AppException(404, "Workflow not found")
+            raise AppError(404, "Workflow not found")
         body = GraphDef(**wf.graph)
     result = WorkflowService.validate(session, body)
     return success(result)
@@ -110,7 +115,7 @@ def validate_workflow_saved(wf_id: str, session: Session = Depends(get_session))
     """校验已保存的工作流图。"""
     wf = WorkflowService.get(session, wf_id)
     if not wf:
-        raise AppException(404, "Workflow not found")
+        raise AppError(404, "Workflow not found")
     result = WorkflowService.validate(session, GraphDef(**wf.graph))
     return success(result)
 
@@ -136,7 +141,9 @@ async def test_node(
     """单节点调试：只执行该节点，不写运行记录。"""
     payload = body or NodeTestRequest()
     result = await WorkflowService.test_node(
-        session, wf_id, node_id,
+        session,
+        wf_id,
+        node_id,
         inputs=payload.inputs,
         upstream=payload.upstream,
     )

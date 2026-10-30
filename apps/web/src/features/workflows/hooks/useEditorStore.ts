@@ -130,7 +130,9 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     if (id === get().selectedId) return;
     set({
       selectedId: id,
-      nodes: get().nodes.map((n) => (n.selected === (n.id === id) ? n : { ...n, selected: n.id === id })),
+      nodes: get().nodes.map((n) =>
+        n.selected === (n.id === id) ? n : { ...n, selected: n.id === id },
+      ),
     });
   },
 
@@ -142,13 +144,12 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
 
     const nodes = applyNodeChanges(changes, get().nodes);
     const meaningful = changes.some(
-      (c) => c.type === 'position' || c.type === 'remove' || c.type === 'add' || c.type === 'replace',
+      (c) =>
+        c.type === 'position' || c.type === 'remove' || c.type === 'add' || c.type === 'replace',
     );
     const selectedId = nodes.some((n) => n.id === get().selectedId) ? get().selectedId : null;
     set(
-      meaningful
-        ? { nodes, selectedId, dirty: true, rev: get().rev + 1 }
-        : { nodes, selectedId },
+      meaningful ? { nodes, selectedId, dirty: true, rev: get().rev + 1 } : { nodes, selectedId },
     );
   },
 
@@ -215,9 +216,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     const node = get().nodes.find((n) => n.id === nodeId);
     if (!node || node.data.label === label) return;
     set({
-      nodes: get().nodes.map((n) =>
-        n.id === nodeId ? { ...n, data: { ...n.data, label } } : n,
-      ),
+      nodes: get().nodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, label } } : n)),
       dirty: true,
       rev: get().rev + 1,
     });
@@ -323,6 +322,5 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       dirty: state.rev !== revAtStart,
     })),
 
-  markSaveError: (message) =>
-    set({ saveState: 'error', saveError: message || '保存失败' }),
+  markSaveError: (message) => set({ saveState: 'error', saveError: message || '保存失败' }),
 }));

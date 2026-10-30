@@ -1,4 +1,5 @@
 """Run repository."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -76,9 +77,11 @@ class RunRepository:
 
     @staticmethod
     def delete_by_workflow(session: Session, workflow_id: str) -> None:
-        session.query(NodeRun).filter(NodeRun.run_id.in_(
-            [r.id for r in session.query(Run).filter(Run.workflow_id == workflow_id).all()]
-        )).delete(synchronize_session=False)
+        session.query(NodeRun).filter(
+            NodeRun.run_id.in_(
+                [r.id for r in session.query(Run).filter(Run.workflow_id == workflow_id).all()]
+            )
+        ).delete(synchronize_session=False)
         session.query(Run).filter(Run.workflow_id == workflow_id).delete()
         session.commit()
 
@@ -100,8 +103,6 @@ class RunRepository:
     def delete_runs(session: Session, run_ids: list[str]) -> None:
         if not run_ids:
             return
-        session.query(NodeRun).filter(NodeRun.run_id.in_(run_ids)).delete(
-            synchronize_session=False
-        )
+        session.query(NodeRun).filter(NodeRun.run_id.in_(run_ids)).delete(synchronize_session=False)
         session.query(Run).filter(Run.id.in_(run_ids)).delete(synchronize_session=False)
         session.commit()

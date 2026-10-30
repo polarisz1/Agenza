@@ -11,11 +11,7 @@ function BaseNode({ data, selected }: NodeProps<EditorNode>) {
 
   return (
     <div
-      className={[
-        'afn',
-        selected ? 'afn--selected' : '',
-        data.hasIssue ? 'afn--issue' : '',
-      ]
+      className={['afn', selected ? 'afn--selected' : '', data.hasIssue ? 'afn--issue' : '']
         .filter(Boolean)
         .join(' ')}
     >

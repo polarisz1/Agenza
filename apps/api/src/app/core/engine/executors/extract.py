@@ -1,4 +1,5 @@
 """Structured extraction - LLM that returns JSON matching a schema."""
+
 from __future__ import annotations
 
 from app.core.engine.contexts import NodeContext, NodeResult
@@ -16,6 +17,7 @@ class ExtractExecutor(LLMExecutor):
             return result
         try:
             import json
+
             if isinstance(result.output, str):
                 result.output = json.loads(result.output)
         except Exception as exc:

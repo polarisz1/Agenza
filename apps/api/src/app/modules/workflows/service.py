@@ -1,4 +1,5 @@
 """Workflow service - orchestrates repository + validator."""
+
 from __future__ import annotations
 
 import json
@@ -11,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.engine.contexts import NodeContext
 from app.core.engine.registry import build_default_registry
 from app.core.engine.validators import validate_graph
-from app.core.exceptions import AppException
+from app.core.exceptions import AppError
 from app.core.providers import get_providers_registry
 from app.modules.workflows.repository import WorkflowRepository
 from app.modules.workflows.schemas import (
@@ -34,7 +35,8 @@ class WorkflowService:
     def create(session: Session, body: WorkflowCreate) -> WorkflowResponse:
         wf_id = f"wf_{uuid.uuid4().hex[:10]}"
         obj = WorkflowRepository.create(
-            session, wf_id=wf_id,
+            session,
+            wf_id=wf_id,
             name=body.name,
             description=body.description,
             graph_json=body.graph.model_dump_json(),
@@ -92,7 +94,8 @@ class WorkflowService:
             new_status = "ready" if result["ok"] and not result["issues"] else "draft"
 
         updated = WorkflowRepository.update(
-            session, wf_id,
+            session,
+            wf_id,
             name=body.name,
             description=body.description,
             graph_json=graph_json,
@@ -112,7 +115,8 @@ class WorkflowService:
             return None
         new_id = f"wf_{uuid.uuid4().hex[:10]}"
         dup_obj = WorkflowRepository.create(
-            session, wf_id=new_id,
+            session,
+            wf_id=new_id,
             name=f"{obj.name} 副本",
             description=obj.description,
             graph_json=obj.graph_json,
@@ -134,7 +138,7 @@ class WorkflowService:
         for obj in objs:
             try:
                 graph = json.loads(obj.graph_json)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 graph = {"version": 1, "inputs": [], "nodes": [], "edges": []}
             out.append(
                 {
@@ -160,7 +164,7 @@ class WorkflowService:
             name = str(entry.get("name") or "导入工作流").strip() or "导入工作流"
             graph = entry.get("graph")
             if not isinstance(graph, dict):
-                raise AppException(422, f"「{name}」缺少 graph")
+                raise AppError(422, f"「{name}」缺少 graph")
             graph.setdefault("version", 1)
             graph.setdefault("inputs", [])
             graph.setdefault("nodes", [])
@@ -211,12 +215,12 @@ class WorkflowService:
         """单节点调试：只执行指定节点，不写 run / node_run。"""
         obj = WorkflowRepository.get(session, wf_id)
         if not obj:
-            raise AppException(404, "Workflow not found")
+            raise AppError(404, "Workflow not found")
 
         graph = json.loads(obj.graph_json)
         node = next((n for n in graph.get("nodes", []) if n.get("id") == node_id), None)
         if node is None:
-            raise AppException(404, "Node not found")
+            raise AppError(404, "Node not found")
 
         merged_upstream = dict(upstream or {})
         available: dict[str, Any] = dict(merged_upstream)
@@ -227,24 +231,20 @@ class WorkflowService:
             history = RunService.latest_node_outputs(session, wf_id)
             available = dict(history)
             parent_ids = {
-                e.get("source")
-                for e in graph.get("edges", [])
-                if e.get("target") == node_id
+                e.get("source") for e in graph.get("edges", []) if e.get("target") == node_id
             }
             merged_upstream = {pid: history[pid] for pid in parent_ids if pid in history}
 
         executor = build_default_registry().get(node.get("type"))
         if executor is None:
-            raise AppException(422, f"No executor for node type '{node.get('type')}'")
+            raise AppError(422, f"No executor for node type '{node.get('type')}'")
 
         ctx = NodeContext(
             node=node,
             run_inputs=inputs or {},
             upstream=merged_upstream,
             available=available,
-            node_names={
-                n["id"]: (n.get("name") or n["id"]) for n in graph.get("nodes", [])
-            },
+            node_names={n["id"]: (n.get("name") or n["id"]) for n in graph.get("nodes", [])},
             providers=get_providers_registry(session),
         )
         started = time.perf_counter()
@@ -274,10 +274,10 @@ def _normalize_import_payload(payload: Any) -> list[dict]:
     if isinstance(payload, dict):
         payload = [payload]
     if not isinstance(payload, list):
-        raise AppException(422, "导入内容格式不正确")
+        raise AppError(422, "导入内容格式不正确")
     entries = [entry for entry in payload if isinstance(entry, dict)]
     if not entries:
-        raise AppException(422, "导入内容为空")
+        raise AppError(422, "导入内容为空")
     return entries
 
 

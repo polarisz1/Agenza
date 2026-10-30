@@ -1,13 +1,13 @@
 """Provider router."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api_deps import get_session
-from app.core.exceptions import AppException
+from app.core.exceptions import AppError
 from app.core.response import ApiResponse, DeleteResult, success
-from app.modules.providers.service import ProviderService
 from app.modules.providers.schemas import (
     ProviderCreate,
     ProviderListData,
@@ -15,6 +15,7 @@ from app.modules.providers.schemas import (
     ProviderTestResult,
     ProviderUpdate,
 )
+from app.modules.providers.service import ProviderService
 
 router = APIRouter()
 
@@ -38,7 +39,7 @@ async def test_provider(body: ProviderCreate):
 def get_provider(pid: str, session: Session = Depends(get_session)):
     p = ProviderService.get(session, pid)
     if not p:
-        raise AppException(404, "Provider not found")
+        raise AppError(404, "Provider not found")
     return success(p)
 
 
@@ -46,7 +47,7 @@ def get_provider(pid: str, session: Session = Depends(get_session)):
 def update_provider(pid: str, body: ProviderUpdate, session: Session = Depends(get_session)):
     p = ProviderService.update(session, pid, body)
     if not p:
-        raise AppException(404, "Provider not found")
+        raise AppError(404, "Provider not found")
     return success(p)
 
 
@@ -54,5 +55,5 @@ def update_provider(pid: str, body: ProviderUpdate, session: Session = Depends(g
 def delete_provider(pid: str, session: Session = Depends(get_session)):
     ok = ProviderService.delete(session, pid)
     if not ok:
-        raise AppException(404, "Provider not found")
+        raise AppError(404, "Provider not found")
     return success({"deleted": True})

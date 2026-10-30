@@ -47,8 +47,11 @@ try {
 }
 
 function compare(label, committedPath, freshPath) {
-  const committed = readFileSync(committedPath, 'utf8');
-  const fresh = readFileSync(freshPath, 'utf8');
+  // 换行统一后再比较：Windows 工作区（core.autocrlf=true）会把 LF 变成 CRLF，
+  // 逐字节比较会因此假报漂移。真正的漂移是内容差异，不是行尾风格。
+  const normalize = (text) => text.replace(/\r\n/g, '\n');
+  const committed = normalize(readFileSync(committedPath, 'utf8'));
+  const fresh = normalize(readFileSync(freshPath, 'utf8'));
   if (committed === fresh) return;
 
   const a = committed.split('\n');

@@ -1,4 +1,5 @@
 """Settings schemas."""
+
 from pydantic import BaseModel
 
 

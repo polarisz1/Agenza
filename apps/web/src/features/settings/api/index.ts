@@ -10,9 +10,7 @@ export async function getSettings(): Promise<SettingsResponse> {
   return http.get<SettingsResponse>('/api/settings');
 }
 
-export async function updateSettings(
-  data: Partial<SettingsResponse>,
-): Promise<SettingsResponse> {
+export async function updateSettings(data: Partial<SettingsResponse>): Promise<SettingsResponse> {
   return http.put<SettingsResponse>('/api/settings', data);
 }
 

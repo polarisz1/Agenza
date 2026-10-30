@@ -1,8 +1,4 @@
-import {
-  DEFAULT_CONFIG,
-  type NodeType,
-  type WorkflowGraphJSON,
-} from './types';
+import { DEFAULT_CONFIG, type NodeType, type WorkflowGraphJSON } from './types';
 
 interface NodeSpec {
   id: string;
@@ -172,10 +168,10 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
             y: 80,
             config: {
               script:
-                'import json\n'
-                + 'data = json.load(open("input.json"))\n'
-                + 'text = data["inputs"].get("text", "")\n'
-                + 'agentflow_result = {"length": len(text), "upper": text.upper()}\n',
+                'import json\n' +
+                'data = json.load(open("input.json"))\n' +
+                'text = data["inputs"].get("text", "")\n' +
+                'agentflow_result = {"length": len(text), "upper": text.upper()}\n',
             },
           },
           {

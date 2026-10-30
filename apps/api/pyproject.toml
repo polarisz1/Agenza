@@ -43,8 +43,28 @@ extend-exclude = ["alembic/**", "*.lock"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "RUF"]
-ignore = ["E501", "B008"]
+# E501: 行宽由 formatter 保证
+# B008: FastAPI 的 Depends()/Query() 默认值是官方写法
+# RUF001/002/003: 本项目文案与注释为中文，全角标点是有意的（产品语言），不是笔误
+ignore = ["E501", "B008", "RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+# main.py 在 app 实例创建后才注册路由，import 顺序是有意为之
+"src/app/main.py" = ["E402"]
+# __init__ 里的 re-export 属于公开接口
+"src/app/**/__init__.py" = ["F401"]
+# 引擎里 WHITE/GRAY/BLACK 这类常量沿用 DFS 惯例命名
+"src/app/core/engine/validators.py" = ["N806"]
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-q"
+markers = [
+    "slow: 需要外部网络或长时间运行的用例",
+]

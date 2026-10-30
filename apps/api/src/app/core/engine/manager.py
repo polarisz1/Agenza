@@ -1,7 +1,9 @@
 """RunManager - registry of in-flight runs, cancellation, concurrency gate."""
+
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -78,21 +80,17 @@ class RunManager:
             scheduler.request_cancel()
             try:
                 await asyncio.wait_for(asyncio.shield(task), timeout=_CANCEL_WAIT_SECONDS)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError, Exception):
                     await task
-                except (asyncio.CancelledError, Exception):  # noqa: BLE001
-                    pass
-            except Exception:  # noqa: BLE001
+            except Exception:
                 log.exception(f"Run {run_id} raised while cancelling")
             return True
 
         task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError, Exception):
             await task
-        except (asyncio.CancelledError, Exception):  # noqa: BLE001
-            pass
         return True
 
     def is_running(self, run_id: str) -> bool:
@@ -132,7 +130,7 @@ class RunManager:
         except asyncio.CancelledError:
             final_status = "cancelled"
             error = "Run cancelled"
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             final_status = "failed"
             error = str(exc)
             log.exception(f"Run {run_id} failed unexpectedly")
@@ -145,7 +143,7 @@ class RunManager:
         if on_run_finished:
             try:
                 await on_run_finished(run_id, final_status, error, duration_ms, total_tokens)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 log.exception(f"Run {run_id} finalize hook failed")
 
         await self._bus.publish(
@@ -164,9 +162,7 @@ class RunManager:
         self._schedulers.pop(run_id, None)
 
 
-def _summarize(
-    scheduler: Scheduler, results: dict[str, NodeResult]
-) -> tuple[str, str | None]:
+def _summarize(scheduler: Scheduler, results: dict[str, NodeResult]) -> tuple[str, str | None]:
     """根据节点结果汇总运行状态。"""
     if scheduler.cancelled:
         return "cancelled", "Run cancelled"

@@ -1,4 +1,5 @@
 """Kahn topological scheduler - runs DAG layer by layer."""
+
 from __future__ import annotations
 
 import asyncio
@@ -116,8 +117,12 @@ class Scheduler:
         # 节点被禁用 → 直接跳过
         if config.get("enabled") is False:
             await self._finish(
-                node_id, node, NodeResult(status="skipped", error="Node disabled"),
-                0, results, on_node_finished,
+                node_id,
+                node,
+                NodeResult(status="skipped", error="Node disabled"),
+                0,
+                results,
+                on_node_finished,
             )
             return
 
@@ -134,25 +139,34 @@ class Scheduler:
                 # If any upstream is skipped/cancelled and this isn't a merge, skip
                 if node_type != "merge":
                     await self._finish(
-                        node_id, node,
+                        node_id,
+                        node,
                         NodeResult(status="skipped", error=f"Upstream {pid} {prev.status}"),
-                        0, results, on_node_finished,
+                        0,
+                        results,
+                        on_node_finished,
                     )
                     return
             elif prev.status == "failed":
                 await self._finish(
-                    node_id, node,
+                    node_id,
+                    node,
                     NodeResult(status="skipped", error=f"Upstream {pid} failed"),
-                    0, results, on_node_finished,
+                    0,
+                    results,
+                    on_node_finished,
                 )
                 return
 
         executor = registry.get(node_type)
         if executor is None:
             await self._finish(
-                node_id, node,
+                node_id,
+                node,
                 NodeResult(status="failed", error=f"No executor registered for type '{node_type}'"),
-                0, results, on_node_finished,
+                0,
+                results,
+                on_node_finished,
             )
             return
 
@@ -188,7 +202,12 @@ class Scheduler:
         duration_ms = int((time.perf_counter() - started) * 1000)
 
         await self._finish(
-            node_id, node, result, duration_ms, results, on_node_finished,
+            node_id,
+            node,
+            result,
+            duration_ms,
+            results,
+            on_node_finished,
         )
 
     async def _execute_node(
@@ -208,13 +227,13 @@ class Scheduler:
 
                     try:
                         result = await asyncio.wait_for(executor.execute(ctx), timeout=timeout)
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         result = NodeResult(
                             status="failed", error=f"Node timed out after {timeout}s"
                         )
                     except asyncio.CancelledError:
                         return NodeResult(status="cancelled", error="Run cancelled")
-                    except Exception as exc:  # noqa: BLE001
+                    except Exception as exc:
                         result = NodeResult(status="failed", error=str(exc))
 
                     if result.status != "failed" or attempt > retry:
@@ -304,5 +323,5 @@ async def _safe_call(func, *args) -> None:
         result = func(*args)
         if asyncio.iscoroutine(result):
             await result
-    except Exception:  # noqa: BLE001
+    except Exception:
         log.exception("Engine callback failed")

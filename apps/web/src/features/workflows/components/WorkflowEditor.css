@@ -16,7 +16,7 @@
   --afe-warn: #a86612;
   --afe-danger: #b03a3a;
   --afe-info: #3d5a80;
-  --afe-mono: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, monospace;
+  --afe-mono: ui-monospace, SFMono-Regular, 'Cascadia Mono', Consolas, monospace;
 
   height: calc(100vh - 112px);
   display: flex;
@@ -118,7 +118,10 @@
   font-size: 12.5px;
   cursor: pointer;
   white-space: nowrap;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
 }
 .afe-btn:hover:not(:disabled) {
   border-color: var(--afe-brand-400);
@@ -576,7 +579,7 @@
   transition: background 0.15s;
 }
 .afe-switch::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 2px;
   left: 2px;

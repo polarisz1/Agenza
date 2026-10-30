@@ -1,7 +1,6 @@
 """HTTP executor - asyncio-friendly HTTP requests via httpx."""
-from __future__ import annotations
 
-import asyncio
+from __future__ import annotations
 
 import httpx
 
@@ -21,9 +20,7 @@ class HttpExecutor(BaseExecutor):
         timeout = config.get("timeout_s", 30)
 
         try:
-            async with httpx.AsyncClient(
-                timeout=timeout, trust_env=trust_env_for(url)
-            ) as client:
+            async with httpx.AsyncClient(timeout=timeout, trust_env=trust_env_for(url)) as client:
                 if method == "GET":
                     resp = await client.get(url, headers=headers)
                 elif method == "POST":
@@ -44,6 +41,7 @@ class HttpExecutor(BaseExecutor):
         text = resp.text
         try:
             import json
+
             body_out = json.loads(text)
         except Exception:
             body_out = text

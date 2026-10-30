@@ -1,4 +1,5 @@
 """Variable resolver: {{ source.field.path }} → actual value."""
+
 from __future__ import annotations
 
 import json
@@ -53,7 +54,9 @@ def resolve(template: str, scope: dict[str, Any]) -> str:
         path = parts[1] if len(parts) > 1 else None
 
         # Workflow inputs take precedence
-        data = scope.get("inputs") if source_key in scope.get("inputs", {}) else scope.get(source_key)
+        data = (
+            scope.get("inputs") if source_key in scope.get("inputs", {}) else scope.get(source_key)
+        )
         if data is None:
             raise VariableError(f"Unknown variable source: '{source_key}'")
 

@@ -1,4 +1,5 @@
 """Merge executor - combines multiple upstream outputs."""
+
 from __future__ import annotations
 
 from app.core.engine.contexts import NodeContext, NodeResult
@@ -14,7 +15,7 @@ class MergeExecutor(BaseExecutor):
 
         # Collect all upstream results that are success
         outputs = []
-        for nid, out in ctx.upstream.items():
+        for _nid, out in ctx.upstream.items():
             outputs.append(out)
 
         if strategy == "all":

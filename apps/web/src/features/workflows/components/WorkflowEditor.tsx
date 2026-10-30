@@ -216,10 +216,7 @@ function EditorInner() {
     return () => window.removeEventListener('beforeunload', handler);
   }, [dirty]);
 
-  const issueIds = useMemo(
-    () => new Set(issues.map((i) => i.node_id).filter(Boolean)),
-    [issues],
-  );
+  const issueIds = useMemo(() => new Set(issues.map((i) => i.node_id).filter(Boolean)), [issues]);
 
   // 把运行态 / 校验态叠加到节点数据上；未变化节点保持原引用，避免全量重渲染
   const runtimeNodes = useMemo<EditorNode[]>(() => {
@@ -420,7 +417,9 @@ function EditorInner() {
             onChange={(e) => setName(e.target.value)}
             aria-label="工作流名称"
           />
-          <span className={status === 'ready' ? 'afe-tag afe-tag--success' : 'afe-tag afe-tag--draft'}>
+          <span
+            className={status === 'ready' ? 'afe-tag afe-tag--success' : 'afe-tag afe-tag--draft'}
+          >
             {status === 'ready' ? '就绪' : '草稿'}
           </span>
 
@@ -551,9 +550,7 @@ function EditorInner() {
                       {issue.code}
                     </span>
                     <span className="afe-issue-msg">{issue.message}</span>
-                    {issue.node_id && (
-                      <span className="afe-dim">{nameOf(issue.node_id)}</span>
-                    )}
+                    {issue.node_id && <span className="afe-dim">{nameOf(issue.node_id)}</span>}
                   </button>
                 ))}
               </div>
@@ -567,11 +564,7 @@ function EditorInner() {
           )}
         </main>
 
-        <PropertyPanel
-          variables={variables}
-          latestOutputs={latestOutputs}
-          onDebug={handleDebug}
-        />
+        <PropertyPanel variables={variables} latestOutputs={latestOutputs} onDebug={handleDebug} />
       </div>
 
       <RunDrawer

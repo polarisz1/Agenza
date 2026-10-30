@@ -1,11 +1,11 @@
 """Workflow Pydantic v2 schemas - OpenAPI single source of truth."""
+
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
-
+from pydantic import BaseModel, Field
 
 WorkflowStatus = Literal["draft", "ready"]
 

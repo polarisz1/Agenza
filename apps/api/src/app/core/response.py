@@ -1,14 +1,15 @@
 """Unified response helpers."""
+
 from __future__ import annotations
 
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
 T = TypeVar("T")
 
 
-class ApiResponse(BaseModel, Generic[T]):
+class ApiResponse[T](BaseModel):
     """统一响应信封 - 作为 FastAPI response_model 的单一事实源。"""
 
     code: int = 200

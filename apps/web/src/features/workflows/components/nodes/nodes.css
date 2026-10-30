@@ -9,7 +9,9 @@
   color: #1b1c1a;
   font-size: 12.5px;
   text-align: left;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .afn--selected {
@@ -89,7 +91,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, monospace;
+  font-family: ui-monospace, SFMono-Regular, 'Cascadia Mono', Consolas, monospace;
 }
 
 .afn-kind {
