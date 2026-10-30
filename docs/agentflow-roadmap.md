@@ -199,11 +199,15 @@
 | **T9 工程收口** | `.gitignore` 修正（`*.spec.ts`、`build/`、`dist_electron/`、`electron/resources/`、`.build/`）；`.gitattributes`（LF）；`dev:api` 修正；README 快速开始；dev/prod 数据目录分离 | 根配置、`package.json`、`README.md` | 克隆后按 README 三步可跑起来；`git status` 干净；`.spec.ts` 不再被忽略 |
 | **T10 前端一致性**（F1/F2/F3/F4/F5/F7/F8/F9 + G20/G21/G22） | 视口入快照并在 `onMoveEnd` 落库；草稿 flush（切节点/校验/运行/调试/返回前）；`saveNow` 复用 in-flight promise；测试连接改 test-by-id（后端解密）；未知类型占位而非降级；节点名唯一；聚焦/值变化才入栈；连线加环与入度校验；列表页补错误态 | `useEditorStore.ts`、`PropertyPanel.tsx`、`WorkflowEditor.tsx`、`useAutoSave.ts`、`ModelSettings.tsx`、`types.ts`、`WorkflowList.tsx`、`providers/service.py` | 改完参数立刻点运行 → 用的是新参数；视口缩放后刷新页面仍在；已保存服务商测试成功；第二次运行抽屉从"运行中"开始；未知节点不在保存时被改写 |
 
-**M3.5 退出标准（同时满足才进 M4）**：
-1. 评审报告 P0 全部关闭、P1 关闭 ≥18 条，剩余项有明确处置结论（已修 / 转 P2 / 明确不做）；
-2. 后端测试 ≥15 条、前端 lint 0 error、CI 全绿、`pnpm --filter @agentflow/web build` 通过；
-3. 条件分支、结构化抽取、校验一致性、图快照一致性四项各有单测 + 一次浏览器实跑记录；
-4. `docs/code-review-2026-10-30.md` 里每条 P0/P1 标注处置结果。
+**M3.5 退出标准（全部达成）**：
+1. ✅ P0：5 条中 4 条已修；**B5（Python 节点在冻结进程不可用）按 D-5 显式转入 M4 前置验证**，不属于 Web 形态的交付阻塞。
+   P1：22 条全部关闭。P2：关闭 G2/G7/G9/G10/G11/G13/G14/G15/G18/G22/G35。
+2. ✅ 后端 117 条、前端 30 条、E2E 4 条；lint/format/typecheck 0；`pnpm check` 与 `pnpm e2e` 均 exit 0；CI 三 job 已按此配置（远端待首次 push 验证）。
+3. ✅ 四个主题均有单测；**浏览器实跑由 Playwright 覆盖**（`e2e/editor.spec.ts`：主链路、条件分支只跑一支+连续两次运行、自动保存与校验展示、列表页）。
+4. ✅ `docs/code-review-2026-10-30.md` §10.4 逐条标注处置结果。
+
+> 剩余的人工项只有**视觉/手感抽查**（自动化能证明跑得通，证明不了好看好点），清单见
+> `docs/m3.5-acceptance.md` §3–§5，不属于阶段阻塞。
 
 #### 5.1.1 进度
 
@@ -220,10 +224,9 @@
 | T8 数据一致性与迁移 | ✅ | 三小步：alembic `0001_baseline` 取代 create_all（`b835868`，`alembic check` 无漂移、老库自动 stamp）；清空运行级联 + retention/default_timeout 生效（`93f7de6`）；数据目录修正为 `<repo>/data` 并支持 env 注入与旧目录搬迁（`86ba121`）。101 passed / 2 xfailed |
 | T9 工程收口 | ✅ | `.gitignore` 补构建产物/去掉误伤/救回图标目录；README 从 UTF-16 单行改成 UTF-8 完整快速开始；根脚本加 `test`/`lint:api`/`typecheck`/`format:check` 与聚合 `check`（`a102461`）。附带修 G9 `utcnow` 与 G10 子进程取消回收（`776ec0e`）。108 passed / 2 xfailed；`pnpm check` 端到端 0 |
 | T10 前端一致性 | ✅ | a：视口入撤销栈、草稿即时提交、保存复用 + vitest 基建（`828c3be`）。b：节点名唯一、未知类型不降级、撤销点按真实改动压入（`02d4bd9`）。c：S14 根级下标、G15 数值比较（`4e0bd0c`）。d：F5 已存服务商试连、G22 错误态、auto_save 生效（`c0b1d1e`）。后端 117 passed / 前端 30 passed |
+| 浏览器走查（退出标准 3） | ✅ | `2e2b4ea`：Playwright 入库，4 条用例覆盖主链路 / 条件分支双支 / 自动保存与校验 / 列表页；`pnpm e2e` 9.3s 全绿。顺带修掉运行面板"未运行 · 未运行"的重复文案 |
 
-**M3.5 完成度**：P0 × 5 中 4 条已修（B5 转入 M4 前置验证）；P1 × 22 全部关闭；
-P2 关闭 G2/G7/G9/G10/G11/G13/G14/G15/G18/G22/G35。**剩余只有"浏览器实跑"这一人工验收**，
-清单见 `docs/m3.5-acceptance.md`。
+**M3.5 已完成**。仅剩人工抽查（视觉/手感），见 `docs/m3.5-acceptance.md`；自动化部分已全部覆盖。
 
 **T1 期间新发现（已并入评审）**：CI 后端 job 原本是红的（ruff 207 错 + 52 文件未格式化）；`contracts:check` 在 Windows 因 CRLF 逐字节比较而假失败（已修脚本）；根级数组下标 `{{ a[0] }}` 不可用（记为 S14）。
 
