@@ -8,7 +8,7 @@ import httpx
 from sqlalchemy.orm import Session
 
 from app.core.providers.anthropic_compat import AnthropicCompatProvider
-from app.core.providers.base import describe_http_error
+from app.core.providers.base import ProviderAdapter, describe_http_error
 from app.core.providers.ollama import OllamaProvider
 from app.core.providers.openai_compat import OpenAICompatProvider
 from app.core.security import KeyDecryptError, KeyManager
@@ -107,26 +107,53 @@ class ProviderService:
 
     @staticmethod
     async def test(body: ProviderCreate) -> ProviderTestResult:
+        """用表单里填的明文密钥测（保存前试连）。"""
         adapter = _adapter(body.kind, body.base_url, body.api_key, body.default_model)
         if not adapter:
             return ProviderTestResult(ok=False, message=f"Unsupported kind: {body.kind}")
+        return await _probe(adapter, body.default_model)
+
+    @staticmethod
+    async def test_saved(session: Session, pid: str) -> ProviderTestResult | None:
+        """用库里已保存的配置（含解密后的密钥）测（评审 F5）。
+
+        此前前端"测试连接"不带密钥，已保存的服务商必然返回鉴权失败。
+        """
+        provider = ProviderRepository.get(session, pid)
+        if provider is None:
+            return None
+
         try:
-            result = await adapter.chat(
-                model=body.default_model,
-                system="",
-                user="ping",
-                temperature=0,
-                max_tokens=8,
+            api_key = KeyManager.decrypt(provider.api_key_enc)
+        except KeyDecryptError:
+            return ProviderTestResult(
+                ok=False, message="密钥无法解密（主密钥可能已更换），请重新填写 API Key"
             )
-            return ProviderTestResult(ok=True, message="Connection OK", model=result.model)
-        except httpx.HTTPStatusError as exc:
-            return ProviderTestResult(ok=False, message=describe_http_error(exc))
-        except httpx.TimeoutException:
-            return ProviderTestResult(ok=False, message="连接超时：服务地址无响应")
-        except httpx.ConnectError:
-            return ProviderTestResult(ok=False, message="无法连接到服务地址：请检查地址与网络")
-        except Exception as exc:
-            return ProviderTestResult(ok=False, message=str(exc))
+
+        adapter = _adapter(provider.kind, provider.base_url, api_key, provider.default_model)
+        if not adapter:
+            return ProviderTestResult(ok=False, message=f"Unsupported kind: {provider.kind}")
+        return await _probe(adapter, provider.default_model)
+
+
+async def _probe(adapter: ProviderAdapter, model: str | None) -> ProviderTestResult:
+    try:
+        result = await adapter.chat(
+            model=model,
+            system="",
+            user="ping",
+            temperature=0,
+            max_tokens=8,
+        )
+        return ProviderTestResult(ok=True, message="Connection OK", model=result.model)
+    except httpx.HTTPStatusError as exc:
+        return ProviderTestResult(ok=False, message=describe_http_error(exc))
+    except httpx.TimeoutException:
+        return ProviderTestResult(ok=False, message="连接超时：服务地址无响应")
+    except httpx.ConnectError:
+        return ProviderTestResult(ok=False, message="无法连接到服务地址：请检查地址与网络")
+    except Exception as exc:
+        return ProviderTestResult(ok=False, message=str(exc))
 
 
 def _to_response(p: Provider) -> ProviderResponse:

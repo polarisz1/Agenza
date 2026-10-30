@@ -10,10 +10,11 @@ const AUTO_SAVE_DELAY = 2000;
  * 自动保存：内容变更后 2s 无新输入 → PUT /api/workflows/{id}。
  * 保存失败保留 dirty，由工具栏"保存失败 · 重试"手动触发。
  *
+ * `enabled` 来自设置页的「自动保存」开关；关闭后只有手动保存（Ctrl+S / 按钮）生效。
  * `saveNow` 可被校验/运行/调试/返回列表复用：并发调用会**共享同一个进行中的请求**，
  * 而不是第二个调用直接返回 false（后者会被上层误判成"保存失败"）。
  */
-export function useAutoSave(workflowId: string | null, delay = AUTO_SAVE_DELAY) {
+export function useAutoSave(workflowId: string | null, delay = AUTO_SAVE_DELAY, enabled = true) {
   const dirty = useEditorStore((s) => s.dirty);
   const rev = useEditorStore((s) => s.rev);
   const saveState = useEditorStore((s) => s.saveState);
@@ -55,7 +56,7 @@ export function useAutoSave(workflowId: string | null, delay = AUTO_SAVE_DELAY) 
   }, [doSave]);
 
   useEffect(() => {
-    if (!workflowId || !dirty) return;
+    if (!enabled || !workflowId || !dirty) return;
     // 保存失败后不自动重试，避免无限请求；由用户点“重试”
     if (saveState === 'saving' || saveState === 'error') return;
 
@@ -63,7 +64,7 @@ export function useAutoSave(workflowId: string | null, delay = AUTO_SAVE_DELAY) 
       void saveNow();
     }, delay);
     return () => window.clearTimeout(timer);
-  }, [workflowId, dirty, rev, saveState, delay, saveNow]);
+  }, [enabled, workflowId, dirty, rev, saveState, delay, saveNow]);
 
   return { saveNow };
 }

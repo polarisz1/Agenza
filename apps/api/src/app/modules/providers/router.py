@@ -32,7 +32,17 @@ def create_provider(body: ProviderCreate, session: Session = Depends(get_session
 
 @router.post("/test", response_model=ApiResponse[ProviderTestResult])
 async def test_provider(body: ProviderCreate):
+    """保存前试连：用请求体里的明文密钥。"""
     return success(await ProviderService.test(body))
+
+
+@router.post("/{pid}/test", response_model=ApiResponse[ProviderTestResult])
+async def test_saved_provider(pid: str, session: Session = Depends(get_session)):
+    """已保存服务商的试连：用库里存的配置（后端负责解密密钥）。"""
+    result = await ProviderService.test_saved(session, pid)
+    if result is None:
+        raise AppError(404, "Provider not found")
+    return success(result)
 
 
 @router.get("/{pid}", response_model=ApiResponse[ProviderResponse])

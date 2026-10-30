@@ -20,6 +20,7 @@ import { useRunStream } from '@/features/runs/hooks/useRunStream';
 import {
   cancelWorkflowRun,
   createWorkflow,
+  getEditorPreferences,
   getLatestRunNodeOutputs,
   getWorkflow,
   runWorkflow,
@@ -89,7 +90,21 @@ function EditorInner() {
   const beginHistory = useEditorStore((s) => s.beginHistory);
   const loadWorkflow = useEditorStore((s) => s.load);
 
-  const { saveNow } = useAutoSave(workflowId);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  // 设置页的「自动保存」开关决定是否防抖落库；读不到就按开启处理（保持旧行为）
+  useEffect(() => {
+    let cancelled = false;
+    getEditorPreferences()
+      .then((prefs) => {
+        if (!cancelled) setAutoSaveEnabled(prefs.autoSave);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const { saveNow } = useAutoSave(workflowId, undefined, autoSaveEnabled);
 
   const [runId, setRunId] = useState<string | null>(null);
   const [issues, setIssues] = useState<ValidateIssue[]>([]);

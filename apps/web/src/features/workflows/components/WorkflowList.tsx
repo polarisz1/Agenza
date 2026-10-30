@@ -1,4 +1,15 @@
-import { Button, Dropdown, Input, Select, Table, Tag, Space, Popconfirm, message } from 'antd';
+import {
+  Alert,
+  Button,
+  Dropdown,
+  Input,
+  Select,
+  Table,
+  Tag,
+  Space,
+  Popconfirm,
+  message,
+} from 'antd';
 import {
   PlusOutlined,
   SearchOutlined,
@@ -19,15 +30,21 @@ export default function WorkflowList() {
   const [items, setItems] = useState<WorkflowListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<string>('');
   const [sort, setSort] = useState<string>('updated_desc');
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await listWorkflows(q || undefined, status || undefined, sort);
       setItems(data);
+    } catch (err: any) {
+      // 以前只有 try/finally：接口失败会变成空表 + unhandled rejection（G22）
+      setLoadError(err?.message || '加载工作流失败');
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -127,6 +144,21 @@ export default function WorkflowList() {
           </Dropdown>
         </Space>
       </div>
+
+      {loadError && (
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginBottom: 12 }}
+          message="加载工作流失败"
+          description={loadError}
+          action={
+            <Button size="small" onClick={() => void load()}>
+              重试
+            </Button>
+          }
+        />
+      )}
 
       <Table
         rowKey="id"

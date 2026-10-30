@@ -122,3 +122,24 @@ export async function importWorkflows(
 ): Promise<WorkflowImportResult> {
   return http.post<WorkflowImportResult>('/api/workflows/import', { payload, confirm });
 }
+
+export interface EditorPreferences {
+  /** 编辑时是否自动保存（对应设置页的「自动保存」开关） */
+  autoSave: boolean;
+}
+
+/** 把后端设置映射成编辑器偏好；缺省或异常一律按"开启"处理（保持旧行为）。 */
+export function toEditorPreferences(settings: { auto_save?: unknown } | null): EditorPreferences {
+  return { autoSave: settings?.auto_save !== false };
+}
+
+/**
+ * 读取编辑器偏好。
+ *
+ * 放在本 feature 自己的 api 层，避免直接 import `features/settings/api`
+ * （AGENTS §3.1 禁止 feature 之间互相依赖）。
+ */
+export async function getEditorPreferences(): Promise<EditorPreferences> {
+  const settings = await http.get<components['schemas']['SettingsResponse']>('/api/settings');
+  return toEditorPreferences(settings);
+}

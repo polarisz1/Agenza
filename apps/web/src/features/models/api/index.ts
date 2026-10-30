@@ -28,3 +28,8 @@ export async function deleteProvider(id: string): Promise<void> {
 export async function testProvider(body: ProviderCreate): Promise<ProviderTestResult> {
   return http.post<ProviderTestResult>('/api/providers/test', body);
 }
+
+/** 测试已保存的服务商：密钥由后端从库里解密，前端不接触明文（F5）。 */
+export async function testProviderById(id: string): Promise<ProviderTestResult> {
+  return http.post<ProviderTestResult>(`/api/providers/${id}/test`);
+}

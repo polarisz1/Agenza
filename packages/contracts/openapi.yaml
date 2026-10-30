@@ -662,6 +662,7 @@ paths:
       tags:
       - providers
       summary: Test Provider
+      description: 保存前试连：用请求体里的明文密钥。
       operationId: test_provider_api_providers_test_post
       requestBody:
         content:
@@ -669,6 +670,33 @@ paths:
             schema:
               $ref: '#/components/schemas/ProviderCreate'
         required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ProviderTestResult_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/providers/{pid}/test:
+    post:
+      tags:
+      - providers
+      summary: Test Saved Provider
+      description: 已保存服务商的试连：用库里存的配置（后端负责解密密钥）。
+      operationId: test_saved_provider_api_providers__pid__test_post
+      parameters:
+      - name: pid
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Pid
       responses:
         '200':
           description: Successful Response

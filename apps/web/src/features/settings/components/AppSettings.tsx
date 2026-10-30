@@ -28,6 +28,7 @@ import type { SettingsResponse, SystemInfo, WorkflowImportResult } from '../api'
 export default function AppSettings() {
   const [, setSettings] = useState<SettingsResponse | null>(null);
   const [info, setInfo] = useState<SystemInfo | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [form] = Form.useForm();
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -36,10 +37,16 @@ export default function AppSettings() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
-    const [s, i] = await Promise.all([getSettings(), getSystemInfo()]);
-    setSettings(s);
-    setInfo(i);
-    form.setFieldsValue(s);
+    setLoadError(null);
+    try {
+      const [s, i] = await Promise.all([getSettings(), getSystemInfo()]);
+      setSettings(s);
+      setInfo(i);
+      form.setFieldsValue(s);
+    } catch (err: any) {
+      // 以前完全没有 catch：接口失败会静默留空表单 + unhandled rejection（G22）
+      setLoadError(err?.message || '加载设置失败');
+    }
   }, [form]);
 
   useEffect(() => {
@@ -91,6 +98,19 @@ export default function AppSettings() {
 
   return (
     <div style={{ display: 'grid', gap: 20 }}>
+      {loadError && (
+        <Alert
+          type="error"
+          showIcon
+          message="加载设置失败"
+          description={loadError}
+          action={
+            <Button size="small" onClick={() => void load()}>
+              重试
+            </Button>
+          }
+        />
+      )}
       <Card title="本机设置">
         <Form
           form={form}

@@ -306,8 +306,31 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Test Provider */
+        /**
+         * Test Provider
+         * @description 保存前试连：用请求体里的明文密钥。
+         */
         post: operations["test_provider_api_providers_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/providers/{pid}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Saved Provider
+         * @description 已保存服务商的试连：用库里存的配置（后端负责解密密钥）。
+         */
+        post: operations["test_saved_provider_api_providers__pid__test_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2371,6 +2394,37 @@ export interface operations {
                 "application/json": components["schemas"]["ProviderCreate"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ProviderTestResult_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_saved_provider_api_providers__pid__test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

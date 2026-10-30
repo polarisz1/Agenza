@@ -19,7 +19,7 @@ import {
   createProvider,
   updateProvider,
   deleteProvider,
-  testProvider,
+  testProviderById,
 } from '../api';
 import type { ProviderResponse } from '../api';
 
@@ -95,17 +95,16 @@ export default function ModelSettings() {
                   onClick={async () => {
                     setTesting(true);
                     try {
-                      const res = await testProvider({
-                        kind: r.kind,
-                        name: r.name,
-                        base_url: r.base_url,
-                        default_model: r.default_model,
-                      });
-                      message.success(
-                        res.ok
-                          ? `连接成功${res.model ? `（${res.model}）` : ''}`
-                          : `连接失败：${res.message}`,
-                      );
+                      // 已保存的服务商按 id 测试：后端用库里解密的密钥，
+                      // 前端不需要（也不应该）拿到明文（F5）
+                      const res = await testProviderById(r.id);
+                      if (res.ok) {
+                        message.success(`连接成功${res.model ? `（${res.model}）` : ''}`);
+                      } else {
+                        message.error(`连接失败：${res.message}`);
+                      }
+                    } catch (err: any) {
+                      message.error(err?.message || '测试失败');
                     } finally {
                       setTesting(false);
                     }
