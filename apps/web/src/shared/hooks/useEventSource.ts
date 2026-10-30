@@ -35,6 +35,8 @@ export function useEventSource({
   const handlerRef = useRef(onEvent);
   handlerRef.current = onEvent;
   const lastIdRef = useRef<string | null>(null);
+  // 记录 lastId 属于哪个 url：换了 run 就必须重置游标
+  const lastUrlRef = useRef<string | null>(null);
 
   // events 数组每次渲染都是新引用，用字符串固化依赖
   const eventKey = events.join(',');
@@ -42,6 +44,14 @@ export function useEventSource({
 
   useEffect(() => {
     if (!enabled || !url) return;
+
+    // 切换到另一次运行（url 变化）时清空游标：
+    // 否则新连接会带上一次运行的 seq，后端按 last_event_id 过滤后
+    // 会把新运行的 run.started 等前段事件全部丢掉（抽屉停在"未运行"）。
+    if (lastUrlRef.current !== url) {
+      lastIdRef.current = null;
+      lastUrlRef.current = url;
+    }
 
     const names = eventKey.split(',').filter(Boolean);
     const stops = doneKey.split(',').filter(Boolean);
