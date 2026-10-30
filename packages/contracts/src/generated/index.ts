@@ -262,9 +262,13 @@ export interface paths {
          * Run Events
          * @description SSE - 实时推送 run 事件。
          *
-         *     - 连接时先回放内存事件历史（按 Last-Event-ID 补齐），
-         *     - 内存无历史（如后端重启）时回放已落库的 node_run，
+         *     - 先回放内存事件历史（按 Last-Event-ID 补齐）；
+         *     - 内存里完全没有这次运行的历史（如后端重启）时，用已落库的 node_run 兜底回放，
+         *       并给回放事件补上单调递增的 seq；
          *     - 之后持续订阅 EventBus 直到 run 结束。
+         *
+         *     注意：这里**不**用 `Depends(get_session)`。请求级 Session 会一直被这条长连接占着，
+         *     多个 SSE 客户端就能把连接池吃干。存在性检查用完即关。
          */
         get: operations["run_events_api_runs__run_id__events_get"];
         put?: never;
