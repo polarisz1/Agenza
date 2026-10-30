@@ -56,9 +56,11 @@ def test_plain_text_untouched() -> None:
     assert resolve("no variables here", SCOPE) == "no variables here"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="S14：根级数组下标 {{ a[0] }} 无法解析（PRD §5.4 要求支持 [0] 下标）",
-)
 def test_resolve_root_level_array_index() -> None:
+    """S14 回归：根级下标 {{ arr[0] }} 也要能解析（PRD §5.4）。"""
     assert resolve("{{ arr[0] }}", {"arr": [10, 20]}) == "10"
+    assert resolve("{{ arr[1] }}", {"arr": [10, 20]}) == "20"
+
+
+def test_resolve_index_then_field() -> None:
+    assert resolve("{{ arr[0].c }}", {"arr": [{"c": 5}]}) == "5"

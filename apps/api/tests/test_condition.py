@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.core.engine.contexts import NodeContext
 from app.core.engine.executors.condition import ConditionExecutor
 
@@ -74,12 +72,22 @@ async def test_unresolvable_variable_fails_with_clear_error() -> None:
     assert "Variable resolution error" in (result.error or "")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="G15：condition._coerce 是空实现，字符串数字与整数比较会抛 TypeError",
-)
-async def test_numeric_comparison_with_string_number() -> None:
+async def test_numeric_string_vs_number() -> None:
+    """G15 回归：变量插值出来的是字符串，"10" 与 9 比较不能抛 TypeError。"""
     result = await run_condition(left="10", op="gt", right=9)
 
     assert result.status == "success"
+    assert result.output["condition"] is True
+
+
+async def test_numeric_equivalence_across_types() -> None:
+    result = await run_condition(left="1.50", op="eq", right="1.5")
+
+    assert result.output["condition"] is True
+
+
+async def test_contains_is_not_numeric_coerced() -> None:
+    """ "2" in "123" 必须仍然成立，不能被数值化破坏。"""
+    result = await run_condition(left="123", op="contains", right="2")
+
     assert result.output["condition"] is True

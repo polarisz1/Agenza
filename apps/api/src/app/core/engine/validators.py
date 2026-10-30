@@ -81,11 +81,15 @@ def validate_variables(nodes: list[dict]) -> list[dict]:
         for text in _iter_strings(node.get("config", {})):
             for match in _VAR_PATTERN.finditer(text):
                 raw = match.group(1)
-                parts = re.split(r"[.\[]", raw, maxsplit=1)
-                source = parts[0]
+                # 源名里不能有点或方括号（`a[0]` 的源是 `a`，下标交给路径解析）
+                parsed = re.match(r"^([^.\[\]]+)(.*)$", raw)
+                if parsed is None:
+                    continue
+                source, rest = parsed.group(1), parsed.group(2)
+                # 只有"字段访问"才做字段校验；`[0]` 这类下标无法静态推断，跳过
                 field = ""
-                if len(parts) > 1:
-                    field = re.split(r"[.\[]", parts[1], maxsplit=1)[0]
+                if rest.startswith("."):
+                    field = re.split(r"[.\[]", rest[1:], maxsplit=1)[0]
 
                 if source not in by_source:
                     if (node_id, source) not in seen:

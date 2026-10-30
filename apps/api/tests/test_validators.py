@@ -219,3 +219,18 @@ def test_input_node_only_exposes_its_key() -> None:
     issues = validate_graph(nodes, edges)["issues"]
 
     assert any(i["code"] == "UNKNOWN_FIELD" for i in issues)
+
+
+def test_array_index_reference_does_not_trigger_field_error() -> None:
+    """`{{ h.body[0] }}` 这类下标引用不应被误报成"未知字段"（S14 的校验侧）。"""
+    nodes = [
+        _node("i", "input", key="text"),
+        _node("h", "http", url="https://example.com"),
+        _node("o", "output", field="result", source="{{ h.body[0].id }}"),
+    ]
+    edges = [_edge("i", "h"), _edge("h", "o")]
+
+    codes = [i["code"] for i in validate_graph(nodes, edges)["issues"]]
+
+    assert "UNKNOWN_FIELD" not in codes
+    assert "UNKNOWN_VARIABLE" not in codes

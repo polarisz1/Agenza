@@ -40,18 +40,28 @@ def _stringify(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
 
 
+# 变量由「源」+「路径」组成；源不能含点或方括号，之后的部分都交给 _resolve_path。
+_SOURCE_PATTERN = re.compile(r"^([^.\[\]]+)(.*)$")
+
+
 def resolve(template: str, scope: dict[str, Any]) -> str:
     """
     Replace all {{ ... }} references with resolved values.
 
     scope keys: "inputs" (workflow-level), node names / node IDs → output.
+
+    支持 `{{ 节点.字段 }}`、`{{ 节点.list[0].字段 }}`，以及**根级下标** `{{ arr[0] }}`
+    （PRD §5.4；此前 `a[0]` 会被误当成源名，评审 S14）。
     """
 
     def _replace(match: re.Match) -> str:
         raw = match.group(1).strip()
-        parts = raw.split(".", 1)
-        source_key = parts[0]
-        path = parts[1] if len(parts) > 1 else None
+        parsed = _SOURCE_PATTERN.match(raw)
+        if parsed is None:
+            raise VariableError(f"Invalid variable reference: '{{{{ {raw} }}}}'")
+
+        source_key, rest = parsed.group(1), parsed.group(2)
+        path = rest.lstrip(".") if rest else ""
 
         # Workflow inputs take precedence
         data = (
