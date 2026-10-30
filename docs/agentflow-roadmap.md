@@ -213,8 +213,8 @@
 | T1 测试与门禁 | ✅ | `tsc -b` 0；`vite build` 成功；eslint 0；prettier 全通过；pytest **25 passed / 3 xfailed**；ruff check+format 0；CI 三 job 重写 |
 | T2 节点配置契约 | ✅ | 8 类 Node/Config schema 进 openapi；`GraphDef.nodes` 在 TS 侧是 8 类型联合；前端图类型全部从契约派生（`NodeType` 由联合反推），`features/workflows` 内 `as any` 归零；33 passed / 3 xfailed；contracts:check OK；8 节点 + 分支边端到端往返零丢失 |
 | T3 条件分支 | ✅ | 调度器按 `from_port` 分流（未激活支 skipped 并写明原因）；条件节点渲染真/假双端口、边带标签；校验新增 `CONDITION_EDGE_NO_PORT` / `CONDITION_BRANCH_UNUSED` 提示；端到端用例经真实引擎验证 run=success / 真支 success / 假支 skipped、SSE 带原因。42 passed / 3 xfailed |
-| T4 结构化抽取 | ⬜ 下一步 | `fields_text` 仍未参与 prompt 与结果校验 |
-| T5 校验语义 | ⬜ | — |
+| T4 结构化抽取 | ✅ | `fields_text` 解析为字段表并注入 system prompt；缺字段 = failed 且点名缺失字段；无字段时保持旧行为。新增 7 条单测，49 passed / 3 xfailed |
+| T5 校验语义 | ⬜ 下一步 | `ok` 仍只等于"无环"；变量只校验到源 |
 | T6 运行链健壮性 | ⬜ | — |
 | T7 Provider 适配 | ⬜ | 可独立开工 |
 | T8 数据一致性与迁移 | ⬜ | — |
