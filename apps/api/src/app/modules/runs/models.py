@@ -1,9 +1,8 @@
 """Run module."""
 
-from datetime import datetime
-
 from sqlalchemy import Column, DateTime, Integer, String, Text
 
+from app.core.time import utcnow
 from app.db.database import Base
 
 
@@ -18,7 +17,7 @@ class Run(Base):
     status = Column(String(20), default="running")  # running | success | failed | cancelled
     trigger = Column(String(20), default="manual")  # manual | debug | scheduled
     error = Column(Text, nullable=True)
-    started_at = Column(DateTime, default=datetime.utcnow, index=True)
+    started_at = Column(DateTime, default=utcnow, index=True)
     finished_at = Column(DateTime, nullable=True)
     duration_ms = Column(Integer, nullable=True)
     total_tokens = Column(Integer, default=0)

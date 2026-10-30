@@ -16,6 +16,7 @@ from app.core.engine.validators import BLOCKING_CODES, validate_graph
 from app.core.exceptions import AppError
 from app.core.logger import log
 from app.core.providers import get_providers_registry
+from app.core.time import utcnow
 from app.db.database import SessionLocal
 from app.modules.runs.models import NodeRun, Run
 from app.modules.runs.repository import RunRepository
@@ -102,7 +103,7 @@ class RunService:
             inputs_json=json.dumps(inputs or {}, ensure_ascii=False),
             status="running",
             trigger=trigger,
-            started_at=datetime.utcnow(),
+            started_at=utcnow(),
         )
         RunRepository.create(session, run)
 
@@ -266,7 +267,7 @@ def _make_node_started(run_id: str):
                         node_name=node_name,
                         status="running",
                         attempt=1,
-                        started_at=datetime.utcnow(),
+                        started_at=utcnow(),
                         duration_ms=0,
                     )
                 )
@@ -294,11 +295,11 @@ def _make_node_finished(run_id: str):
                         node_name=node.get("name") or node_id,
                         status=result.status,
                         attempt=1,
-                        started_at=datetime.utcnow(),
+                        started_at=utcnow(),
                     )
                     db.add(nr)
                 nr.status = result.status
-                nr.finished_at = datetime.utcnow()
+                nr.finished_at = utcnow()
                 nr.duration_ms = duration_ms
                 nr.tokens_in = result.tokens_in
                 nr.tokens_out = result.tokens_out
@@ -331,7 +332,7 @@ def _make_run_finished(run_id: str, workflow_id: str):
                     run_id,
                     status=status,
                     error=error,
-                    finished_at=datetime.utcnow(),
+                    finished_at=utcnow(),
                     duration_ms=duration_ms,
                     total_tokens=total_tokens,
                 )

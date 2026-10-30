@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from alembic import command
 from app.core.config import settings
 from app.core.logger import log
+from app.core.time import utcnow
 
 connect_args = {}
 if settings.effective_database_url.startswith("sqlite"):
@@ -111,13 +112,12 @@ def _upgrade_schema() -> None:
 
 def _mark_interrupted_runs() -> None:
     """后端重启后，之前处于 running 的运行不可能还在跑，统一标记失败。"""
-    from datetime import datetime
 
     from sqlalchemy import update
 
     from app.modules.runs.models import NodeRun, Run
 
-    now = datetime.utcnow()
+    now = utcnow()
     with SessionLocal() as session:
         session.execute(
             update(Run)

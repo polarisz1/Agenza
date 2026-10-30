@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import time
 
+import pytest
+
 from app.core.engine.contexts import NodeContext
 from app.core.engine.executors.python import PythonExecutor
 
@@ -84,3 +86,17 @@ async def test_empty_script_fails_fast() -> None:
 
     assert result.status == "failed"
     assert result.error == "Empty script"
+
+
+async def test_cancellation_propagates() -> None:
+    """外层取消（运行被取消 / 调度器超时）时异常原样抛出，子进程被回收。"""
+    import asyncio
+
+    task = asyncio.create_task(
+        PythonExecutor().execute(_ctx("import time\ntime.sleep(30)\nagentflow_result = {}\n"))
+    )
+    await asyncio.sleep(0.3)
+    task.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await task

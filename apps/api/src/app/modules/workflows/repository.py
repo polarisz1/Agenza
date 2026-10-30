@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime
 
 from sqlalchemy.orm import Session
 
+from app.core.time import utcnow
 from app.modules.workflows.models import Workflow
+
+# utcnow 用于 last_run_at
 
 
 class WorkflowRepository:
@@ -86,5 +88,5 @@ class WorkflowRepository:
         obj = session.get(Workflow, wf_id)
         if obj is None:
             return
-        obj.last_run_at = datetime.utcnow()
+        obj.last_run_at = utcnow()
         session.commit()

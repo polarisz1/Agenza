@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 
 import httpx
 from sqlalchemy.orm import Session
@@ -13,6 +12,7 @@ from app.core.providers.base import describe_http_error
 from app.core.providers.ollama import OllamaProvider
 from app.core.providers.openai_compat import OpenAICompatProvider
 from app.core.security import KeyDecryptError, KeyManager
+from app.core.time import utcnow
 from app.modules.providers.models import Provider
 from app.modules.providers.repository import ProviderRepository
 from app.modules.providers.schemas import (
@@ -64,7 +64,7 @@ class ProviderService:
             api_key_enc=key_enc,
             default_model=body.default_model,
             enabled=True,
-            created_at=datetime.utcnow(),
+            created_at=utcnow(),
         )
         created = ProviderRepository.create(session, obj)
         return _to_response(created)

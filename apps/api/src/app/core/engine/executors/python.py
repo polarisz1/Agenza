@@ -80,6 +80,11 @@ class PythonExecutor(BaseExecutor):
             except TimeoutError:
                 await _terminate(proc)
                 return NodeResult(status="failed", error=f"Script timed out after {timeout}s")
+            except asyncio.CancelledError:
+                # 外层取消（运行被取消 / 调度器超时）时也必须杀掉子进程，
+                # 否则脚本会继续在后台跑，占 CPU 并泄漏管道。
+                await _terminate(proc)
+                raise
 
             if proc.returncode != 0:
                 detail = _decode(stderr)[:500]

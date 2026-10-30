@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from sqlalchemy import Column, DateTime, String, Text
 
+from app.core.time import utcnow
 from app.db.database import Base
 
 
@@ -18,6 +17,6 @@ class Workflow(Base):
     status = Column(String(20), default="draft")  # draft | ready
     graph_json = Column(Text, nullable=False, default="{}")
     viewport_json = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
     last_run_at = Column(DateTime, nullable=True)
