@@ -219,11 +219,13 @@
 | T7 Provider 适配 | ✅ | Ollama 仅在 json 模式带 `format`；Anthropic 加 `tool_choice` 并解析 `tool_use`；密钥解密失败改为显式 `KeyDecryptError` + `UnusableProvider`（节点错误直接可读）。适配器新增 `transport` 注入，用 `httpx.MockTransport` 断言请求体。87 passed / 2 xfailed |
 | T8 数据一致性与迁移 | ✅ | 三小步：alembic `0001_baseline` 取代 create_all（`b835868`，`alembic check` 无漂移、老库自动 stamp）；清空运行级联 + retention/default_timeout 生效（`93f7de6`）；数据目录修正为 `<repo>/data` 并支持 env 注入与旧目录搬迁（`86ba121`）。101 passed / 2 xfailed |
 | T9 工程收口 | ✅ | `.gitignore` 补构建产物/去掉误伤/救回图标目录；README 从 UTF-16 单行改成 UTF-8 完整快速开始；根脚本加 `test`/`lint:api`/`typecheck`/`format:check` 与聚合 `check`（`a102461`）。附带修 G9 `utcnow` 与 G10 子进程取消回收（`776ec0e`）。108 passed / 2 xfailed；`pnpm check` 端到端 0 |
-| T10 前端一致性 | ◐ a 完成，b/c 待做 | T10-a：视口入撤销栈且用户缩放才置 dirty、草稿即时提交（切节点/校验/运行/调试/返回）、saveNow 复用在飞请求；引入 vitest（16 条前端用例）并接入 CI。`pnpm check` 端到端 0 |
+| T10 前端一致性 | ◐ a/b 完成，c 剩两项 | a：视口入撤销栈、草稿即时提交、保存复用 + 前端测试基建（`828c3be`）。b：节点名唯一、未知类型不降级（`unknown` + 原样写回）、撤销点按真实改动压入（`02d4bd9`）。c：S14 根级下标与 G15 数值比较已修（`4e0bd0c`）。后端 114 passed / **0 xfailed**；前端 26 passed |
 
-**T10 剩余**：
-- **b**：节点名唯一（F8）、未知节点类型不再降级成 `python`（F7）、撤销栈只在值真的变化时压入（F9）、列表/设置页补错误态（G22）
-- **c**：`auto_save` 设置生效、`{{ a[0] }}` 根级下标（S14）与 `_coerce` 数值比较（G15），并删掉对应 xfail
+**T10 剩余（收尾项）**：
+- F5：模型设置的"测试连接"没有把已存密钥发给后端，已保存的服务商测试必然鉴权失败
+- G22：列表页/设置页的加载失败没有错误态
+- `auto_save` 设置：前端写死 2s，需要读设置项
+- 完成后 M3.5 只剩"浏览器实跑"这一项人工验收
 
 **T1 期间新发现（已并入评审）**：CI 后端 job 原本是红的（ruff 207 错 + 52 文件未格式化）；`contracts:check` 在 Windows 因 CRLF 逐字节比较而假失败（已修脚本）；根级数组下标 `{{ a[0] }}` 不可用（记为 S14）。
 

@@ -327,8 +327,8 @@ Node 22.23.4 / pnpm 9.12.0 / Python 3.12.13（uv 管理），全部安装在 **E
 | S11 | 节点异常被吞 | ✅ 已修 | `8f38cbf`：`_guarded` 兜底 + 每层补漏 + 用例固定两层异常 |
 | S12 | 全 skipped 误判 cancelled | ✅ 已修 | `8f38cbf`：全 skipped 判 success，全 cancelled 才 cancelled |
 | S13 | `DATA_DIR` 少算一层 | ✅ 已修 | `86ba121`：`ROOT_DIR` 修正 + 默认 `<repo>/data` + 旧目录一次性搬迁（不覆盖、非默认目录不搬） |
-| S14 | 根级数组下标不可用 | ⬜ 待排 | `test_resolve_root_level_array_index` 以 xfail 守着 |
-| F1–F5、F7–F9 | 前端一致性问题 | ◐ 部分 | F1/F2/F3/F4 已修（`828c3be`）；F5（测试连接不带密钥）、F7/F8/F9 待做 |
+| S14 | 根级数组下标不可用 | ✅ 已修 | `4e0bd0c`：源/路径重新切分，`{{ arr[0] }}` 与 `{{ arr[0].c }}` 可用；校验侧不再误报字段 |
+| F1–F5、F7–F9 | 前端一致性问题 | ◐ 部分 | F1/F2/F3/F4（`828c3be`）、F7/F8/F9（`02d4bd9`）已修；仅 F5（测试连接不带密钥）待做 |
 | F6 | SSE 游标跨运行复用 | ✅ 已修 | `6a6d66f`：url 变化即重置 last_event_id（浏览器复验待做） |
 | G7 | `wf_id` 可空路径参数 | ✅ 已修 | `f6860cd` |
 | G9 | `datetime.utcnow()` 弃用 | ✅ 已修 | `776ec0e`：`core/time.py::utcnow()`（naive UTC），12 处收口 |
@@ -336,7 +336,7 @@ Node 22.23.4 / pnpm 9.12.0 / Python 3.12.13（uv 管理），全部安装在 **E
 | G11 | `.gitignore` 漏项与误伤 | ✅ 已修 | `a102461`：补构建产物、`*.spec` 替换、`!electron/build/` |
 | G13 | `dev:api` 不跨平台 | ✅ 已修 | `a102461`：`uv run --directory apps/api` |
 | G14 | README 只有一行且是 UTF-16 | ✅ 已修 | `a102461`：转 UTF-8 并写清快速开始/命令/文档索引 |
-| G15 | `condition._coerce` 空实现 | ⬜ 待排 | xfail 守着 |
+| G15 | `condition._coerce` 空实现 | ✅ 已修 | `4e0bd0c`：数值归一仅作用于 eq/neq/gt/lt，`contains` 保持原样 |
 | G18 | 密钥解密失败静默空串 | ✅ 已修 | `2fd0515`：抛 `KeyDecryptError` + `UnusableProvider` + 掩码提示 |
 | G35 | `vite-env.d.ts` 悬空类型引用 | ✅ 已修 | `2439e09` |
 
