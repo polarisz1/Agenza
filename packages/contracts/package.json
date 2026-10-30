@@ -1,0 +1,16 @@
+{
+  "name": "@agentflow/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "build": "node node_modules/openapi-typescript/bin/cli.js openapi.yaml --output src/generated/index.ts",
+    "check": "node scripts/check.mjs"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.4.3"
+  }
+}

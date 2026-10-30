@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AgentFlow 产品需求文档 v0.1</title>
+<style>
+  :root {
+    --paper: #fbfaf6; --ink: #1b1c1a; --ink-2: #4b4e49; --ink-3: #7c807a;
+    --line: #e2e0d8; --brand: #1f4e3d; --brand-soft: #edf3ef;
+    --warn: #a15c14; --warn-soft: #fbf1e4;
+    --mono: "SFMono-Regular","Cascadia Mono",Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#f1efe9;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+  .page{max-width:1180px;margin:40px auto 80px;background:var(--paper);box-shadow:0 1px 2px rgba(20,20,10,.06),0 24px 60px -20px rgba(20,20,10,.18);border-radius:2px}
+  .wrap{display:grid;grid-template-columns:210px minmax(0,1fr)}
+  .cover{grid-column:1/-1;padding:64px 72px 48px;border-bottom:1px solid var(--line);background:radial-gradient(1200px 260px at 82% -40px,#e7efe9 0%,transparent 70%),var(--paper)}
+  .kicker{display:inline-flex;align-items:center;gap:9px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--brand);font-weight:650}
+  .kicker::before{content:"";width:22px;height:1px;background:var(--brand)}
+  .cover h1{margin:22px 0 6px;font-size:46px;line-height:1.1;letter-spacing:-.02em;font-weight:680}
+  .cover .sub{margin:0;color:var(--ink-2);font-size:17px;max-width:640px}
+  .meta{margin-top:36px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line);padding-top:18px;gap:18px}
+  .meta div{font-size:12px;color:var(--ink-3)}
+  .meta strong{display:block;margin-top:3px;font-size:13px;color:var(--ink);font-weight:600}
+  .toc{position:relative;border-right:1px solid var(--line);padding:36px 26px 60px 40px;font-size:12.5px}
+  .toc .sticky{position:sticky;top:28px}
+  .toc-title{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:14px}
+  .toc a{display:block;color:var(--ink-2);text-decoration:none;padding:5px 0 5px 12px;border-left:2px solid transparent;transition:.15s}
+  .toc a:hover{color:var(--brand);border-left-color:var(--brand);background:var(--brand-soft)}
+  .toc a.sub-item{padding-left:24px;color:var(--ink-3);font-size:11.5px}
+  main{padding:44px 64px 80px}
+  section{margin-bottom:58px;scroll-margin-top:24px}
+  h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);font-weight:700;margin:0 0 6px}
+  h3{font-size:25px;font-weight:650;letter-spacing:-.01em;margin:0 0 18px;line-height:1.3}
+  h4{font-size:16px;font-weight:650;margin:30px 0 10px}
+  p{margin:0 0 14px;color:var(--ink-2)}
+  p strong{color:var(--ink)}
+  ul,ol{margin:0 0 16px;padding-left:22px;color:var(--ink-2)}
+  li{margin-bottom:7px}
+  .lead{font-size:16px;color:var(--ink-2)}
+  .callout{border-left:3px solid var(--brand);background:var(--brand-soft);padding:14px 18px;margin:18px 0;border-radius:0 6px 6px 0;font-size:13.5px;color:#2c4038}
+  .callout.warn{border-left-color:var(--warn);background:var(--warn-soft);color:#5c3d16}
+  .callout b{color:inherit}
+  table{width:100%;border-collapse:collapse;margin:16px 0 24px;font-size:13px}
+  thead th{text-align:left;font-weight:650;color:var(--ink);background:#f2f0ea;border-bottom:1px solid #d8d5cc;padding:9px 12px;font-size:12px;letter-spacing:.02em}
+  tbody td{border-bottom:1px solid var(--line);padding:9px 12px;color:var(--ink-2);vertical-align:top}
+  tbody td:first-child{color:var(--ink);font-weight:600}
+  tbody tr:last-child td{border-bottom:none}
+  code,.mono{font-family:var(--mono);font-size:12px;background:#efede6;padding:1px 5px;border-radius:3px;color:#3a3c38}
+  .tag{display:inline-block;font-size:10.5px;font-weight:650;letter-spacing:.04em;padding:1px 6px;border-radius:3px;margin-right:6px;vertical-align:1px}
+  .p0{background:#1f4e3d;color:#fff}.p1{background:#e5e2d9;color:#52554f}.no{background:#f1dfd6;color:#8a3d1c}
+  .flow{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:22px 0 26px}
+  .flow .step{border:1px solid var(--line);border-radius:6px;background:#fff;padding:10px 10px 12px;font-size:11.5px;line-height:1.45;color:var(--ink-2)}
+  .flow .step b{display:block;color:var(--ink);font-size:12px;margin-bottom:3px}
+  .flow .num{font-family:var(--mono);font-size:10px;color:var(--brand)}
+  .footer{grid-column:1/-1;border-top:1px solid var(--line);padding:22px 72px;font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}.toc{border-right:0;border-bottom:1px solid var(--line);padding:24px 32px}main{padding:32px}.cover{padding:40px 32px}.cover h1{font-size:34px}.meta{grid-template-columns:1fr 1fr}.flow{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="page"><div class="wrap">
+<header class="cover">
+  <div class="kicker">Product Requirements Document</div>
+  <h1>AgentFlow</h1>
+  <p class="sub">单用户、本地部署的 AI 工作流编排平台——把一次 AI 处理过程固化为可复用、可观测、可复现的流程图。</p>
+  <div class="meta">
+    <div>文档版本<strong>v0.1</strong></div>
+    <div>交付状态<strong>待评审</strong></div>
+    <div>产品形态<strong>本地桌面应用</strong></div>
+    <div>编写日期<strong>2026-10-29</strong></div>
+  </div>
+</header>
+<nav class="toc"><div class="sticky">
+  <div class="toc-title">目录</div>
+  <a href="#s1">1. 产品定位</a>
+  <a href="#s2">2. 产品契约</a>
+  <a href="#s3">3. 核心概念</a>
+  <a href="#s4">4. 范围界定</a>
+  <a href="#s5">5. 功能需求</a>
+  <a href="#s5-1" class="sub-item">5.1 工作流管理</a>
+  <a href="#s5-2" class="sub-item">5.2 画布编排</a>
+  <a href="#s5-3" class="sub-item">5.3 节点类型</a>
+  <a href="#s5-4" class="sub-item">5.4 变量引用</a>
+  <a href="#s5-5" class="sub-item">5.5 运行与观测</a>
+  <a href="#s5-6" class="sub-item">5.6 节点调试</a>
+  <a href="#s5-7" class="sub-item">5.7 模型与密钥</a>
+  <a href="#s5-8" class="sub-item">5.8 运行记录</a>
+  <a href="#s5-9" class="sub-item">5.9 本机设置</a>
+  <a href="#s6">6. 关键流程</a>
+  <a href="#s7">7. 状态与规则</a>
+  <a href="#s8">8. 异常与边界</a>
+  <a href="#s9">9. 权限与安全</a>
+  <a href="#s10">10. 非功能要求</a>
+  <a href="#s11">11. 后续规划</a>
+  <a href="#s12">12. 待定项</a>
+</div></nav>
+<main>
+
+<section id="s1"><h2>01 / Positioning</h2><h3>产品定位</h3>
+<p class="lead">AgentFlow 面向希望在本机掌控 AI 处理流程的个人用户，提供一个"画布 + 运行台"的工作空间：用图形方式编排模型调用、外部请求与条件分支，并在本机完成执行、观测与复盘。</p>
+<table>
+  <thead><tr><th style="width:130px">维度</th><th>描述</th></tr></thead>
+  <tbody>
+    <tr><td>目标用户</td><td>独立开发者、研究者、内容与运营人员等单机使用者。通常已具备模型 API Key 或本地推理服务，愿意自己配置环境。</td></tr>
+    <tr><td>使用场景</td><td>把"抓取资料 → 模型总结 → 条件校验 → 输出成稿"这类多步骤任务固定下来，重复运行、对比结果、定位失败节点。</td></tr>
+    <tr><td>核心价值</td><td>过程可见。每一步的输入、输出、耗时与消耗都可回看；改一处配置即可复跑，不必重新拼装脚本。</td></tr>
+    <tr><td>使用环境</td><td>Windows 桌面应用，Electron 壳内嵌 FastAPI + React。无账号体系、无云端同步、无多租户。断网时除模型与外部请求外，其余功能均可用。</td></tr>
+    <tr><td>不在定位内</td><td>团队协作、权限分配、线上 SaaS 计费、公开市场化的模板商店。</td></tr>
+  </tbody>
+</table>
+<div class="callout"><b>设计基调：</b>单用户意味着可以省去登录、邀请、角色与审批流程；产品应把复杂度全部让位给"编排"和"观测"两件事，而不是复制一套企业后台。</div>
+</section>
+
+<section id="s2"><h2>02 / Product Contract</h2><h3>产品契约</h3>
+<table>
+  <thead><tr><th style="width:130px">要素</th><th>定义</th></tr></thead>
+  <tbody>
+    <tr><td>唯一角色</td><td><b>本机使用者</b>。拥有本机全部工作流、密钥与运行记录；不存在第二个角色，也不存在"分享给他人"的动作。</td></tr>
+    <tr><td>触发</td><td>使用者打开桌面应用，新建工作流或从列表打开一个已有工作流。</td></tr>
+    <tr><td>核心任务</td><td>把一次多步骤 AI 处理编排成图，并让它在需要时稳定地跑完。</td></tr>
+    <tr><td>完成条件</td><td>一次运行到达"成功"，且使用者能在运行记录中查看每个节点的输入、输出与耗时；任务结果可被复制或下载。</td></tr>
+    <tr><td>共享对象</td><td><b>工作流</b>：由节点与连线构成的图，是编排、运行与复盘共同指向的唯一对象。</td></tr>
+    <tr><td>信任基础</td><td>使用者信任"所见即所跑"：画布上的结构与实际执行的步骤一致；日志不做美化，失败如实暴露。</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s3"><h2>03 / Concepts</h2><h3>核心概念</h3>
+<table>
+  <thead><tr><th style="width:120px">概念</th><th>定义</th><th style="width:210px">边界说明</th></tr></thead>
+  <tbody>
+    <tr><td>工作流</td><td>一张有向无环图，包含节点、连线、工作流级输入与输出定义。</td><td>必须无环；至少一个入口与一个出口才能运行。</td></tr>
+    <tr><td>节点</td><td>图中的一个执行单元，有类型、参数、输入端口与输出端口。</td><td>每个节点拥有稳定 ID；改名不影响引用。</td></tr>
+    <tr><td>连线</td><td>表示数据流向：上游节点的输出成为下游节点的输入来源。</td><td>不允许自环、重复连线、跨层回连。</td></tr>
+    <tr><td>变量</td><td>对工作流输入或某个节点输出的引用，写作 <code>{{ 名称.字段 }}</code>。</td><td>只在文本参数中生效；解析失败按规则报错，不静默替换为空串。</td></tr>
+    <tr><td>运行</td><td>一次按图执行的实例，记录整体状态与逐节点结果。</td><td>运行只读快照，不受之后对工作流的编辑影响。</td></tr>
+    <tr><td>快照</td><td>运行发起时固化的工作流结构副本。</td><td>回看旧运行不展示"当前"节点配置，避免误读。</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s4"><h2>04 / Scope</h2><h3>范围界定</h3>
+<p>P0 只覆盖"进入 → 编排 → 校验 → 调试 → 运行 → 复盘"这一条完整旅程；任何不能支撑完成或恢复的功能都不进入本期。</p>
+<table>
+  <thead><tr><th style="width:90px">级别</th><th>内容</th></tr></thead>
+  <tbody>
+    <tr><td><span class="tag p0">P0</span></td><td>工作流列表与增删改复制；画布拖拽编排与连线；七类基础节点；变量引用；全量运行与单节点调试；运行记录与节点级日志；模型与密钥配置；本机设置与数据备份。</td></tr>
+    <tr><td><span class="tag p1">P1</span></td><td>版本历史与对比；工作流导入导出（JSON）；定时触发；本地文档知识库检索节点；人工确认节点；子工作流复用；运行结果对比；Electron 桌面壳 + 自动更新。</td></tr>
+    <tr><td><span class="tag no">不做</span></td><td>多用户与权限；云端同步与分享链接；在线模板市场；计费与账单；移动端专用布局。</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5"><h2>05 / Functional Requirements</h2><h3>功能需求</h3>
+<p class="lead">每项需求按"触发 — 处理规则 — 结果 — 状态变化"描述；共享规则（连线校验、变量解析、状态机）只在第 7 章定义一次。</p>
+
+<h4 id="s5-1">5.1 工作流管理</h4>
+<table>
+  <thead><tr><th style="width:110px">能力</th><th>规则</th></tr></thead>
+  <tbody>
+    <tr><td>列表</td><td>展示全部工作流：名称、简介、节点数、最近一次运行状态与时间。支持按名称搜索，按"全部 / 草稿 / 已就绪"筛选，按最近编辑与最近运行排序。</td></tr>
+    <tr><td>新建</td><td>提供空白工作流与内置模板两种入口。新建后直接进入画布，工作流处于"草稿"。</td></tr>
+    <tr><td>重命名</td><td>名称在工作流内唯一；留空或重名时阻止保存并原地提示。</td></tr>
+    <tr><td>复制</td><td>复制结构、节点参数与工作流级输入定义；不复制运行记录与密钥引用以外的敏感值，副本名称追加"副本"。</td></tr>
+    <tr><td>删除</td><td>删除前需二次确认，并明确提示"将一并删除该工作流的全部运行记录"。删除不可撤销。</td></tr>
+    <tr><td>自动保存</td><td>画布编辑在停顿后自动保存草稿；工具栏显示"已保存 / 保存中 / 保存失败"三种反馈。保存失败时保留本地未提交修改并提示重试。</td></tr>
+  </tbody>
+</table>
+
+<h4 id="s5-2">5.2 画布编排</h4>
+<ul>
+  <li><b>节点库：</b>左侧固定面板，按"基础 / 模型 / 工具 / 流程"分组，支持关键字过滤；点击或拖拽均可添加节点，新节点落在视口中心附近并保持选中。</li>
+  <li><b>连线：</b>从输出端口拖向输入端口建立连接；端口类型不兼容时，目标端口在悬停期间显示为不可用。</li>
+  <li><b>选中与属性：</b>单击节点选中，右侧属性面板展示该节点参数、可用变量与最近一次运行输出；单击画布空白处取消选中。</li>
+  <li><b>结构操作：</b>支持框选、多选移动、删除、复制粘贴、撤销与重做；撤销栈覆盖节点增删、连线、位置与参数修改。</li>
+  <li><b>视图：</b>支持缩放、平移、适应画布、自动布局（按拓扑分层从左到右排列）。缩放与自动布局不改变业务数据。</li>
+  <li><b>校验入口：</b>工具栏常驻"校验"，也可在运行前自动执行一次；校验结果以列表形式定位到具体节点。</li>
+</ul>
+
+<h4 id="s5-3">5.3 节点类型</h4>
+<table>
+  <thead><tr><th style="width:110px">节点</th><th>参数</th><th>行为与输出</th></tr></thead>
+  <tbody>
+    <tr><td>输入</td><td>字段名、类型（文本 / 数字 / 布尔 / JSON）、是否必填、默认值、说明。</td><td>运行开始时作为工作流输入被填写；输出为该字段集合。同一工作流可存在多个输入节点。</td></tr>
+    <tr><td>LLM 调用</td><td>模型、系统提示、用户提示、温度、最大输出长度、输出格式（文本 / JSON）。</td><td>按解析后的提示调用模型；输出为文本或结构化对象，并附模型名、耗时与 token 用量。调用失败时按重试规则处理。</td></tr>
+    <tr><td>结构化抽取</td><td>模型、待抽取内容、目标字段列表、字段说明。</td><td>输出为字段对象；无法按目标字段解析时标记为节点失败，并保留原始响应以便排查。</td></tr>
+    <tr><td>HTTP 请求</td><td>方法、地址、查询参数、请求头、请求体、超时秒数。</td><td>输出为状态码、响应头与响应体（自动识别 JSON）；非 2xx 视为失败，但响应体仍完整保留。</td></tr>
+    <tr><td>Python 脚本</td><td>脚本内容、超时秒数。</td><td>在受限的本机运行环境内执行，输入通过变量注入，输出取脚本返回的 JSON；异常信息原样呈现。</td></tr>
+    <tr><td>条件分支</td><td>左值、比较符（等于 / 不等于 / 包含 / 大于 / 小于 / 为空判断）、右值。</td><td>输出布尔结果，并只激活满足条件的那一条下游分支；未激活分支上的节点标记为"已跳过"，不视为失败。</td></tr>
+    <tr><td>合并</td><td>合并策略（全部到达 / 任一到达）、结果字段名。</td><td>收拢多条上游结果后统一输出，供下游一次性使用。</td></tr>
+    <tr><td>输出</td><td>结果字段名、来源变量、展示格式（文本 / JSON / Markdown）。</td><td>运行完成时作为最终结果展示，可复制与下载。</td></tr>
+  </tbody>
+</table>
+<p><b>节点通用设置：</b>名称、启用开关、失败重试次数（0–3）、超时（继承工作流默认或自定义）、备注。停用的节点在运行中标记为"已跳过"，其下游若无其他输入来源则整体跳过。</p>
+
+<h4 id="s5-4">5.4 变量引用</h4>
+<ul>
+  <li>引用格式为 <code>{{ 引用源.字段路径 }}</code>，引用源可以是工作流输入名，也可以是节点名称；字段路径用 <code>.</code> 逐级访问，数组下标写作 <code>[0]</code>。</li>
+  <li>属性面板在文本输入框旁提供"可用变量"列表，点击即插入；插入位置为光标处。</li>
+  <li>引用不存在的字段时，该节点在运行前校验阶段即被标记为错误，并给出可定位的提示；运行中若上游输出结构与预期不符，节点失败并保留原始上下文。</li>
+  <li>变量值以字符串化结果注入提示词；对象与数组按 JSON 文本注入，避免歧义。</li>
+</ul>
+
+<h4 id="s5-5">5.5 运行与观测</h4>
+<table>
+  <thead><tr><th style="width:130px">能力</th><th>规则</th></tr></thead>
+  <tbody>
+    <tr><td>发起运行</td><td>画布工具栏"运行"发起一次全量运行；若存在必填输入未填写，先弹出输入表单，填写完成才可开始。</td></tr>
+    <tr><td>运行中反馈</td><td>节点按执行顺序显示"排队 / 运行中 / 成功 / 失败 / 已跳过 / 已取消"；当前节点高亮，连线在数据通过时短暂高亮。</td></tr>
+    <tr><td>实时日志</td><td>底部运行面板追加节点级日志（开始、结束、模型与 token、错误摘要）。使用者可折叠、清空显示（不清除记录）与复制。</td></tr>
+    <tr><td>取消</td><td>运行中提供"取消"；已完成的节点结果保留，正在执行的节点标记为已取消，未开始节点标记为已取消。</td></tr>
+    <tr><td>超时</td><td>单节点超时按节点设置执行；整次运行不设统一上限，但连续超时导致全部节点结束后运行状态为失败。</td></tr>
+    <tr><td>完成反馈</td><td>运行结束后展示整体耗时、成功节点数、失败节点数与 token 总量；存在失败节点时，定位到第一个失败节点并展开其错误详情。</td></tr>
+    <tr><td>结果取用</td><td>输出节点结果支持一键复制；JSON 结果支持下载为文件。历史运行可随时重新打开。</td></tr>
+  </tbody>
+</table>
+
+<h4 id="s5-6">5.6 节点调试</h4>
+<ul>
+  <li>属性面板提供"调试运行此节点"：仅执行该节点，上游输入取该节点变量的最近一次成功输出，若无则要求手动填写。</li>
+  <li>调试结果就地展示在该节点的"输出"标签页，不写入正式运行记录，也不改变工作流状态。</li>
+  <li>调试失败时展示错误类型、错误信息与所使用输入，便于判断问题出在参数还是上游数据。</li>
+</ul>
+
+<h4 id="s5-7">5.7 模型与密钥</h4>
+<table>
+  <thead><tr><th style="width:130px">能力</th><th>规则</th></tr></thead>
+  <tbody>
+    <tr><td>服务商</td><td>支持"OpenAI 兼容"（自定义服务地址与模型名）、"Ollama 本地"与"Anthropic 兼容"三类配置。每类可添加多个实例。</td></tr>
+    <tr><td>连接测试</td><td>保存前可"测试连接"，返回成功或具体错误（地址不可达、鉴权失败、模型不存在、超时）。测试结果不改变已保存配置。</td></tr>
+    <tr><td>密钥展示</td><td>密钥仅在本机保存；界面只显示尾号（如 <code>••••3f9a</code>），编辑时需重新输入完整值。密钥不随工作流导出、不写入运行日志。</td></tr>
+    <tr><td>默认模型</td><td>可指定一个默认模型；新建 LLM 节点时预选该模型，逐节点仍可覆盖。</td></tr>
+    <tr><td>可用性提示</td><td>工作流引用的服务商被删除或停用时，该校验项报错并指明受影响的节点，不阻止查看历史运行。</td></tr>
+  </tbody>
+</table>
+
+<h4 id="s5-8">5.8 运行记录</h4>
+<ul>
+  <li>列表展示：运行编号、所属工作流、状态、触发方式（手动 / 调试 / P1 定时）、开始时间、总耗时、token 总量。</li>
+  <li>筛选：按状态、工作流与时间范围；默认按开始时间倒序。</li>
+  <li>详情包含：整体摘要、逐节点时间线、每个节点的输入与输出快照、错误堆栈摘要、所用模型与 token。</li>
+  <li>支持"以此配置重新运行"：使用该次运行的快照结构与输入重新发起，产生新的运行编号。</li>
+  <li>运行记录按工作流保留最近 200 条；超出后最旧记录自动清理，清理前在设置中提示保留策略。</li>
+</ul>
+
+<h4 id="s5-9">5.9 本机设置</h4>
+<ul>
+  <li>展示数据目录与占用大小，提供"打开目录"与"导出备份"。</li>
+  <li>自动保存开关、运行日志保留条数、默认超时时间、界面语言。</li>
+  <li>导入工作流：选择本地 JSON 文件，先预览将新增的工作流与校验结果，确认后才写入。</li>
+  <li>危险操作：清空全部运行记录、清空全部数据。两者均需输入确认文字，且明确不可恢复。</li>
+</ul>
+</section>
+
+<section id="s6"><h2>06 / Flows</h2><h3>关键流程</h3>
+<p><b>主流程 — 从空白到一次成功运行</b></p>
+<div class="flow">
+  <div class="step"><span class="num">01</span><b>新建</b>选择空白或模板，进入画布，状态为草稿。</div>
+  <div class="step"><span class="num">02</span><b>编排</b>拖入节点、连线、填写参数与变量。</div>
+  <div class="step"><span class="num">03</span><b>校验</b>检查必填项、连线与变量引用。</div>
+  <div class="step"><span class="num">04</span><b>调试</b>对关键节点单步执行，确认输出结构。</div>
+  <div class="step"><span class="num">05</span><b>运行</b>填写工作流输入，观察节点状态与日志。</div>
+  <div class="step"><span class="num">06</span><b>复盘</b>查看结果与节点快照，必要时重新运行。</div>
+</div>
+<p><b>恢复流程 — 运行失败</b>：运行失败后，界面定位到第一个失败节点；使用者可查看错误与输入快照，选择"调试此节点"验证修正，再发起新的运行。旧运行记录保持原样，供对比。</p>
+<p><b>恢复流程 — 保存失败</b>：工具栏出现"保存失败 · 重试"，本地编辑内容保留；重试成功后状态回到"已保存"，期间不阻止继续编辑，但关闭页面前给出未保存提示。</p>
+</section>
+
+<section id="s7"><h2>07 / States</h2><h3>状态与规则</h3>
+<h4>工作流状态</h4>
+<table>
+  <thead><tr><th style="width:110px">状态</th><th>进入条件</th><th>允许动作</th></tr></thead>
+  <tbody>
+    <tr><td>草稿</td><td>新建或存在未完成的校验问题。</td><td>编辑、保存、调试单节点、尝试运行（运行前自动校验）。</td></tr>
+    <tr><td>已就绪</td><td>校验通过：无环、至少一个输入与一个输出、必填参数完整、变量可解析。</td><td>运行、复制、编辑（编辑后回落为草稿）。</td></tr>
+  </tbody>
+</table>
+<h4>运行状态机</h4>
+<table>
+  <thead><tr><th style="width:110px">状态</th><th>含义</th><th>后续</th></tr></thead>
+  <tbody>
+    <tr><td>等待输入</td><td>已发起但必填工作流输入未填写。</td><td>填写后进入"运行中"；关闭则回到未运行。</td></tr>
+    <tr><td>运行中</td><td>至少一个节点正在执行。</td><td>全部终态后进入 成功 / 失败 / 已取消。</td></tr>
+    <tr><td>成功</td><td>所有应执行节点成功，或仅有被跳过节点。</td><td>终态。</td></tr>
+    <tr><td>失败</td><td>存在至少一个失败节点。</td><td>终态；可重新运行。</td></tr>
+    <tr><td>已取消</td><td>使用者主动取消。</td><td>终态。</td></tr>
+  </tbody>
+</table>
+<h4>节点状态</h4>
+<table>
+  <thead><tr><th style="width:110px">状态</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>排队</td><td>上游尚未产出所需输出。</td></tr>
+    <tr><td>运行中</td><td>已开始执行，尚未产出结果。</td></tr>
+    <tr><td>成功</td><td>产出有效输出。</td></tr>
+    <tr><td>失败</td><td>执行出错且重试耗尽，或参数/变量解析错误。</td></tr>
+    <tr><td>已跳过</td><td>所在分支未被激活，或节点被停用。不计入失败。</td></tr>
+    <tr><td>已取消</td><td>运行被取消时该节点尚未完成。</td></tr>
+  </tbody>
+</table>
+<div class="callout"><b>一致性规则：</b>一个节点在执行前必须拿到全部必需输入；条件节点只有一个下游分支会被激活；被跳过节点不阻断运行；运行的最终状态只由"是否存在失败节点"和"是否被取消"决定。</div>
+</section>
+
+<section id="s8"><h2>08 / Edge Cases</h2><h3>异常与边界</h3>
+<table>
+  <thead><tr><th style="width:150px">场景</th><th>系统行为</th></tr></thead>
+  <tbody>
+    <tr><td>存在环</td><td>校验失败，提示"检测到循环依赖"并高亮构成环的连线；禁止运行。</td></tr>
+    <tr><td>节点未连线</td><td>孤立节点在校验中提示"未连接到主流程"，可选择停用或删除。</td></tr>
+    <tr><td>缺少必填输入</td><td>运行前拦截并打开输入表单；表单提交后校验通过才继续。</td></tr>
+    <tr><td>模型未配置 / 密钥失效</td><td>运行时该节点失败，错误写明"服务商未配置"或"鉴权失败"，并跳转模型设置入口。</td></tr>
+    <tr><td>接口限流或超时</td><td>按节点重试次数重试，每次间隔递增；仍失败则节点失败，保留最后一次响应。</td></tr>
+    <tr><td>外部地址不可达</td><td>HTTP 节点失败并记录耗时与错误原因；不影响其他已成功节点的结果留存。</td></tr>
+    <tr><td>取消时的中间态</td><td>正在执行的节点尽快终止并标记已取消；已产生的结果仍可查看。</td></tr>
+    <tr><td>空工作流</td><td>画布展示空状态引导（"从左侧拖入输入节点开始"）；不可运行。</td></tr>
+    <tr><td>删除被引用的节点</td><td>连线一并移除，引用该节点的变量在校验中标红，提示需更新。</td></tr>
+    <tr><td>导入冲突</td><td>同名工作流默认生成副本名，不覆盖已有工作流。</td></tr>
+    <tr><td>数据目录不可写</td><td>保存与运行记录写入失败时给出显式错误，进入只读提示，不静默丢弃内容。</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s9"><h2>09 / Trust &amp; Security</h2><h3>权限与安全</h3>
+<ul>
+  <li><b>单用户边界：</b>无注册、登录与角色；Electron 壳在本机进程内运行，FastAPI 仅监听 <code>127.0.0.1</code>，外网完全不可达。</li>
+  <li><b>密钥：</b>仅在本机存储，界面与日志均不出现完整值；导出工作流时不包含密钥。</li>
+  <li><b>数据流向：</b>模型请求仅发往使用者配置的服务商；产品本身不上报任何使用数据。</li>
+  <li><b>脚本节点：</b>通过独立子进程执行（<code>python -I -S</code>），工作目录为临时目录，超时即 kill，避免影响主进程。</li>
+  <li><b>删除：</b>删除工作流、清空运行记录、清空数据均为不可逆动作，需二次确认。</li>
+  <li><b>导入：</b>导入文件只创建内容，不自动执行；导入后先校验，由使用者决定是否运行。</li>
+</ul>
+</section>
+
+<section id="s10"><h2>10 / Non-functional</h2><h3>非功能要求</h3>
+<table>
+  <thead><tr><th style="width:150px">类别</th><th>要求</th></tr></thead>
+  <tbody>
+    <tr><td>启动</td><td>桌面壳启动后 10 秒内可打开工作流列表；无需额外数据库或中间件安装。</td></tr>
+    <tr><td>交互</td><td>画布拖拽与缩放保持连贯；100 个节点以内的图操作不出现明显卡顿。</td></tr>
+    <tr><td>可靠性</td><td>自动保存失败不丢失当前编辑；取消运行不产生"卡在运行中"的垃圾状态；后端崩溃时主进程自动重启它。</td></tr>
+    <tr><td>可移植</td><td>数据目录可整体复制到另一台同版本机器继续使用；支持导出备份。</td></tr>
+    <tr><td>可读性</td><td>日志与错误使用平实中文，不暴露内部堆栈作为唯一说明；保留原始错误供排查。</td></tr>
+    <tr><td>无障碍</td><td>键盘可完成画布基本操作；状态不以颜色为唯一区分（配文字或图标）。</td></tr>
+    <tr><td>自动更新</td><td>支持壳更新、后端更新、前端更新三层独立热更；用户可手动触发检查。</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s11"><h2>11 / Later</h2><h3>后续规划</h3>
+<ul>
+  <li><b>版本历史：</b>保存关键版本、查看差异、回滚到某一版本。</li>
+  <li><b>触发方式：</b>定时触发与文件监听触发，扩展"无人值守"的使用场景。</li>
+  <li><b>知识库：</b>基于本地文档的检索节点，用于长资料问答。</li>
+  <li><b>人工确认：</b>在关键节点暂停等待本机使用者确认后继续。</li>
+  <li><b>子工作流：</b>把稳定流程封装为可复用节点。</li>
+</ul>
+</section>
+
+<section id="s12"><h2>12 / Open Items</h2><h3>待定项</h3>
+<table>
+  <thead><tr><th style="width:150px">事项</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>[TBD] 成本展示</td><td>是否按模型单价换算估算费用。需使用者确认是否有稳定的价格来源；本期先只展示 token 用量。</td></tr>
+    <tr><td>[TBD] 多实例并发</td><td>同一工作流是否允许同时发起多次运行。默认串行，避免本机资源争抢；若需要并发，需定义排队规则。</td></tr>
+    <tr><td>[TBD] 运行保留策略</td><td>200 条为初始假设，是否按总量或磁盘占用调整，待真实使用后确认。</td></tr>
+    <tr><td>[TBD] 脚本节点能力范围</td><td>是否允许访问网络与本地文件。初始假设：允许标准库与网络请求，禁止读取工作流数据目录以外的路径。</td></tr>
+    <tr><td>[TBD] 界面语言</td><td>默认简体中文；是否需要英文界面待定。</td></tr>
+  </tbody>
+</table>
+</section>
+
+</main>
+<footer class="footer"><span>AgentFlow · 产品需求文档 v0.1</span><span>单用户 · 本地桌面应用 · 2026-10-29</span></footer>
+</div></div>
+</body></html>

@@ -1,0 +1,4 @@
+packages:
+  - 'apps/web'
+  - 'packages/*'
+  # electron/ 和 pyinstaller/ 单独 pnpm 管理，与业务代码零耦合

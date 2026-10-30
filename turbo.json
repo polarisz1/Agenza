@@ -1,0 +1,26 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "src/generated/**"]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "format": {
+      "cache": false
+    },
+    "contracts:generate": {
+      "cache": false
+    },
+    "contracts:build": {
+      "dependsOn": ["contracts:generate"],
+      "outputs": ["packages/contracts/src/generated/**"]
+    }
+  }
+}

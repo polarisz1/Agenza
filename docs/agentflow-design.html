@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AgentFlow 技术设计方案 v0.2</title>
+<style>
+  :root {
+    --bg:#f4f5f2;--panel:#ffffff;--ink:#1d1f1c;--ink-2:#565b54;--ink-3:#8b9088;
+    --line:#dfe1da;--brand:#1f4e3d;--brand-2:#2f7059;--soft:#e9f0ec;
+    --code-bg:#20241f;--code-ink:#dfe6dc;--amber:#a86612;
+    --mono:"SFMono-Regular","Cascadia Mono",Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;font-size:14.5px;line-height:1.72;-webkit-font-smoothing:antialiased}
+  .shell{max-width:1200px;margin:36px auto 72px;display:grid;grid-template-columns:1fr 236px;gap:28px}
+  header.hero{grid-column:1/-1;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:36px 40px;display:grid;grid-template-columns:1fr auto;align-items:end;gap:24px;background-image:linear-gradient(90deg,rgba(31,78,61,.04) 1px,transparent 1px),linear-gradient(rgba(31,78,61,.04) 1px,transparent 1px);background-size:22px 22px}
+  .hero .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--brand);text-transform:uppercase}
+  .hero h1{margin:10px 0 6px;font-size:40px;letter-spacing:-.02em;line-height:1.12}
+  .hero p{margin:0;color:var(--ink-2);max-width:680px}
+  .hero .stamp{border:1px solid var(--brand);color:var(--brand);border-radius:999px;padding:7px 16px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;white-space:nowrap}
+  .doc{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 44px 56px}
+  aside{align-self:start;position:sticky;top:24px}
+  .toc{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 14px;font-size:12px}
+  .toc .h{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--ink-3);margin:0 0 10px 6px;text-transform:uppercase}
+  .toc a{display:block;padding:5px 8px;border-radius:6px;color:var(--ink-2);text-decoration:none}
+  .toc a:hover{background:var(--soft);color:var(--brand)}
+  section{padding-top:34px;scroll-margin-top:20px}
+  .sec-head{display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:18px}
+  .sec-head .n{font-family:var(--mono);font-size:11px;color:var(--brand-2);background:var(--soft);padding:3px 7px;border-radius:4px}
+  .sec-head h2{margin:0;font-size:21px;letter-spacing:-.01em}
+  h3{font-size:15px;margin:24px 0 8px;color:var(--ink)}
+  p{margin:0 0 12px;color:var(--ink-2)}
+  p strong,li strong{color:var(--ink)}
+  ul,ol{margin:0 0 14px;padding-left:20px;color:var(--ink-2)}
+  li{margin-bottom:6px}
+  table{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:12.5px}
+  thead th{background:#f3f4f0;text-align:left;font-size:11.5px;font-weight:650;padding:8px 10px;border-bottom:1px solid var(--line);color:var(--ink)}
+  tbody td{border-bottom:1px solid #eff0ec;padding:8px 10px;color:var(--ink-2);vertical-align:top}
+  tbody td:first-child{color:var(--ink);font-weight:600}
+  .mono{font-family:var(--mono);font-size:11.5px}
+  code{font-family:var(--mono);font-size:11.5px;background:#eef0ea;padding:1px 5px;border-radius:3px}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:10px;overflow-x:auto;font-family:var(--mono);font-size:12px;line-height:1.65;margin:12px 0 20px}
+  pre .c{color:#8a9a86}pre .k{color:#9fd3b4}pre .s{color:#d9c48d}pre .t{color:#b9c7e2}
+  .arch{border:1px solid var(--line);border-radius:12px;padding:20px;background:#fbfcf9;margin:14px 0 20px}
+  .arch .row{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center;padding:8px 0}
+  .arch .row + .row{border-top:1px dashed #dde0d6}
+  .arch .label{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--ink-3);text-transform:uppercase}
+  .arch .cells{display:flex;flex-wrap:wrap;gap:8px}
+  .arch .cell{border:1px solid #ccd5ca;background:#fff;border-radius:8px;padding:8px 12px;font-size:11.5px;color:var(--ink-2)}
+  .arch .cell b{display:block;font-family:var(--mono);font-size:10px;color:var(--brand);font-weight:600;margin-bottom:2px;letter-spacing:.03em}
+  .arch .cell.accent{background:var(--soft);border-color:#b9cfc3}
+  .note{border:1px solid #d9d3bf;background:#fbf8ec;border-radius:9px;padding:12px 16px;font-size:12.5px;color:#5b4d24;margin:14px 0 20px}
+  .note b{color:#3f3516}
+  .flowbar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0 22px}
+  .flowbar div{background:#fff;border:1px solid var(--line);border-radius:9px;padding:11px 13px;font-size:11.5px;color:var(--ink-2)}
+  .flowbar b{display:block;color:var(--ink);font-size:12.5px;margin-bottom:2px}
+  .flowbar .step{font-family:var(--mono);font-size:10px;color:var(--brand)}
+  footer{grid-column:1/-1;color:var(--ink-3);font-size:11.5px;padding:0 8px;display:flex;justify-content:space-between}
+  @media(max-width:960px){.shell{grid-template-columns:1fr;margin:16px}aside{display:none}.doc{padding:4px 22px 40px}header.hero{padding:26px 22px;grid-template-columns:1fr}.arch .row{grid-template-columns:1fr}.flowbar{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header class="hero">
+  <div>
+    <div class="eyebrow">Technical Design · v0.2</div>
+    <h1>AgentFlow 技术设计方案</h1>
+    <p>在 Monorepo（pnpm workspace + Turborepo + uv）之上，构建单用户、本地桌面部署的 AI 工作流编排平台。桌面壳采用 Electron + PyInstaller，执行引擎采用自研轻量 DAG 调度。</p>
+  </div>
+  <div class="stamp">MONOREPO / ELECTRON / SINGLE-USER</div>
+</header>
+
+<div class="doc">
+
+<section id="d1"><div class="sec-head"><span class="n">D1</span><h2>设计目标与约束</h2></div>
+<div class="flowbar">
+  <div><span class="step">01</span><b>零外部依赖</b>仅 Python + Node，SQLite 落盘，不需要消息队列、Redis 或容器。</div>
+  <div><span class="step">02</span><b>进程内执行</b>引擎与 API 同进程，asyncio 调度，便于本地调试与取消。</div>
+  <div><span class="step">03</span><b>可观测</b>节点级输入/输出/耗时持久化，SSE 实时推送执行事件。</div>
+  <div><span class="step">04</span><b>桌面原生体验</b>Electron 壳提供托盘、原生窗口、自动更新；后端 PyInstaller 单文件。</div>
+</div>
+<table>
+  <thead><tr><th style="width:140px">约束</th><th>落地方式</th></tr></thead>
+  <tbody>
+    <tr><td>单用户</td><td>不引入登录与权限；Electron 壳在本机进程内运行，FastAPI 仅监听 <code>127.0.0.1</code>。</td></tr>
+    <tr><td>桌面应用</td><td>Electron 壳内嵌 PyInstaller 打包的 FastAPI 单文件 exe；壳主进程守护后端崩溃自动重启。</td></tr>
+    <tr><td>Monorepo</td><td>pnpm workspace（JS侧）+ uv workspace（Python侧），Turborepo 编排任务。</td></tr>
+    <tr><td>契约单一事实源</td><td>后端 Pydantic schema 导出 OpenAPI YAML → openapi-typescript 生成前端类型。</td></tr>
+    <tr><td>SQLite</td><td>开启 WAL + foreign_keys + busy_timeout；引擎侧写库串行化，避免 SQLite 单写者竞争。</td></tr>
+    <tr><td>前端约束</td><td>React 18 + AntD 5 + Zustand + @xyflow/react；AntD ConfigProvider 覆写主色 #1F4E3D。</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="d2"><div class="sec-head"><span class="n">D2</span><h2>总体架构</h2></div>
+<div class="arch">
+  <div class="row"><span class="label">Electron Shell</span><div class="cells">
+    <div class="cell accent"><b>main.js</b>启动backend.exe → BrowserWindow → 托盘 → 自动更新</div>
+    <div class="cell"><b>preload.js</b>contextBridge白名单：dialogs、notifications、keyIO</div>
+    <div class="cell"><b>electron-updater</b>壳自动更新（NSIS安装包）</div>
+  </div></div>
+  <div class="row"><span class="label">BrowserWindow</span><div class="cells">
+    <div class="cell accent"><b>React 18 / Vite</b>workflows / runs / models / settings</div>
+    <div class="cell"><b>@xyflow/react</b>画布编辑器</div>
+    <div class="cell"><b>Zustand</b>编辑器状态 / 撤销栈 / SSE连接</div>
+  </div></div>
+  <div class="row"><span class="label">API (FastAPI)</span><div class="cells">
+    <div class="cell accent"><b>FastAPI</b>REST + SSE，统一 <code>{code,message,data}</code></div>
+    <div class="cell"><b>modules/</b>workflows · runs · providers · settings</div>
+    <div class="cell"><b>validator</b>图结构 & 变量引用校验</div>
+  </div></div>
+  <div class="row"><span class="label">Engine</span><div class="cells">
+    <div class="cell accent"><b>RunManager</b>运行注册表、取消、并发闸门</div>
+    <div class="cell"><b>Scheduler</b>Kahn拓扑分层 + asyncio.gather</div>
+    <div class="cell"><b>Executors</b>input / llm / extract / http / script / condition / merge / output</div>
+    <div class="cell"><b>EventBus</b>内存发布订阅 → SSE</div>
+  </div></div>
+  <div class="row"><span class="label">Storage</span><div class="cells">
+    <div class="cell"><b>SQLite (WAL)</b>workflow / run / node_run / provider / app_setting</div>
+    <div class="cell"><b>本地文件</b>data/ · 密钥加密文件 · 导出 JSON</div>
+  </div></div>
+  <div class="row"><span class="label">External</span><div class="cells">
+    <div class="cell"><b>OpenAI 兼容</b>httpx</div>
+    <div class="cell"><b>Ollama</b>localhost:11434</div>
+    <div class="cell"><b>Anthropic 兼容</b>httpx</div>
+  </div></div>
+</div>
+<p>生产模式：Electron 主进程 spawn backend.exe（PyInstaller 产物）→ BrowserWindow.loadURL('http://127.0.0.1:{port}/')（FastAPI 挂载的前端 dist）。开发模式：Electron 主进程 loadURL('http://localhost:5173') + 手动启动 FastAPI，HMR 照常。</p>
+</section>
+
+<section id="d3"><div class="sec-head"><span class="n">D3</span><h2>Monorepo 目录结构</h2></div>
+<pre><span class="c">// 完整目录树（关键文件标注）</span>
+AgentFlow/
+├── AGENTS.md                   <span class="c"># ★ AI协作必读：目录约定</span>
+├── package.json                <span class="c"># 根：Turborepo + pnpm workspace声明</span>
+├── pnpm-workspace.yaml         <span class="c"># apps/* packages/*</span>
+├── turbo.json                  <span class="c"># 任务流水线：dev/build/lint/contracts:generate</span>
+├── README.md
+├── .github/workflows/ci.yml    <span class="c"># 契约校验 + 全量构建</span>
+├── apps/
+│   ├── web/                    <span class="c"># React18 + Vite + AntD5 + @xyflow/react</span>
+│   │   ├── src/features/       <span class="c"># ★ 按业务功能组织（workflows / runs / models / settings）</span>
+│   │   ├── src/shared/         <span class="c"># ★ 跨feature通用资产（禁止反向依赖features）</span>
+│   │   └── src/router/         <span class="c"># React Router路由表</span>
+│   └── api/                    <span class="c"># FastAPI + Pydantic v2 + SQLAlchemy + uv</span>
+│       └── src/app/
+│           ├── core/engine/    <span class="c"># ★ 执行引擎（RunManager + Scheduler + Executors + EventBus）</span>
+│           └── modules/        <span class="c"># ★ 按业务功能组织（每个feature内部含router/service/repository/schemas/models）</span>
+├── packages/contracts/         <span class="c"># OpenAPI YAML → openapi-typescript → TS类型</span>
+├── electron/                   <span class="c"># Electron壳（Phase 1+启用，零耦合）</span>
+├── pyinstaller/                <span class="c"># FastAPI后端打包脚本（Phase 1+启用）</span>
+└── tools/scripts/              <span class="c"># 辅助脚本：dev.sh / pack-release.sh</span></pre>
+<div class="note"><b>核心约束不放松：</b>Python modules/ 下严格按 feature 建目录，禁止 routers/services 平铺；React features/ 同理，禁止业务组件进 shared/。</div>
+</section>
+
+<section id="d4"><div class="sec-head"><span class="n">D4</span><h2>数据模型</h2></div>
+<p>所有业务表新增于 <code>apps/api/src/app/modules/\<feature\>/models.py</code>，在 <code>init_db()</code> 中导入注册。ID 使用字符串（<code>uuid4().hex[:12]</code> 前缀化），便于导入导出与前端引用。</p>
+<table>
+  <thead><tr><th style="width:130px">表</th><th>关键字段</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>workflow</td><td>id, name, description, status, graph_json, viewport_json, created_at, updated_at, last_run_at</td><td><code>status</code> ∈ draft / ready；<code>graph_json</code> 存整张图（节点、连线、工作流输入）。</td></tr>
+    <tr><td>run</td><td>id, workflow_id, workflow_name, graph_snapshot, inputs_json, status, trigger, error, started_at, finished_at, duration_ms, total_tokens</td><td>运行即快照；<code>trigger</code> ∈ manual / debug / scheduled。</td></tr>
+    <tr><td>node_run</td><td>id, run_id, node_id, node_type, node_name, status, attempt, input_json, output_json, error, model, tokens_in, tokens_out, duration_ms</td><td>逐节点执行账本；SSE 断线后由它重放。</td></tr>
+    <tr><td>provider</td><td>id, kind, name, base_url, api_key_enc, default_model, extra_json, enabled, created_at</td><td><code>api_key_enc</code> 为 Fernet 密文，明文永不入库。</td></tr>
+    <tr><td>app_setting</td><td>key, value_json, updated_at</td><td>自动保存、日志保留、默认超时等。</td></tr>
+  </tbody>
+</table>
+<h3>工作流图结构</h3>
+<pre><span class="c">// graph_json（整图序列化，编辑时整图保存）</span>
+{
+  <span class="k">"version"</span>: 1,
+  <span class="k">"inputs"</span>: [{ <span class="k">"key"</span>: <span class="s">"topic"</span>, <span class="k">"label"</span>: <span class="s">"调研主题"</span>, <span class="k">"type"</span>: <span class="s">"text"</span>, <span class="k">"required"</span>: <span class="t">true</span> }],
+  <span class="k">"nodes"</span>: [{
+    <span class="k">"id"</span>: <span class="s">"n_llm_01"</span>, <span class="k">"type"</span>: <span class="s">"llm"</span>, <span class="k">"name"</span>: <span class="s">"拆解检索问题"</span>,
+    <span class="k">"position"</span>: { <span class="k">"x"</span>: 320, <span class="k">"y"</span>: 180 },
+    <span class="k">"disabled"</span>: <span class="t">false</span>, <span class="k">"retry"</span>: 1, <span class="k">"timeout_s"</span>: 60,
+    <span class="k">"config"</span>: {
+      <span class="k">"provider_id"</span>: <span class="s">"pv_openai"</span>, <span class="k">"model"</span>: <span class="s">"gpt-4o-mini"</span>,
+      <span class="k">"system"</span>: <span class="s">"你是情报分析师…"</span>,
+      <span class="k">"prompt"</span>: <span class="s">"围绕 {{ topic }} 拆解 5 个检索问题"</span>,
+      <span class="k">"temperature"</span>: 0.3, <span class="k">"max_tokens"</span>: 1024, <span class="k">"format"</span>: <span class="s">"json"</span>
+    }
+  }],
+  <span class="k">"edges"</span>: [{ <span class="k">"id"</span>: <span class="s">"e_01"</span>, <span class="k">"source"</span>: <span class="s">"n_input_01"</span>, <span class="k">"target"</span>: <span class="s">"n_llm_01"</span>, <span class="k">"source_port"</span>: <span class="s">"out"</span>, <span class="k">"target_port"</span>: <span class="s">"main"</span> }]
+}</pre>
+<div class="note"><b>不把节点拆成独立表：</b>图是整体对象，编辑时整图保存，避免节点级并发写与"半张图"状态。运行账本独立成表，便于查询与清理。</div>
+</section>
+
+<section id="d5"><div class="sec-head"><span class="n">D5</span><h2>执行引擎</h2></div>
+<h3>5.1 运行生命周期</h3>
+<div class="flowbar">
+  <div><span class="step">01</span><b>Validate</b>图结构、必填参数、变量可解析、provider 可用。</div>
+  <div><span class="step">02</span><b>Snapshot</b>冻结 graph + inputs，写入 run（状态 running）。</div>
+  <div><span class="step">03</span><b>Schedule</b>Kahn分层，每层 <code>asyncio.gather</code> + Semaphore(4)。</div>
+  <div><span class="step">04</span><b>Finalize</b>汇总状态与token，写入 finished_at，推送 run.finished。</div>
+</div>
+<p>调度器不依赖"当前运行到第几步"的游标；每轮从 <code>pending</code> 集合中挑选"所有入边来源均已终态"的节点，天然支持并行分支与条件跳过。节点输出统一写入内存 <code>outputs[node_id]</code>，供变量解析读取。</p>
+
+<h3>5.2 节点执行器契约</h3>
+<pre><span class="c"># apps/api/src/app/core/engine/</span>
+<span class="k">class</span> NodeResult(BaseModel):
+    status: Literal[<span class="s">"success"</span>, <span class="s">"failed"</span>, <span class="s">"skipped"</span>]
+    output: Any = <span class="t">None</span>
+    error: str | <span class="t">None</span> = <span class="t">None</span>
+    model: str | <span class="t">None</span> = <span class="t">None</span>
+    tokens_in: int = 0
+    tokens_out: int = 0
+
+<span class="k">class</span> NodeContext:
+    node: dict                   <span class="c"># 快照中的节点</span>
+    run_inputs: dict
+    upstream: dict[str, Any]     <span class="c"># node_id -> output</span>
+    providers: ProviderRegistry
+    emit: Callable[[str, dict], Awaitable[<span class="t">None</span>]]
+
+<span class="k">class</span> NodeExecutor(Protocol):
+    <span class="k">async def</span> execute(self, ctx: NodeContext) -&gt; NodeResult: ...</pre>
+
+<h3>5.3 变量解析</h3>
+<pre><span class="c"># 支持：{{ topic }} / {{ 拆解检索问题.output }} / {{ n_http_01.body.items[0].title }}</span>
+VAR_PATTERN = re.compile(<span class="s">r"\{\{\s*([^\s{}]+?)\s*\}\}"</span>)
+
+<span class="k">def</span> resolve(template: str, scope: Scope) -&gt; str:
+    <span class="c"># 引用源顺序：工作流输入 -> 节点名称/ID -> 解析失败抛 VariableError</span>
+    <span class="c"># 对象与数组统一 json.dumps(ensure_ascii=False) 后注入</span></pre>
+<p>解析发生在节点执行前，作用于 prompt、url、body、条件左右值等文本字段。<b>校验阶段</b>使用同一解析器做"干跑"：字段路径不存在即报错，保证运行前暴露问题。</p>
+
+<h3>5.4 重试、超时、取消</h3>
+<table>
+  <thead><tr><th style="width:130px">机制</th><th>规则</th></tr></thead>
+  <tbody>
+    <tr><td>重试</td><td><code>attempt <= node.retry</code>；仅对可重试错误（连接失败、超时、429、5xx）退避重试，间隔 <code>1s × 2^attempt</code>；参数校验错误与 4xx 不重试。</td></tr>
+    <tr><td>超时</td><td>节点级 <code>asyncio.wait_for(..., timeout=node.timeout_s or settings.DEFAULT_TIMEOUT)</code>；超时视为可重试错误。</td></tr>
+    <tr><td>取消</td><td><code>RunManager</code> 持有 <code>run_id -> asyncio.Task</code>；取消时 <code>task.cancel()</code>，<code>finally</code> 中把未完成节点写为 canceled 并把运行置为 canceled。</td></tr>
+    <tr><td>跳过传播</td><td>条件节点未激活的分支：其下游若"所有入边都来自跳过节点"则标记 skipped；失败节点的下游同样 skipped，不继续执行。</td></tr>
+    <tr><td>并发</td><td>全局 <code>Semaphore(ENGINE_MAX_CONCURRENCY=4)</code>；默认同一工作流串行（已有 running 则拒绝新运行，返回 409）。</td></tr>
+  </tbody>
+</table>
+
+<h3>5.5 持久化与 SQLite 写竞争</h3>
+<ul>
+  <li>SQLite 开启 <code>PRAGMA journal_mode=WAL</code> 与 <code>busy_timeout=5000</code>，读多写少场景足够。</li>
+  <li>引擎写节点账本通过单一 <code>asyncio.Lock</code> 串行化，每次写入使用独立短 Session（<code>asyncio.to_thread</code>），不在 await 期间持有 Session。</li>
+  <li>SSE 事件与入库顺序：先入库再推事件，保证客户端收到事件后立即查询也能读到该节点记录。</li>
+  <li>运行结束清理：按 <code>RUN_RETENTION</code>（默认 200/工作流）删除最旧 run 与其 node_run（级联删除）。</li>
+</ul>
+</section>
+
+<section id="d6"><div class="sec-head"><span class="n">D6</span><h2>实时事件流（SSE）</h2></div>
+<p><code>GET /api/runs/{run_id}/events</code> 返回 <code>text/event-stream</code>。前端用 <code>EventSource</code> 订阅；连接建立时先回放已落库的节点状态，之后推送增量。</p>
+<pre><span class="c">event: node.finished</span>
+<span class="c">id: 12</span>
+<span class="c">data: {"run_id":"r_8f2a","node_id":"n_llm_01","status":"success",</span>
+<span class="c">       "duration_ms":842,"tokens_in":210,"tokens_out":388,"output_preview":"…"}</span>
+
+<span class="c">event: run.finished</span>
+<span class="c">data: {"run_id":"r_8f2a","status":"success","duration_ms":4210,"total_tokens":1842}</span></pre>
+<table>
+  <thead><tr><th style="width:130px">事件</th><th>载荷</th></tr></thead>
+  <tbody>
+    <tr><td>run.started</td><td>run_id, workflow_id, started_at</td></tr>
+    <tr><td>node.started</td><td>run_id, node_id, attempt</td></tr>
+    <tr><td>node.log</td><td>run_id, node_id, level, message（模型流式片段或脚本输出）</td></tr>
+    <tr><td>node.finished</td><td>run_id, node_id, status, duration_ms, tokens, error?, output_preview</td></tr>
+    <tr><td>run.finished</td><td>run_id, status, duration_ms, total_tokens, failed_node_id?</td></tr>
+  </tbody>
+</table>
+<p>前端断线时指数退避重连；重连携带 <code>Last-Event-ID</code>，后端从 <code>node_run</code> 中补齐缺失状态。<b>不推送大对象</b>：完整输入输出由详情接口按节点按需拉取，SSE 只带摘要。</p>
+</section>
+
+<section id="d7"><div class="sec-head"><span class="n">D7</span><h2>API 设计</h2></div>
+<table>
+  <thead><tr><th style="width:80px">方法</th><th style="width:330px">路径</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>GET</td><td><code>/api/workflows</code></td><td>列表，支持 q / status / sort。</td></tr>
+    <tr><td>POST</td><td><code>/api/workflows</code></td><td>新建（空图或模板 id）。</td></tr>
+    <tr><td>GET</td><td><code>/api/workflows/{id}</code></td><td>详情含 graph。</td></tr>
+    <tr><td>PUT</td><td><code>/api/workflows/{id}</code></td><td>保存名称、描述、graph、viewport；返回校验状态。</td></tr>
+    <tr><td>DELETE</td><td><code>/api/workflows/{id}</code></td><td>级联删除运行记录，需 <code>?confirm=true</code>。</td></tr>
+    <tr><td>POST</td><td><code>/api/workflows/{id}/duplicate</code></td><td>复制为新草稿。</td></tr>
+    <tr><td>POST</td><td><code>/api/workflows/{id}/validate</code></td><td>返回 <code>{ok, issues:[{node_id, code, message}]}</code>。</td></tr>
+    <tr><td>GET / POST</td><td><code>/api/workflows/{id}/export</code> · <code>/api/workflows/import</code></td><td>单条导出 JSON / 预览并导入。</td></tr>
+    <tr><td>POST</td><td><code>/api/workflows/{id}/runs</code></td><td>发起运行，body 为 <code>{inputs}</code>；返回 run_id。</td></tr>
+    <tr><td>POST</td><td><code>/api/workflows/{id}/nodes/{node_id}/test</code></td><td>单节点调试，不落运行记录。</td></tr>
+    <tr><td>GET</td><td><code>/api/runs</code></td><td>分页 + 状态/工作流/时间筛选。</td></tr>
+    <tr><td>GET</td><td><code>/api/runs/{id}</code></td><td>运行摘要 + 节点列表（不含完整 output）。</td></tr>
+    <tr><td>GET</td><td><code>/api/runs/{id}/nodes/{node_id}</code></td><td>节点完整输入/输出/错误。</td></tr>
+    <tr><td>GET</td><td><code>/api/runs/{id}/events</code></td><td>SSE 事件流。</td></tr>
+    <tr><td>POST</td><td><code>/api/runs/{id}/cancel</code></td><td>取消运行，幂等。</td></tr>
+    <tr><td>POST</td><td><code>/api/runs/{id}/rerun</code></td><td>基于该 run 快照与输入新建运行。</td></tr>
+    <tr><td>GET / POST / PUT / DELETE</td><td><code>/api/providers[/{id}]</code></td><td>服务商 CRUD；响应中 key 只返回尾号。</td></tr>
+    <tr><td>POST</td><td><code>/api/providers/test</code></td><td>未保存配置的连接测试。</td></tr>
+    <tr><td>GET / PUT</td><td><code>/api/settings</code></td><td>本机设置读写。</td></tr>
+    <tr><td>GET</td><td><code>/api/system/info</code></td><td>数据目录、占用、版本、运行中数量。</td></tr>
+    <tr><td>POST</td><td><code>/api/system/export</code> · <code>/api/system/clear-runs</code></td><td>备份导出 / 清空运行记录。</td></tr>
+  </tbody>
+</table>
+<p>除 SSE 与下载外沿用统一响应体。错误码：400 参数、404 不存在、409 状态冲突（运行中重复发起）、422 校验不通过、502 上游服务失败。</p>
+</section>
+
+<section id="d8"><div class="sec-head"><span class="n">D8</span><h2>桌面壳架构（Electron + PyInstaller）</h2></div>
+<pre><span class="c">// Electron main.js（~120行，核心逻辑）</span>
+<span class="k">const</span> { app, BrowserWindow, Tray, Menu, ipcMain, dialog, shell, Notification } = require(<span class="s">'electron'</span>);
+<span class="k">const</span> path = require(<span class="s">'path'</span>);
+<span class="k">const</span> { spawn } = require(<span class="s">'child_process'</span>);
+<span class="k">const</span> fs = require(<span class="s">'fs'</span>);
+
+<span class="k">let</span> mainWin, tray, backendProc, backendPort;
+<span class="k">const</span> DEV = !app.isPackaged;
+
+<span class="k">async function</span> startBackend() {
+  <span class="k">const</span> port = DEV ? <span class="t">8000</span> : findFreePort();
+  <span class="k">if</span> (DEV) { exec(<span class="s">'python -m app.run'</span>, { cwd: <span class="s">'../apps/api'</span> }); }
+  <span class="k">else</span> { backendProc = spawn(path.join(process.resourcesPath, <span class="s">'backend.exe'</span>), [<span class="s">'--port'</span>, port]); }
+  <span class="k">await</span> waitForBackend(port);  <span class="c"># poll /health endpoint</span>
+  backendPort = port;
+}
+
+<span class="k">function</span> createWindow() {
+  mainWin = <span class="k">new</span> BrowserWindow({
+    width: <span class="t">1440</span>, height: <span class="t">900</span>, autoHideMenuBar: <span class="t">true</span>,
+    webPreferences: { preload: path.join(__dirname, <span class="s">'preload.js'</span>),
+                       contextIsolation: <span class="t">true</span>, nodeIntegration: <span class="t">false</span>, sandbox: <span class="t">true</span> }
+  });
+  <span class="k">const</span> url = DEV ? <span class="s">'http://localhost:5173'</span> : <span class="s">`http://127.0.0.1:${backendPort}/`</span>;
+  mainWin.loadURL(url);
+  mainWin.on(<span class="s">'close'</span>, (e) =&gt; { <span class="k">if</span> (!app.isQuitting) { e.preventDefault(); mainWin.hide(); } });
+}
+
+app.whenReady().then(<span class="k">async</span> () =&gt; {
+  <span class="k">await</span> startBackend();
+  createWindow();
+  setupTray();
+  <span class="k">if</span> (!DEV) setupAutoUpdater();  <span class="c"># electron-updater</span>
+});
+
+app.on(<span class="s">'before-quit'</span>, () =&gt; { app.isQuitting = <span class="t">true</span>; backendProc?.kill(<span class="t">'SIGTERM'</span>); });</pre>
+
+<h3>三层自动更新链路</h3>
+<table>
+  <thead><tr><th style="width:110px">层级</th><th>更新方式</th><th>是否重启应用</th></tr></thead>
+  <tbody>
+    <tr><td>Electron壳</td><td>electron-updater + GitHub Release / OSS；下载增量或全量安装包；Squirrel.Windows 完成替换</td><td>✅ 壳退出 → Squirrel替换 → 拉起新壳（后端进程自动跟着重启）</td></tr>
+    <tr><td>FastAPI后端</td><td>启动时 / 定时查版本API；下载新exe到temp/ → 写bootstrap.bat脚本 → 壳优雅退出后端进程 → bootstrap替换exe并重启壳</td><td>✅ 壳重启，但前端dist未变则前端缓存可保留</td></tr>
+    <tr><td>前端dist</td><td>FastAPI定时查版本API → 下载dist.zip到temp/ → 原子替换frontend/dist/目录 → SSE通知前端软刷新 location.reload()</td><td>❌ 最无感：前端软刷新，壳和后端都不重启</td></tr>
+  </tbody>
+</table>
+<div class="note"><b>关键设计：</b>三层更新独立、互不依赖。壳更新最重（NSIS安装包），前端更新最轻（软刷新）。所有更新前都校验SHA-512，失败则回滚到上一个版本。后端崩溃时主进程自动重启它，不影响壳窗口存活。</div>
+</section>
+
+<section id="d9"><div class="sec-head"><span class="n">D9</span><h2>前端设计</h2></div>
+<table>
+  <thead><tr><th style="width:180px">模块</th><th>实现要点</th></tr></thead>
+  <tbody>
+    <tr><td>路由</td><td><code>/workflows</code>、<code>/workflows/:id</code>（编辑器）、<code>/runs</code>、<code>/runs/:id</code>、<code>/models</code>、<code>/settings</code>；React Router createBrowserRouter。</td></tr>
+    <tr><td>画布</td><td><code>@xyflow/react</code>；自定义节点组件按类型渲染（图标、标题、状态徽标、端口）；连线 Bezier；Background variant=dots。</td></tr>
+    <tr><td>编辑器状态</td><td>Zustand slice：nodes / edges / selection / dirty / undoStack。撤销栈保存序列化快照（上限 50），参数输入 300ms 防抖提交。</td></tr>
+    <tr><td>属性面板</td><td>按节点类型映射表单；变量选择器读取当前图内可用输出；"调试此节点"走单节点接口并就地展示结果。</td></tr>
+    <tr><td>运行面板</td><td>底部抽屉；Zustand run slice + SSE hook useRunStream 合并事件；展开显示时间线日志。</td></tr>
+    <tr><td>数据请求</td><td>axios 封装；API 类型全部从 <code>@agentflow/contracts</code> 导入，禁止手写 interface。</td></tr>
+    <tr><td>视觉</td><td>AntD ConfigProvider：<code>colorPrimary #1F4E3D</code>、<code>borderRadius 10</code>；画布背景暖灰，节点卡片白底 + 类型色条，状态使用文字 + 图标而非仅颜色。</td></tr>
+    <tr><td>Electron检测</td><td><code>window.electronAPI?.getBackendPort()</code>；前端可动态切baseURL到后端实际端口。</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="d10"><div class="sec-head"><span class="n">D10</span><h2>契约层工作流</h2></div>
+<pre><span class="c"># 1. 后端修改 schemas.py（Pydantic v2）</span>
+<span class="k">class</span> WorkflowCreate(BaseModel):
+    name: str = Field(..., min_length=<span class="t">1</span>, max_length=<span class="t">100</span>)
+    description: str | <span class="t">None</span> = <span class="t">None</span>
+    graph: dict
+
+<span class="c"># 2. FastAPI 启动自动挂载 /openapi.json</span>
+<span class="c"># 3. 开发者运行</span>
+pnpm contracts:generate
+<span class="c">#   → 启动 apps/api 临时实例</span>
+<span class="c">#   → GET /openapi.json</span>
+<span class="c">#   → 写入 packages/contracts/openapi.yaml</span>
+
+<span class="c"># 4. 生成前端类型</span>
+pnpm contracts:build
+<span class="c">#   → openapi-typescript openapi.yaml --output src/generated/index.ts</span>
+
+<span class="c"># 5. 前端使用</span>
+<span class="k">import</span> type { WorkflowResponse } <span class="k">from</span> <span class="s">'@agentflow/contracts'</span>;
+
+<span class="c"># 6. CI 校验漂移</span>
+pnpm contracts:check
+<span class="c">#   → 重新导出 openapi</span>
+<span class="c">#   → diff 与已提交的 openapi.yaml</span>
+<span class="c">#   → 不同则 CI fail</span></pre>
+</section>
+
+<section id="d11"><div class="sec-head"><span class="n">D11</span><h2>安全与本地化</h2></div>
+<ul>
+  <li><b>监听范围：</b>生产模式 FastAPI 默认只监听 <code>127.0.0.1</code>；Electron 壳内置后端的端口也绑定 localhost。</li>
+  <li><b>密钥加密：</b>Fernet（<code>cryptography</code>）加密后存入 <code>provider.api_key_enc</code>；主密钥生成于 Electron 壳首次启动时写入用户数据目录，可用 <code>AGENTFLOW_SECRET_KEY</code> 覆盖。</li>
+  <li><b>密钥出站：</b>API 响应只返回掩码尾号；日志过滤器拦截 <code>sk-</code>/<code>Bearer</code> 形态字符串；导出文件不含密钥。</li>
+  <li><b>脚本节点：</b>独立子进程（<code>python -I -S</code>），工作目录为临时目录，stdin/stdout 传 JSON，超时即 kill。</li>
+  <li><b>路径校验：</b>导入导出与数据目录操作统一走 <code>Path.resolve()</code> + 根目录白名单，拒绝目录穿越。</li>
+  <li><b>单实例：</b>Electron 壳启动时获取用户数据目录下的锁文件，避免两个后端共用同一 SQLite 文件。</li>
+  <li><b>Electron 安全基线：</b><code>contextIsolation=true</code> + <code>nodeIntegration=false</code> + <code>sandbox=true</code>；所有原生能力通过 preload contextBridge 白名单暴露。</li>
+</ul>
+</section>
+
+<section id="d12"><div class="sec-head"><span class="n">D12</span><h2>实施顺序</h2></div>
+<table>
+  <thead><tr><th style="width:90px">阶段</th><th>交付内容</th><th>验证方式</th></tr></thead>
+  <tbody>
+    <tr><td>M0 脚手架</td><td>Monorepo目录结构、根配置、AGENTS.md、契约层脚本、基础CRUD跑通</td><td>pnpm contracts:generate && pnpm dev，浏览器打开localhost看到工作流列表</td></tr>
+    <tr><td>M1 引擎</td><td>RunManager、Scheduler、七类执行器、SSE、运行记录、取消</td><td>Mock执行器跑通串行/并行/条件跳过/失败/取消五种路径；SSE断线重放</td></tr>
+    <tr><td>M2 编辑器</td><td>画布、节点库、属性面板、变量选择器、运行抽屉、单节点调试</td><td>手工走查主流程；100节点图操作流畅；撤销重做正确</td></tr>
+    <tr><td>M3 配置与打磨</td><td>模型配置与连接测试、设置页、备份清空、空状态与错误文案</td><td>真实provider跑一次完整流程；异常场景逐条对照PRD第8章</td></tr>
+    <tr><td>M4 桌面化</td><td>Electron壳 + PyInstaller后端exe + 自动更新三层链路</td><td>Windows上双击exe即用；自动更新从GitHub Release拉取并静默安装</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="d13"><div class="sec-head"><span class="n">D13</span><h2>风险与取舍</h2></div>
+<table>
+  <thead><tr><th style="width:160px">风险</th><th>影响</th><th>应对</th></tr></thead>
+  <tbody>
+    <tr><td>SQLite 写竞争</td><td>节点并发完成时写库抖动</td><td>WAL + 单写锁 + 短 Session；如仍不足，后续可切 PostgreSQL（已有配置项）。</td></tr>
+    <tr><td>SSE 与进程重启</td><td>运行中重启导致运行悬挂</td><td>启动时扫描 <code>running</code> 状态运行，标记为 failed（"应用重启中断"）。</td></tr>
+    <tr><td>Provider 差异</td><td>各家 JSON 输出与用量字段不一致</td><td>Provider 适配层归一化 <code>text / json / usage</code>，不支持的能力降级为文本解析。</td></tr>
+    <tr><td>脚本安全</td><td>本机代码执行风险</td><td>子进程隔离 + 超时 + 明确提示；不做沙箱承诺，定位为可信本地功能。</td></tr>
+    <tr><td>画布性能</td><td>大图拖拽掉帧</td><td>仅选中节点重渲染；属性表单防抖；必要时限制同屏节点数并提示。</td></tr>
+    <tr><td>Electron 体积</td><td>安装包 ~120MB</td><td>这是 Chromium 的固有成本；Tauri 体积更小但需 Rust + WebView2 实测 AntD5 兼容性。</td></tr>
+    <tr><td>Electron Defender 误报</td><td>首次安装被标记病毒</td><td>EV证书签名 + Windows Hardware Dev Center 提交；Phase 1 先用自签名，后续升级。</td></tr>
+    <tr><td>pnpm + uv 并行</td><td>两套 workspace 配置容易混乱</td><td>明确边界：pnpm 管 apps/web + packages/contracts，uv 单独管 apps/api；CI 分别调用，无交叉。</td></tr>
+  </tbody>
+</table>
+</section>
+
+</div>
+
+<aside>
+  <nav class="toc">
+    <div class="h">Contents</div>
+    <a href="#d1">D1 目标与约束</a>
+    <a href="#d2">D2 总体架构</a>
+    <a href="#d3">D3 Monorepo结构</a>
+    <a href="#d4">D4 数据模型</a>
+    <a href="#d5">D5 执行引擎</a>
+    <a href="#d6">D6 SSE事件流</a>
+    <a href="#d7">D7 API设计</a>
+    <a href="#d8">D8 桌面壳架构</a>
+    <a href="#d9">D9 前端设计</a>
+    <a href="#d10">D10 契约层</a>
+    <a href="#d11">D11 安全</a>
+    <a href="#d12">D12 实施顺序</a>
+    <a href="#d13">D13 风险与取舍</a>
+  </nav>
+</aside>
+
+<footer>
+  <span>AgentFlow · Technical Design v0.2</span>
+  <span>配套文档：PRD v0.1 · UI 原型</span>
+</footer>
+</div>
+</body>
+</html>

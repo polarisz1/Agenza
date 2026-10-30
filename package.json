@@ -1,0 +1,25 @@
+{
+  "name": "agentflow",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:web": "turbo run dev --filter=@agentflow/web",
+    "dev:api": "cd apps/api && uv run python -m app.run",
+    "build": "turbo run build",
+    "build:web": "turbo run build --filter=@agentflow/web",
+    "lint": "turbo run lint",
+    "format": "turbo run format",
+    "contracts:generate": "node packages/contracts/scripts/generate.mjs",
+    "contracts:build": "node node_modules/openapi-typescript/bin/cli.js packages/contracts/openapi.yaml -o packages/contracts/src/generated/index.ts",
+    "contracts:check": "node packages/contracts/scripts/check.mjs",
+    "pack": "bash tools/scripts/pack-release.sh"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.3",
+    "openapi-typescript": "^7.4.3"
+  }
+}

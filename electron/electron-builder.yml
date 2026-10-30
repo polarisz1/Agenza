@@ -1,0 +1,50 @@
+appId: com.agentflow.app
+productName: AgentFlow
+copyright: Copyright © 2026 AgentFlow
+
+directories:
+  buildResources: build
+  output: dist_electron
+
+files:
+  - main.js
+  - preload.js
+  - package.json
+  - node_modules/**/*
+
+asar: true
+
+asarUnpack:
+  - "**/*.node"
+
+extraResources:
+  - from: ../apps/web/dist
+    to: frontend-dist
+    filter:
+      - "**/*"
+  - from: ../apps/api/dist_backend
+    to: backend
+    filter:
+      - "**/*.exe"
+      - "**/*.dll"
+      - "**/*.pyd"
+
+win:
+  icon: icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: AgentFlow
+  uninstallDisplayName: AgentFlow
+
+publish:
+  provider: github
+  owner: agentflow
+  repo: releases

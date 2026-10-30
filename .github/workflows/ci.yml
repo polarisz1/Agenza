@@ -1,0 +1,56 @@
+name: AgentFlow CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  contracts:
+    name: Contract drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile || pnpm install
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: uv install
+        run: pip install uv && cd apps/api && uv sync --all-extras
+      - name: contracts:check
+        run: pnpm contracts:check
+
+  api:
+    name: Backend lint + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: uv install
+        run: pip install uv && cd apps/api && uv sync --all-extras
+      - name: Ruff lint
+        run: cd apps/api && uv run ruff check src/
+      - name: Ruff format
+        run: cd apps/api && uv run ruff format --check src/
+
+  web:
+    name: Frontend lint + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile || pnpm install
+      - name: lint
+        run: pnpm --filter @agentflow/web lint
+      - name: build
+        run: pnpm --filter @agentflow/web build

@@ -1,0 +1,58 @@
+name: AgentFlow Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-desktop:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.0 }
+
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile || pnpm install
+
+      - name: uv install
+        run: pip install uv pyinstaller && cd apps/api && uv sync
+
+      - name: Build frontend
+        run: pnpm --filter @agentflow/web build
+
+      - name: Build backend exe
+        run: |
+          cd apps/api
+          uv run pyinstaller --onefile --name backend.exe src/app/run.py --distpath ../../electron/resources --workpath ../../.build/pyinstaller --noconfirm
+
+      - name: Build Electron app
+        working-directory: electron
+        run: |
+          npm install
+          npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AgentFlow-Setup
+          path: electron/dist_electron/*.exe
+
+  release:
+    needs: build-desktop
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: AgentFlow-Setup, path: ./dist }
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: ./dist/*

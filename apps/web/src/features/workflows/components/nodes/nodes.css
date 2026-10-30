@@ -1,0 +1,111 @@
+/* ---------- 画布节点卡片 ---------- */
+
+.afn {
+  width: 190px;
+  padding: 9px 11px 10px;
+  border: 1px solid #e2e0d8;
+  border-radius: 10px;
+  background: #fff;
+  color: #1b1c1a;
+  font-size: 12.5px;
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.afn--selected {
+  border-color: #1f4e3d;
+  box-shadow: 0 0 0 2px rgba(31, 78, 61, 0.18);
+}
+
+.afn--issue {
+  border-color: #b03a3a;
+  box-shadow: 0 0 0 2px rgba(176, 58, 58, 0.16);
+}
+
+.afn-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.afn-bar {
+  flex: none;
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+}
+
+.afn-title {
+  flex: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.afn-status {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.afn-status--queued {
+  background: #eef0ec;
+  color: #7c807a;
+}
+.afn-status--running {
+  background: #e9eef6;
+  color: #3d5a80;
+}
+.afn-status--success {
+  background: #e7f0eb;
+  color: #2f7059;
+}
+.afn-status--failed {
+  background: #faece4;
+  color: #a86612;
+}
+.afn-status--skipped,
+.afn-status--cancelled {
+  background: #eef0ec;
+  color: #7c807a;
+}
+
+.afn-body {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 7px;
+  color: #4b4e49;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.afn-summary {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, monospace;
+}
+
+.afn-kind {
+  flex: none;
+  color: #9aa09a;
+  font-size: 10px;
+}
+
+/* 端口：兼容目标端口悬停时高亮，不兼容时置灰 */
+.react-flow__handle.afn-handle {
+  width: 9px;
+  height: 9px;
+  border: 2px solid #fff;
+  background: #2f7059;
+}
+
+.react-flow__handle.afn-handle.connectingto:not(.valid) {
+  background: #c3c7c0;
+}
