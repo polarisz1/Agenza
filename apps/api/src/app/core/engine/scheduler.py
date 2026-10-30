@@ -50,10 +50,12 @@ class Scheduler:
         edges = graph.get("edges", [])
         node_map = {n["id"]: n for n in nodes}
 
-        # target → 上游节点集合
-        parents: dict[str, set[str]] = defaultdict(set)
+        # target → [(source, from_port)]：保留边声明顺序（保证 merge 输入顺序确定）
+        parent_edges: dict[str, list[tuple[str, str | None]]] = defaultdict(list)
         for e in edges:
-            parents[e["target"]].add(e["source"])
+            source, target = e.get("source"), e.get("target")
+            if source in node_map and target in node_map:
+                parent_edges[target].append((source, e.get("from_port")))
 
         layers = kahn_layers(nodes, edges)
         results: dict[str, NodeResult] = {}  # node_id → NodeResult
@@ -79,7 +81,7 @@ class Scheduler:
                         node_id=nid,
                         node_map=node_map,
                         node_names=node_names,
-                        parents=parents,
+                        parent_edges=parent_edges,
                         results=results,
                         inputs=inputs,
                         registry=registry,
@@ -102,7 +104,7 @@ class Scheduler:
         node_id: str,
         node_map: dict[str, dict],
         node_names: dict[str, str],
-        parents: dict[str, set[str]],
+        parent_edges: dict[str, list[tuple[str, str | None]]],
         results: dict[str, NodeResult],
         inputs: dict,
         registry: dict[str, NodeExecutor],
@@ -127,26 +129,22 @@ class Scheduler:
             return
 
         # Gather upstream inputs
+        # 分支语义：来自条件节点的边只有与条件结果一致时才激活。
+        # 未激活的边既不提供输入，也不算"上游失败"。
         upstream: dict[str, Any] = {}
-        for pid in parents.get(node_id, set()):
+        active_parents: list[str] = []
+        inactive_parents: list[str] = []
+        for pid, from_port in parent_edges.get(node_id, ()):
             prev = results.get(pid)
             if prev is None:
                 # upstream not yet executed (shouldn't happen given layers)
                 continue
+            if not _branch_active(from_port, prev):
+                inactive_parents.append(pid)
+                continue
+            active_parents.append(pid)
             if prev.status == "success":
                 upstream[pid] = prev.output
-            elif prev.status in ("skipped", "cancelled"):
-                # If any upstream is skipped/cancelled and this isn't a merge, skip
-                if node_type != "merge":
-                    await self._finish(
-                        node_id,
-                        node,
-                        NodeResult(status="skipped", error=f"Upstream {pid} {prev.status}"),
-                        0,
-                        results,
-                        on_node_finished,
-                    )
-                    return
             elif prev.status == "failed":
                 await self._finish(
                     node_id,
@@ -157,6 +155,31 @@ class Scheduler:
                     on_node_finished,
                 )
                 return
+            elif node_type != "merge":
+                # 上游被跳过/取消：非 merge 节点不执行
+                await self._finish(
+                    node_id,
+                    node,
+                    NodeResult(status="skipped", error=f"Upstream {pid} {prev.status}"),
+                    0,
+                    results,
+                    on_node_finished,
+                )
+                return
+
+        if inactive_parents and not active_parents:
+            await self._finish(
+                node_id,
+                node,
+                NodeResult(
+                    status="skipped",
+                    error=f"分支未激活：{'、'.join(inactive_parents)} 未走该分支",
+                ),
+                0,
+                results,
+                on_node_finished,
+            )
+            return
 
         executor = registry.get(node_type)
         if executor is None:
@@ -174,7 +197,7 @@ class Scheduler:
             node=node,
             run_inputs=inputs,
             upstream=upstream,
-            available=_collect_ancestor_outputs(node_id, parents, results),
+            available=_collect_ancestor_outputs(node_id, parent_edges, results),
             node_names=node_names,
             providers=providers_registry,
             emit=self.bus.publish,
@@ -280,15 +303,36 @@ class Scheduler:
             await _safe_call(on_node_finished, node_id, node, result, duration_ms)
 
 
+def _branch_active(from_port: str | None, prev: NodeResult) -> bool:
+    """判断来自条件节点的边是否激活。
+
+    - 边没标 `from_port` → 视为普通边，恒激活（兼容旧图）
+    - 上游输出没有布尔 `condition`（非条件节点）→ 恒激活
+    - 否则：`true` 端口在条件为真时激活，`false` 端口反之
+    """
+    if from_port is None:
+        return True
+
+    output = prev.output
+    if not isinstance(output, dict) or "condition" not in output:
+        return True
+
+    value = output.get("condition")
+    if not isinstance(value, bool):
+        return True
+
+    return value == (from_port == "true")
+
+
 def _collect_ancestor_outputs(
     node_id: str,
-    parents: dict[str, set[str]],
+    parent_edges: dict[str, list[tuple[str, str | None]]],
     results: dict[str, NodeResult],
 ) -> dict[str, Any]:
     """收集所有已完成祖先节点的成功输出，供变量引用使用。"""
     collected: dict[str, Any] = {}
     seen: set[str] = set()
-    stack = list(parents.get(node_id, ()))
+    stack = [src for src, _ in parent_edges.get(node_id, ())]
     while stack:
         pid = stack.pop()
         if pid in seen:
@@ -297,7 +341,7 @@ def _collect_ancestor_outputs(
         prev = results.get(pid)
         if prev is not None and prev.status == "success":
             collected[pid] = prev.output
-        stack.extend(parents.get(pid, ()))
+        stack.extend(src for src, _ in parent_edges.get(pid, ()))
     return collected
 
 
