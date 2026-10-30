@@ -2,13 +2,32 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-ROOT_DIR = Path(__file__).resolve().parents[4]  # AgentFlow/
+# config.py 位于 apps/api/src/app/core → parents[5] 才是仓库根
+# （此前写成 parents[4]，数据目录因此落在 apps/data，评审 S13）
+ROOT_DIR = Path(__file__).resolve().parents[5]  # AgentFlow/
 DATA_DIR = ROOT_DIR / "data"
+
+
+def relocate_legacy_data_dir(legacy: Path, target: Path) -> bool:
+    """把旧位置的数据目录搬到新位置（一次性）。
+
+    只在"新位置还没有库、旧位置有库"时动手，避免覆盖用户数据。
+    返回是否发生了搬迁，便于调用方记录日志。
+    """
+    if not legacy.is_dir() or (target / "agentflow.db").exists():
+        return False
+    target.mkdir(parents=True, exist_ok=True)
+    for item in legacy.iterdir():
+        if item.is_file():
+            shutil.move(str(item), str(target / item.name))
+    shutil.rmtree(legacy, ignore_errors=True)
+    return True
 
 
 class Settings(BaseSettings):
@@ -74,6 +93,13 @@ class Settings(BaseSettings):
         data = Path(self.DATA_DIR)
         data.mkdir(parents=True, exist_ok=True)
         return f"sqlite:///{data / 'agentflow.db'}"
+
+    @property
+    def is_packaged(self) -> bool:
+        """是否运行在 PyInstaller 冻结环境里（打包后必须由外层显式给 DATA_DIR）。"""
+        import sys
+
+        return bool(getattr(sys, "frozen", False))
 
 
 settings = Settings()

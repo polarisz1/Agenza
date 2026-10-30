@@ -56,8 +56,27 @@ def init_db() -> None:
     结构来源是 alembic（`alembic/versions/0001_baseline.py` 起），不再用
     `create_all`——否则模型与库会悄悄漂移，且没有回滚路径。
     """
+    _relocate_legacy_data()
     _upgrade_schema()
     _mark_interrupted_runs()
+
+
+def _relocate_legacy_data() -> None:
+    """把历史上落在 apps/data 的库与主密钥搬到仓库根的 data/（评审 S13 / D-3）。
+
+    只在"使用默认数据目录"时执行：测试与 Electron 会显式指定 DATA_DIR，
+    此时绝不能去动仓库里的旧目录。
+    """
+    from app.core.config import DATA_DIR as DEFAULT_DATA_DIR
+    from app.core.config import ROOT_DIR, relocate_legacy_data_dir
+
+    target = Path(settings.DATA_DIR)
+    if target.resolve() != DEFAULT_DATA_DIR.resolve():
+        return
+
+    legacy = ROOT_DIR / "apps" / "data"
+    if relocate_legacy_data_dir(legacy, target):
+        log.info(f"已把历史数据目录 {legacy} 迁移到 {target}")
 
 
 def _upgrade_schema() -> None:
