@@ -1,41 +1,40 @@
-"""FastAPI dependency - ProviderRegistry bootstrap."""
+"""服务商注册表装载。
+
+每次调用都构造**新的** ProviderRegistry（快照），不再复用模块级单例：
+运行中的节点持有自己那次的快照，此时用户去「单节点调试」或发起新运行，
+不会把在途节点的 provider 清空（评审 S4）。
+"""
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-
 from sqlalchemy.orm import Session
 
-from app.api_deps import get_session
 from app.core.providers.anthropic_compat import AnthropicCompatProvider
-from app.core.providers.base import ProviderRegistry
+from app.core.providers.base import ProviderAdapter, ProviderRegistry
 from app.core.providers.ollama import OllamaProvider
 from app.core.providers.openai_compat import OpenAICompatProvider
 from app.core.security import KeyManager
 from app.modules.providers.repository import ProviderRepository
 
-_registry = ProviderRegistry()
+
+def get_providers_registry(session: Session) -> ProviderRegistry:
+    """按当前数据库内容构建一份服务商快照。"""
+    registry = ProviderRegistry()
+    for provider in ProviderRepository.list_enabled(session):
+        adapter = _build_adapter(
+            provider.kind,
+            provider.base_url,
+            KeyManager.decrypt(provider.api_key_enc),
+            provider.default_model,
+        )
+        if adapter:
+            registry.register(provider.id, adapter)
+    return registry
 
 
-def get_providers_registry(session: Session | None = None) -> ProviderRegistry:
-    """Load all enabled providers into the singleton registry."""
-    _registry.clear()
-    sess = session or next(get_session())
-    try:
-        db_providers = ProviderRepository.list_enabled(sess)
-        for p in db_providers:
-            adapter = _build_adapter(
-                p.kind, p.base_url, KeyManager.decrypt(p.api_key_enc), p.default_model
-            )
-            if adapter:
-                _registry.register(p.id, adapter)
-    finally:
-        if session is None:
-            sess.close()
-    return _registry
-
-
-def _build_adapter(kind: str, base_url: str, api_key: str | None, default_model: str | None):
+def _build_adapter(
+    kind: str, base_url: str, api_key: str | None, default_model: str | None
+) -> ProviderAdapter | None:
     if kind == "ollama":
         return OllamaProvider(base_url=base_url, default_model=default_model)
     if kind == "openai-compat":
