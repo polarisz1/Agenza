@@ -52,6 +52,29 @@ class ProviderAdapter:
         raise NotImplementedError
 
 
+class ProviderError(RuntimeError):
+    """服务商不可用（配置/密钥问题），错误信息直接展示给用户。"""
+
+
+class UnusableProvider(ProviderAdapter):
+    """占位适配器：让"服务商存在但不可用"有明确报错，而不是静默变成空密钥。"""
+
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+
+    async def chat(
+        self,
+        *,
+        model: str | None,
+        system: str = "",
+        user: str = "",
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+        response_format: ResponseFormat = "text",
+    ) -> ChatResult:
+        raise ProviderError(self.reason)
+
+
 class ProviderRegistry:
     """In-memory provider instances, keyed by provider db id."""
 

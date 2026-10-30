@@ -12,7 +12,7 @@ from app.core.providers.anthropic_compat import AnthropicCompatProvider
 from app.core.providers.base import describe_http_error
 from app.core.providers.ollama import OllamaProvider
 from app.core.providers.openai_compat import OpenAICompatProvider
-from app.core.security import KeyManager
+from app.core.security import KeyDecryptError, KeyManager
 from app.modules.providers.models import Provider
 from app.modules.providers.repository import ProviderRepository
 from app.modules.providers.schemas import (
@@ -28,6 +28,8 @@ def _masked(key_enc: str | None) -> str:
         return "（未设置）"
     try:
         raw = KeyManager.decrypt(key_enc)
+    except KeyDecryptError:
+        return "（无法解密，请重新填写）"
     except Exception:
         return "••••"
     if len(raw) <= 6:

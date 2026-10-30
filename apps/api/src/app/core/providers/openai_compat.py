@@ -14,10 +14,17 @@ from app.core.providers.base import ChatResult, ProviderAdapter, ResponseFormat
 class OpenAICompatProvider(ProviderAdapter):
     kind = "openai-compat"
 
-    def __init__(self, base_url: str, api_key: str, default_model: str | None = None) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str,
+        default_model: str | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.default_model = default_model or "gpt-4o-mini"
+        self._transport = transport
 
     async def chat(
         self,
@@ -44,7 +51,11 @@ class OpenAICompatProvider(ProviderAdapter):
         }
         url = f"{self.base_url}/chat/completions"
 
-        async with httpx.AsyncClient(timeout=120, trust_env=trust_env_for(self.base_url)) as client:
+        async with httpx.AsyncClient(
+            timeout=120,
+            trust_env=trust_env_for(self.base_url),
+            transport=self._transport,
+        ) as client:
             resp = await client.post(url, json=payload, headers=headers)
             resp.raise_for_status()
             data = resp.json()

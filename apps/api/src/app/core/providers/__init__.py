@@ -9,11 +9,12 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
+from app.core.logger import log
 from app.core.providers.anthropic_compat import AnthropicCompatProvider
-from app.core.providers.base import ProviderAdapter, ProviderRegistry
+from app.core.providers.base import ProviderAdapter, ProviderRegistry, UnusableProvider
 from app.core.providers.ollama import OllamaProvider
 from app.core.providers.openai_compat import OpenAICompatProvider
-from app.core.security import KeyManager
+from app.core.security import KeyDecryptError, KeyManager
 from app.modules.providers.repository import ProviderRepository
 
 
@@ -21,10 +22,18 @@ def get_providers_registry(session: Session) -> ProviderRegistry:
     """按当前数据库内容构建一份服务商快照。"""
     registry = ProviderRegistry()
     for provider in ProviderRepository.list_enabled(session):
+        try:
+            api_key = KeyManager.decrypt(provider.api_key_enc)
+        except KeyDecryptError as exc:
+            # 密钥解不开：注册一个会明确报错的占位实现，而不是拿空串去请求（那样只会 401）
+            log.warning(f"Provider {provider.id} 密钥无法解密：{exc}")
+            registry.register(provider.id, UnusableProvider(str(exc)))
+            continue
+
         adapter = _build_adapter(
             provider.kind,
             provider.base_url,
-            KeyManager.decrypt(provider.api_key_enc),
+            api_key,
             provider.default_model,
         )
         if adapter:

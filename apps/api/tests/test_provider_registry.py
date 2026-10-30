@@ -10,6 +10,7 @@ from types import SimpleNamespace
 
 from app.core import providers as providers_module
 from app.core.providers import get_providers_registry
+from app.core.security import KeyManager
 
 
 def _fake_provider(pid: str, kind: str = "openai-compat") -> SimpleNamespace:
@@ -17,7 +18,7 @@ def _fake_provider(pid: str, kind: str = "openai-compat") -> SimpleNamespace:
         id=pid,
         kind=kind,
         base_url="https://example.com/v1",
-        api_key_enc="",
+        api_key_enc=KeyManager.encrypt("sk-test"),
         default_model="m",
     )
 
