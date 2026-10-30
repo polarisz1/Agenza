@@ -13,6 +13,7 @@ import {
 import {
   createNodeData,
   deserializeGraph,
+  nextLabel,
   uid,
   type EditorNode,
   type NodeType,
@@ -52,6 +53,11 @@ interface EditorState {
   rev: number;
   /** 撤销/重做/加载后 +1，用于属性面板同步草稿 */
   historyVersion: number;
+  /**
+   * 当前"编辑会话"锚定的节点：同一节点连续编辑只压一次撤销栈，
+   * 换节点后再改才压新的（F9：不再靠 focus 事件压栈导致"撤销按了没反应"）。
+   */
+  historyAnchor: string | null;
   past: Snapshot[];
   future: Snapshot[];
 
@@ -95,6 +101,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   loaded: false,
   rev: 0,
   historyVersion: 0,
+  historyAnchor: null,
   past: [],
   future: [],
 
@@ -115,6 +122,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       loaded: true,
       rev: 0,
       historyVersion: get().historyVersion + 1,
+      historyAnchor: null,
       past: [],
       future: [],
     });
@@ -141,6 +149,8 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     if (id === get().selectedId) return;
     set({
       selectedId: id,
+      // 换选中的节点 = 结束上一次"编辑会话"，下次改参数会压新的撤销点
+      historyAnchor: null,
       nodes: get().nodes.map((n) =>
         n.selected === (n.id === id) ? n : { ...n, selected: n.id === id },
       ),
@@ -206,18 +216,25 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
 
   addNode: (type, position) => {
     get().beginHistory();
-    const seq = get().nodes.filter((n) => n.data.type === type).length + 1;
     const id = uid(type);
+    // 名称按"已有同类节点里的最大编号 +1"，删掉节点后重建也不会重名（F8）
+    const label = nextLabel(
+      type,
+      get()
+        .nodes.filter((n) => n.data.type === type)
+        .map((n) => n.data.label),
+    );
     const node: EditorNode = {
       id,
       type,
       position,
       selected: true,
-      data: createNodeData(type, seq),
+      data: { ...createNodeData(type, 1), label },
     };
     set({
       nodes: [...get().nodes.map((n) => (n.selected ? { ...n, selected: false } : n)), node],
       selectedId: id,
+      historyAnchor: null,
       dirty: true,
       rev: get().rev + 1,
     });
@@ -229,6 +246,12 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     const current = node.data.config || {};
     const next = { ...current, ...patch };
     if (JSON.stringify(current) === JSON.stringify(next)) return;
+
+    // 真的改了才压撤销点，且同一节点连续编辑只压一次（F9）
+    if (get().historyAnchor !== nodeId) {
+      get().beginHistory();
+      set({ historyAnchor: nodeId });
+    }
     set({
       nodes: get().nodes.map((n) =>
         n.id === nodeId ? { ...n, data: { ...n.data, config: next } } : n,
@@ -241,6 +264,11 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   updateLabel: (nodeId, label) => {
     const node = get().nodes.find((n) => n.id === nodeId);
     if (!node || node.data.label === label) return;
+
+    if (get().historyAnchor !== nodeId) {
+      get().beginHistory();
+      set({ historyAnchor: nodeId });
+    }
     set({
       nodes: get().nodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, label } } : n)),
       dirty: true,
@@ -278,6 +306,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       dirty: true,
       rev: get().rev + 1,
       historyVersion: get().historyVersion + 1,
+      historyAnchor: null,
     });
   },
 
@@ -298,6 +327,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       dirty: true,
       rev: get().rev + 1,
       historyVersion: get().historyVersion + 1,
+      historyAnchor: null,
     });
   },
 

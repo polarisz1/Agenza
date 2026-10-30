@@ -209,7 +209,8 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
   const labelInvalid = labelDraft.trim() !== '' && !isVariableSafeLabel(labelDraft.trim());
 
   return (
-    <aside className="afe-props" onFocusCapture={beginHistory}>
+    // 撤销点由 store 在"值真的变化时"按节点压入（F9），不再靠聚焦事件
+    <aside className="afe-props">
       <div className="afe-props-head">
         <span className="afe-nbar" style={{ background: meta.color }} />
         <input

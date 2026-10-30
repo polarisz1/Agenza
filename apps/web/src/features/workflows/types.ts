@@ -7,6 +7,15 @@ import type { components } from '@agentflow/contracts';
  */
 export type NodeType = NonNullable<components['schemas']['GraphDef']['nodes']>[number]['type'];
 
+/**
+ * 编辑器里的节点类型：已知类型 + `unknown`。
+ *
+ * 打开旧版本/未来版本的工作流时可能遇到编辑器不认识的类型。**不能**把它降级成
+ * `python`（那样一保存就把数据写坏了），而是原样保留原始 type、用 `unknown` 渲染，
+ * 保存时再写回去（评审 F7）。
+ */
+export type EditorNodeType = NodeType | 'unknown';
+
 /** 节点运行态（PRD §7：排队 / 运行中 / 成功 / 失败 / 已跳过 / 已取消） */
 export type RuntimeStatus = 'queued' | 'running' | 'success' | 'failed' | 'skipped' | 'cancelled';
 
@@ -14,14 +23,16 @@ export type RuntimeStatus = 'queued' | 'running' | 'success' | 'failed' | 'skipp
 export type PortKind = 'text' | 'json' | 'bool';
 
 export interface NodeData extends Record<string, unknown> {
-  type: NodeType;
+  type: EditorNodeType;
   label: string;
   config: Record<string, any>;
+  /** 未知类型节点保留的原始 type，保存时原样写回 */
+  unknownType?: string;
   runtimeStatus?: RuntimeStatus;
   hasIssue?: boolean;
 }
 
-export type EditorNode = Node<NodeData, NodeType>;
+export type EditorNode = Node<NodeData, EditorNodeType>;
 
 export interface NodeMeta {
   label: string;
@@ -34,7 +45,17 @@ export interface NodeMeta {
   accepts: PortKind[];
 }
 
-export const NODE_META: Record<NodeType, NodeMeta> = {
+export const NODE_META: Record<EditorNodeType, NodeMeta> = {
+  unknown: {
+    label: '未知节点',
+    group: '其他',
+    desc: '编辑器不认识的节点类型（只读保留，不会被改写）',
+    color: '#b03a3a',
+    hasInput: true,
+    hasOutput: true,
+    outputKind: 'json',
+    accepts: ['text', 'json', 'bool'],
+  },
   input: {
     label: '输入',
     group: '基础',
@@ -230,6 +251,21 @@ export function createNodeData(type: NodeType, seq: number): NodeData {
   };
 }
 
+/** 下一个可用的节点名序号：按已有标签里的**最大编号 +1**，删掉节点后不会重名（F8）。 */
+export function nextLabel(type: NodeType, existingLabels: string[]): string {
+  const prefix = labelPrefix(type);
+  const used = existingLabels
+    .map((label) => label.match(new RegExp(`^${escapeRegExp(prefix)}(\\d+)$`)))
+    .filter((m): m is RegExpMatchArray => m !== null)
+    .map((m) => Number(m[1]));
+  const next = used.length ? Math.max(...used) + 1 : 1;
+  return `${prefix}${next}`;
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function labelPrefix(type: NodeType): string {
   switch (type) {
     case 'input':
@@ -255,6 +291,8 @@ function labelPrefix(type: NodeType): string {
 export function nodeSummary(data: NodeData): string {
   const c = data.config || {};
   switch (data.type) {
+    case 'unknown':
+      return `未知类型 ${data.unknownType ?? ''}（原样保留，不会被改写）`;
     case 'input':
       return `字段 ${c.key || '未命名'} · ${c.data_type || 'text'}`;
     case 'llm':
@@ -283,7 +321,7 @@ export function isVariableSafeLabel(label: string): boolean {
   return /^[^\s.{}]+$/.test(label);
 }
 
-export function canConnect(source: NodeType, target: NodeType): boolean {
+export function canConnect(source: EditorNodeType, target: EditorNodeType): boolean {
   // 条件节点输出的是"控制流"（走哪条分支），不承载数据，因此不参与端口类型矩阵：
   // 下游的数据仍然从各自的祖先节点解析，这里只要求对端有输入端口。
   if (source === 'condition') return NODE_META[target].hasInput;
@@ -338,7 +376,8 @@ export function serializeGraph(nodes: EditorNode[], edges: Edge[]): GraphDef {
       }
       return {
         id: n.id,
-        type: n.data.type,
+        // 未知类型节点原样写回原始 type，绝不改成编辑器认识的类型（F7）
+        type: n.data.unknownType ?? n.data.type,
         name: n.data.label,
         position: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
         config,
@@ -364,8 +403,12 @@ export function deserializeGraph(graph: any): { nodes: EditorNode[]; edges: Edge
   const rawEdges: any[] = Array.isArray(graph?.edges) ? graph.edges : [];
 
   const nodes: EditorNode[] = rawNodes.map((n) => {
-    const type = (NODE_META as Record<string, NodeMeta>)[n.type] ? (n.type as NodeType) : 'python';
-    const config = { ...DEFAULT_CONFIG[type], ...(n.config || {}) };
+    const known = (NODE_META as Record<string, NodeMeta>)[n.type] !== undefined;
+    const type: EditorNodeType = known ? (n.type as NodeType) : 'unknown';
+    const config = {
+      ...(known ? DEFAULT_CONFIG[type as NodeType] : {}),
+      ...(n.config || {}),
+    };
     // 后端返回的 headers 是对象，编辑器内用 JSON 文本编辑
     if (type === 'http' && config.headers && typeof config.headers === 'object') {
       config.headers = JSON.stringify(config.headers, null, 2);
@@ -381,6 +424,8 @@ export function deserializeGraph(graph: any): { nodes: EditorNode[]; edges: Edge
         type,
         label: String(n.name || NODE_META[type].label),
         config,
+        // 未知类型保留原始 type，保存时原样写回（F7：不降级、不篡改）
+        ...(known ? {} : { unknownType: String(n.type ?? '') }),
       },
     };
   });
