@@ -28,8 +28,8 @@ export function useAutoSave(workflowId: string | null, delay = AUTO_SAVE_DELAY) 
     try {
       const saved = await updateWorkflow(state.workflowId, {
         name: state.name,
-        graph: graph as any,
-        viewport: viewport as any,
+        graph,
+        viewport: viewport as Record<string, unknown> | undefined,
       });
       useEditorStore.getState().markSaved(revAtStart, saved.status);
       return true;

@@ -11,6 +11,7 @@ import {
   useReactFlow,
   type Connection,
   type Edge,
+  type Viewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -153,7 +154,7 @@ function EditorInner() {
           name: wf.name,
           status: wf.status,
           graph: wf.graph,
-          viewport: (wf.viewport as any) ?? null,
+          viewport: (wf.viewport ?? null) as Viewport | null,
         });
         setIssues([]);
         setRunId(null);
@@ -304,7 +305,7 @@ function EditorInner() {
         return [];
       }
       const result = await validateWorkflow(wfId);
-      const list = (result.issues ?? []) as unknown as ValidateIssue[];
+      const list = result.issues ?? [];
       setIssues(list);
       return list;
     } catch (err: any) {

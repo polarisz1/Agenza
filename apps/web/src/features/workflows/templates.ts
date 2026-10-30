@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type NodeType, type WorkflowGraphJSON } from './types';
+import { DEFAULT_CONFIG, type GraphDef, type NodeType, type WorkflowInputField } from './types';
 
 interface NodeSpec {
   id: string;
@@ -13,10 +13,10 @@ export interface WorkflowTemplate {
   key: string;
   name: string;
   description: string;
-  build: () => WorkflowGraphJSON;
+  build: () => GraphDef;
 }
 
-function buildGraph(specs: NodeSpec[], edges: [string, string][]): WorkflowGraphJSON {
+function buildGraph(specs: NodeSpec[], edges: [string, string][]): GraphDef {
   const inputs = specs
     .filter((spec) => spec.type === 'input')
     .map((spec) => {
@@ -24,13 +24,13 @@ function buildGraph(specs: NodeSpec[], edges: [string, string][]): WorkflowGraph
       return {
         key,
         label: key,
-        type: (spec.config?.data_type || 'text') as WorkflowGraphJSON['inputs'][number]['type'],
+        type: (spec.config?.data_type || 'text') as WorkflowInputField['type'],
         required: Boolean(spec.config?.required),
         default: spec.config?.default ?? null,
       };
     });
 
-  return {
+  const graph = {
     version: 1,
     inputs,
     nodes: specs.map((spec) => ({
@@ -46,6 +46,10 @@ function buildGraph(specs: NodeSpec[], edges: [string, string][]): WorkflowGraph
       target,
     })),
   };
+
+  // 模板里的 config 由 DEFAULT_CONFIG 拼装，编译期无法逐字段对齐判别联合，
+  // 与 serializeGraph 同理只做一次边界断言（真正的把关在后端 schema）。
+  return graph as GraphDef;
 }
 
 /** 内置工作流模板（新建入口 → 从模板创建） */

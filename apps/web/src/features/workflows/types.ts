@@ -1,9 +1,11 @@
 import type { Edge, Node } from '@xyflow/react';
 import type { components } from '@agentflow/contracts';
 
-/** 八类节点（与后端执行器一一对应） */
-export type NodeType =
-  'input' | 'llm' | 'extract' | 'http' | 'python' | 'condition' | 'merge' | 'output';
+/**
+ * 八类节点：**从后端契约派生**，不在前端手抄。
+ * 后端加/删节点类型时，这里会立刻编译报错（NODE_META / DEFAULT_CONFIG 都要跟着补）。
+ */
+export type NodeType = NonNullable<components['schemas']['GraphDef']['nodes']>[number]['type'];
 
 /** 节点运行态（PRD §7：排队 / 运行中 / 成功 / 失败 / 已跳过 / 已取消） */
 export type RuntimeStatus = 'queued' | 'running' | 'success' | 'failed' | 'skipped' | 'cancelled';
@@ -210,14 +212,10 @@ export const STATUS_TEXT: Record<RuntimeStatus, string> = {
   cancelled: '⊘ 已取消',
 };
 
+export type GraphDef = components['schemas']['GraphDef'];
 export type WorkflowInputField = components['schemas']['WorkflowInputField'];
 export type WorkflowStatus = components['schemas']['WorkflowListItem']['status'];
-
-export interface ValidateIssue {
-  code: string;
-  node_id: string;
-  message: string;
-}
+export type ValidateIssue = components['schemas']['ValidateIssue'];
 
 /** 阻断运行的校验问题码 */
 export const BLOCKING_ISSUE_CODES = new Set(['CYCLE', 'MISSING_INPUT', 'MISSING_OUTPUT']);
@@ -294,19 +292,7 @@ export function canConnect(source: NodeType, target: NodeType): boolean {
 }
 
 // ---------------- 图序列化 ----------------
-
-export interface WorkflowGraphJSON {
-  version: 1;
-  inputs: WorkflowInputField[];
-  nodes: {
-    id: string;
-    type: NodeType;
-    name: string;
-    position: { x: number; y: number };
-    config: Record<string, any>;
-  }[];
-  edges: { id: string; source: string; target: string }[];
-}
+// 图结构完全复用后端契约（GraphDef），此文件不再手写节点/边的形状。
 
 function safeParseObject(raw: unknown): Record<string, unknown> {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) return raw as Record<string, unknown>;
@@ -339,8 +325,8 @@ export function extractWorkflowInputs(nodes: EditorNode[]): WorkflowInputField[]
     });
 }
 
-export function serializeGraph(nodes: EditorNode[], edges: Edge[]): WorkflowGraphJSON {
-  return {
+export function serializeGraph(nodes: EditorNode[], edges: Edge[]): GraphDef {
+  const graph = {
     version: 1,
     inputs: extractWorkflowInputs(nodes),
     nodes: nodes.map((n) => {
@@ -358,6 +344,11 @@ export function serializeGraph(nodes: EditorNode[], edges: Edge[]): WorkflowGrap
     }),
     edges: edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
   };
+
+  // 编辑器内部 config 是宽松的 Record<string, any>（属性面板逐字段编辑），
+  // 与后端判别联合无法在编译期逐字段对齐；契约在后端保存/校验时把关，
+  // 因此这里只做一次边界断言，避免在调用点散落 `as any`。
+  return graph as GraphDef;
 }
 
 export function deserializeGraph(graph: any): { nodes: EditorNode[]; edges: Edge[] } {

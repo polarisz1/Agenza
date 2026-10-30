@@ -51,7 +51,7 @@ export default function WorkflowList() {
 
       const template = WORKFLOW_TEMPLATES.find((item) => item.key === key);
       if (!template) return;
-      const wf = await createWorkflow({ name: template.name, graph: template.build() as any });
+      const wf = await createWorkflow({ name: template.name, graph: template.build() });
       nav(`/workflows/${wf.id}`);
     } catch (err: any) {
       message.error(err?.message || '创建工作流失败');
