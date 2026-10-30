@@ -106,6 +106,44 @@ def kahn_layers(nodes: list[dict], edges: list[dict]) -> list[list[str]]:
     return layers
 
 
+def validate_branches(nodes: list[dict], edges: list[dict]) -> list[dict]:
+    """条件节点的分支连线检查（提示级，不阻断运行）。"""
+    condition_ids = {str(n.get("id")) for n in nodes if n.get("type") == "condition"}
+    if not condition_ids:
+        return []
+
+    issues: list[dict] = []
+    used: dict[str, set[str]] = {cid: set() for cid in condition_ids}
+
+    for e in edges:
+        source = str(e.get("source"))
+        if source not in condition_ids:
+            continue
+        port = e.get("from_port")
+        if port in ("true", "false"):
+            used[source].add(port)
+        else:
+            issues.append(
+                {
+                    "code": "CONDITION_EDGE_NO_PORT",
+                    "node_id": source,
+                    "message": "条件节点的出边未指定「真/假」分支，该下游在两种情况下都会执行",
+                }
+            )
+
+    for cid, ports in used.items():
+        for missing, label in (("true", "真"), ("false", "假")):
+            if missing not in ports:
+                issues.append(
+                    {
+                        "code": "CONDITION_BRANCH_UNUSED",
+                        "node_id": cid,
+                        "message": f"条件节点的「{label}」分支没有连线",
+                    }
+                )
+    return issues
+
+
 def validate_graph(nodes: list[dict], edges: list[dict]) -> dict[str, Any]:
     """Run all structural validations. Returns {ok, issues}."""
     issues: list[dict] = []
@@ -147,5 +185,6 @@ def validate_graph(nodes: list[dict], edges: list[dict]) -> dict[str, Any]:
         )
 
     issues.extend(validate_variables(nodes))
+    issues.extend(validate_branches(nodes, edges))
 
     return {"ok": len(cycles) == 0, "issues": issues}

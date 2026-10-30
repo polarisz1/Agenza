@@ -75,6 +75,41 @@ def test_unknown_variable_source_is_flagged() -> None:
     assert any(i["code"] == "UNKNOWN_VARIABLE" for i in issues)
 
 
+def test_condition_edge_without_port_is_flagged() -> None:
+    """条件节点出边没标分支 → 提示（旧图画法，两种分支都会执行）。"""
+    nodes = [_node("c", "condition", left="a", op="eq", right="a"), _node("t", "output")]
+    edges = [_edge("c", "t")]
+
+    codes = [i["code"] for i in validate_graph(nodes, edges)["issues"]]
+
+    assert "CONDITION_EDGE_NO_PORT" in codes
+
+
+def test_condition_unused_branch_is_flagged() -> None:
+    """只连了真分支 → 提示假分支未使用。"""
+    nodes = [_node("c", "condition"), _node("t", "output")]
+    edges = [{**_edge("c", "t"), "from_port": "true"}]
+
+    issues = validate_graph(nodes, edges)["issues"]
+
+    assert any(i["code"] == "CONDITION_BRANCH_UNUSED" and "假" in i["message"] for i in issues), (
+        issues
+    )
+
+
+def test_condition_both_branches_wired_is_clean() -> None:
+    nodes = [_node("c", "condition"), _node("t1", "output"), _node("t2", "output")]
+    edges = [
+        {**_edge("c", "t1"), "from_port": "true"},
+        {**_edge("c", "t2"), "from_port": "false"},
+    ]
+
+    codes = [i["code"] for i in validate_graph(nodes, edges)["issues"]]
+
+    assert "CONDITION_EDGE_NO_PORT" not in codes
+    assert "CONDITION_BRANCH_UNUSED" not in codes
+
+
 @pytest.mark.xfail(
     strict=True,
     reason="S1：validate_graph 的 ok 只反映“无环”，MISSING_INPUT/OUTPUT 等不阻断运行",
