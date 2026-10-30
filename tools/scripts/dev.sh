@@ -1,40 +1,28 @@
 #!/usr/bin/env bash
-# One-command dev setup - starts FastAPI (uvicorn --reload) + Vite dev server (HMR).
+# 兼容入口：真正的实现是 tools/scripts/dev.mjs（跨平台，与 `pnpm dev` 同一份逻辑）。
+# 保留这个文件是因为设计文档引用了 tools/scripts/dev.sh，且习惯 bash 的同学会直接敲它。
+#
 # Usage: bash tools/scripts/dev.sh [api-port] [web-port]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-API_PORT="${1:-8000}"
-WEB_PORT="${2:-5173}"
 
-echo "============================================="
-echo " AgentFlow · dev mode"
-echo "============================================="
-echo " API  : http://127.0.0.1:${API_PORT}"
-echo " Web  : http://localhost:${WEB_PORT}"
-echo "============================================="
+# 这个 bash 可能是 WSL / Git Bash，里面不一定有 node。
+# 与其抛一句 "exec: node: not found"，不如直接告诉用户该怎么跑。
+if ! command -v node >/dev/null 2>&1; then
+  cat >&2 <<'EOF'
+[dev] 当前 bash 环境里找不到 node（常见于 WSL：system32\bash.exe 是 WSL，不是 Git Bash）。
 
-cleanup() {
-  echo "[dev] Stopping services..."
-  [ -n "${API_PID:-}" ] && kill $API_PID 2>/dev/null || true
-  [ -n "${WEB_PID:-}" ] && kill $WEB_PID 2>/dev/null || true
-  wait 2>/dev/null || true
-}
-trap cleanup EXIT INT TERM
+请改用以下任一方式：
+  1) 在 Windows 终端（PowerShell/CMD）里直接运行：  pnpm dev
+  2) 自定义端口：  node tools/scripts/dev.mjs --api-port 8000 --web-port 5173
+  3) 或在这个 bash 里先安装 Node.js（>= 20）再重试
+EOF
+  exit 127
+fi
 
-cd "$ROOT"
+args=()
+if [ "${1:-}" != "" ]; then args+=("--api-port" "$1"); fi
+if [ "${2:-}" != "" ]; then args+=("--web-port" "$2"); fi
 
-# --- Backend ---
-echo "[dev] Starting FastAPI on :${API_PORT} ..."
-(cd apps/api && \
-  uv run python -m uvicorn app.main:app \
-    --host 127.0.0.1 --port $API_PORT \
-    --reload --reload-dir src/app) &
-API_PID=$!
-
-# --- Frontend ---
-echo "[dev] Starting Vite dev server on :${WEB_PORT} ..."
-(cd apps/web && VITE_API_BASE_URL="http://127.0.0.1:${API_PORT}" pnpm dev --port $WEB_PORT --host) &
-WEB_PID=$!
-
-wait
+exec node "$ROOT/tools/scripts/dev.mjs" "${args[@]}"

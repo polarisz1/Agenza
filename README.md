@@ -30,10 +30,19 @@ pnpm dev
 
 `pnpm dev` 会并行启动：
 
-- 后端 <http://127.0.0.1:8000>（改代码自动重载）
-- 前端 <http://localhost:5173>（HMR；若 5173 被占用会自动换端口，以终端打印为准）
+- 后端 <http://127.0.0.1:8000>（只监听 `src/app` 变化，自动重载）
+- 前端 <http://localhost:5173>（HMR，`/api` 代理到上面的后端）
 
-> 也可以分开起：`pnpm dev:api` / `pnpm dev:web`。
+端口被占用时会**直接报错退出**（前端开了 `--strictPort`，不会悄悄换号），换端口的方式：
+
+```bash
+node tools/scripts/dev.mjs --api-port 8010 --web-port 5180
+```
+
+> - 只想起一半：`pnpm dev:api` / `pnpm dev:web`
+> - `bash tools/scripts/dev.sh [api-port] [web-port]` 是兼容入口，内部转调同一个脚本；
+>   它要求**该 bash 里有 node**（注意 Windows 的 `bash.exe` 可能是 WSL，里面通常没有 node，
+>   此时脚本会提示改用 `pnpm dev`）
 
 打开前端地址 → 「工作流」→「新建」。首次使用先在「模型配置」里添加服务商
 （OpenAI 兼容 / Ollama / Anthropic 兼容），否则 LLM 节点会提示"服务商未配置"。

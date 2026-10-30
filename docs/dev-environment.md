@@ -45,8 +45,12 @@ uv run python -V   # 在 apps/api 下：Python 3.12.13
 pnpm install
 cd apps/api; uv sync --all-extras
 
-# 一条命令起前后端（Ctrl+C 一起停；脚本在 tools/scripts/dev.mjs）
+# 一条命令起前后端（Ctrl+C 一起停；实现在 tools/scripts/dev.mjs）
 pnpm dev
+# 自定义端口（前端 --strictPort：端口被占用会直接报错，不会悄悄换号）
+node tools/scripts/dev.mjs --api-port 8010 --web-port 5180
+# bash 兼容入口（要求该 bash 里有 node；Windows 的 bash.exe 可能是 WSL，里面通常没有）
+bash tools/scripts/dev.sh 8010 5180
 
 # 后端
 cd apps/api
