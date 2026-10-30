@@ -214,8 +214,8 @@
 | T2 节点配置契约 | ✅ | 8 类 Node/Config schema 进 openapi；`GraphDef.nodes` 在 TS 侧是 8 类型联合；前端图类型全部从契约派生（`NodeType` 由联合反推），`features/workflows` 内 `as any` 归零；33 passed / 3 xfailed；contracts:check OK；8 节点 + 分支边端到端往返零丢失 |
 | T3 条件分支 | ✅ | 调度器按 `from_port` 分流（未激活支 skipped 并写明原因）；条件节点渲染真/假双端口、边带标签；校验新增 `CONDITION_EDGE_NO_PORT` / `CONDITION_BRANCH_UNUSED` 提示；端到端用例经真实引擎验证 run=success / 真支 success / 假支 skipped、SSE 带原因。42 passed / 3 xfailed |
 | T4 结构化抽取 | ✅ | `fields_text` 解析为字段表并注入 system prompt；缺字段 = failed 且点名缺失字段；无字段时保持旧行为。新增 7 条单测，49 passed / 3 xfailed |
-| T5 校验语义 | ⬜ 下一步 | `ok` 仍只等于"无环"；变量只校验到源 |
-| T6 运行链健壮性 | ⬜ | — |
+| T5 校验语义 | ✅ | `ok`（无任何问题）与 `blocking`（阻断运行）分离，issue 自带 blocking 标记；变量校验升级到字段级（`UNKNOWN_FIELD` 并列出可用字段）；发起运行按 blocking 拒绝。新增 11 条测试，61 passed / 2 xfailed |
+| T6 运行链健壮性 | ⬜ 下一步 | S3 余项 / S4 / S5 / S6 / S11 / S12 / F6 |
 | T7 Provider 适配 | ⬜ | 可独立开工 |
 | T8 数据一致性与迁移 | ⬜ | — |
 | T9 工程收口 | ⬜ | — |

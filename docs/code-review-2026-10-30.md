@@ -305,6 +305,34 @@ Node 22.23.4 / pnpm 9.12.0 / Python 3.12.13（uv 管理），全部安装在 **E
 
 **规模化改动说明**：`ruff format` 重排 56 个 py 文件、Prettier 重排 45 个前端文件，均为纯格式化（`git diff` 复核 + 构建/测试通过），不含逻辑变更。
 
+### 10.4 缺陷处置进度（每完成一项就更新）
+
+| ID | 缺陷 | 状态 | 证据 |
+|---|---|---|---|
+| B1 | 条件分支无分流 | ✅ 已修 | `0418e31` 调度分流 / `eecc799` 双端口 / `39b01a9` 校验+回归；`test_scheduler_branches`、`test_run_e2e` |
+| B2 | 抽取不读 `fields_text` | ✅ 已修 | `fe9aeaf`；`test_extract` 7 条 |
+| B3 | 零测试 / 无 lint / CI 假作业 | ✅ 已修 | `2439e09`；用例 0 → 61，ESLint+Prettier 配置，CI 三 job 真跑 |
+| B4 | 无 alembic 迁移 | ⬜ T8 | — |
+| B5 | Python 节点冻结后不可用 | ⬜ M4 前置验证 | — |
+| S1 | `ok` 只等于"无环" | ✅ 已修 | `284995f`：`ok = 无任何问题`、`blocking` 单独给出；前端删掉自建码表 |
+| S2 | 变量只校验源 | ✅ 已修 | `284995f`：字段级校验（`UNKNOWN_FIELD`，错误信息列出可用字段） |
+| S3 | merge 输入顺序不确定 | ◐ 部分 | `parent_edges` 保序（T3a）；"`all` 校验到达数"未做 |
+| S4 | provider 注册表单例竞态 | ⬜ T6 | — |
+| S5 | SSE 占请求级 Session | ⬜ T6 | — |
+| S6 | 回放事件无 seq | ⬜ T6 | — |
+| S7 | 清空运行不删 node_run | ⬜ T8 | — |
+| S8 | 三个设置项空转 | ⬜ T8 | — |
+| S9 | Ollama `format:"text"` | ⬜ T7 | — |
+| S10 | Anthropic JSON 模式无效 | ⬜ T7 | — |
+| S11 | 节点异常被吞 | ⬜ T6 | — |
+| S12 | 全 skipped 误判 cancelled | ⬜ T6 | — |
+| S13 | `DATA_DIR` 少算一层 | ⬜ T8 | — |
+| S14 | 根级数组下标不可用 | ⬜ 待排 | `test_resolve_root_level_array_index` 以 xfail 守着 |
+| F1–F9 | 前端一致性问题 | ⬜ T10 | — |
+| G7 | `wf_id` 可空路径参数 | ✅ 已修 | `f6860cd` |
+| G15 | `condition._coerce` 空实现 | ⬜ 待排 | xfail 守着 |
+| G35 | `vite-env.d.ts` 悬空类型引用 | ✅ 已修 | `2439e09` |
+
 ---
 
 ## 附录 A · 验证边界（2026-10-30 修订）
