@@ -53,4 +53,10 @@ Thumbs.db
 # TypeScript incremental build
 *.tsbuildinfo
 
+# Playwright（E2E 的临时库与产物）
+e2e/.data/
+test-results/
+playwright-report/
+blob-report/
+
 .tmp/

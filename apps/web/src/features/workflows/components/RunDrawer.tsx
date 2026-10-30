@@ -111,7 +111,13 @@ export default function RunDrawer({
       <div className="afe-runpanel-head">
         <div className="afe-runpanel-title">
           <span className={`afe-dot afe-dot--${status}`} />
-          {runId ? `运行 #${runId}` : '未运行'} · {STATUS_LABEL[status] ?? status}
+          {runId ? (
+            <>
+              运行 #{runId} · {STATUS_LABEL[status] ?? status}
+            </>
+          ) : (
+            '未运行'
+          )}
           {durationMs != null && status !== 'running'
             ? ` · ${(durationMs / 1000).toFixed(1)}s`
             : ''}
