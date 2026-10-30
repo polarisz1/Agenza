@@ -216,8 +216,8 @@
 | T4 结构化抽取 | ✅ | `fields_text` 解析为字段表并注入 system prompt；缺字段 = failed 且点名缺失字段；无字段时保持旧行为。新增 7 条单测，49 passed / 3 xfailed |
 | T5 校验语义 | ✅ | `ok`（无任何问题）与 `blocking`（阻断运行）分离，issue 自带 blocking 标记；变量校验升级到字段级（`UNKNOWN_FIELD` 并列出可用字段）；发起运行按 blocking 拒绝。新增 11 条测试，61 passed / 2 xfailed |
 | T6 运行链健壮性 | ✅ | 四小步各自提交/验证：节点异常兜底+全跳过判定（`8f38cbf`）、provider 快照（`83b2ffa`）、SSE 不占 Session+回放 seq（`e007a1e`）、前端 SSE 游标重置（`6a6d66f`）。74 passed / 2 xfailed |
-| T7 Provider 适配 | ⬜ 下一步 | Ollama `format:"text"`、Anthropic `tool_choice`/`tool_use`、密钥解密失败可见 |
-| T8 数据一致性与迁移 | ⬜ | — |
+| T7 Provider 适配 | ✅ | Ollama 仅在 json 模式带 `format`；Anthropic 加 `tool_choice` 并解析 `tool_use`；密钥解密失败改为显式 `KeyDecryptError` + `UnusableProvider`（节点错误直接可读）。适配器新增 `transport` 注入，用 `httpx.MockTransport` 断言请求体。87 passed / 2 xfailed |
+| T8 数据一致性与迁移 | ⬜ 下一步 | alembic baseline、clear-runs 级联、设置项生效、`DATA_DIR` |
 | T9 工程收口 | ⬜ | — |
 | T10 前端一致性 | ⬜ | — |
 

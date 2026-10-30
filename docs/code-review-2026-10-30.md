@@ -322,8 +322,8 @@ Node 22.23.4 / pnpm 9.12.0 / Python 3.12.13（uv 管理），全部安装在 **E
 | S6 | 回放事件无 seq | ✅ 已修 | `e007a1e`：回放补 `base_seq + i`，并新增 `has_history()` 判定何时才回放 |
 | S7 | 清空运行不删 node_run | ⬜ T8 | — |
 | S8 | 三个设置项空转 | ⬜ T8 | — |
-| S9 | Ollama `format:"text"` | ⬜ T7 | — |
-| S10 | Anthropic JSON 模式无效 | ⬜ T7 | — |
+| S9 | Ollama `format:"text"` | ✅ 已修 | `2fd0515`：只在 json 模式带 `format`，MockTransport 断言请求体 |
+| S10 | Anthropic JSON 模式无效 | ✅ 已修 | `2fd0515`：加 `tool_choice` 并解析 `tool_use` 的 input |
 | S11 | 节点异常被吞 | ✅ 已修 | `8f38cbf`：`_guarded` 兜底 + 每层补漏 + 用例固定两层异常 |
 | S12 | 全 skipped 误判 cancelled | ✅ 已修 | `8f38cbf`：全 skipped 判 success，全 cancelled 才 cancelled |
 | S13 | `DATA_DIR` 少算一层 | ⬜ T8 | — |
@@ -332,6 +332,7 @@ Node 22.23.4 / pnpm 9.12.0 / Python 3.12.13（uv 管理），全部安装在 **E
 | F6 | SSE 游标跨运行复用 | ✅ 已修 | `6a6d66f`：url 变化即重置 last_event_id（浏览器复验待做） |
 | G7 | `wf_id` 可空路径参数 | ✅ 已修 | `f6860cd` |
 | G15 | `condition._coerce` 空实现 | ⬜ 待排 | xfail 守着 |
+| G18 | 密钥解密失败静默空串 | ✅ 已修 | `2fd0515`：抛 `KeyDecryptError` + `UnusableProvider` + 掩码提示 |
 | G35 | `vite-env.d.ts` 悬空类型引用 | ✅ 已修 | `2439e09` |
 
 ---
