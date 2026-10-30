@@ -328,7 +328,7 @@ Node 22.23.4 / pnpm 9.12.0 / Python 3.12.13（uv 管理），全部安装在 **E
 | S12 | 全 skipped 误判 cancelled | ✅ 已修 | `8f38cbf`：全 skipped 判 success，全 cancelled 才 cancelled |
 | S13 | `DATA_DIR` 少算一层 | ✅ 已修 | `86ba121`：`ROOT_DIR` 修正 + 默认 `<repo>/data` + 旧目录一次性搬迁（不覆盖、非默认目录不搬） |
 | S14 | 根级数组下标不可用 | ⬜ 待排 | `test_resolve_root_level_array_index` 以 xfail 守着 |
-| F1–F5、F7–F9 | 前端一致性问题 | ⬜ T10 | — |
+| F1–F5、F7–F9 | 前端一致性问题 | ◐ 部分 | F1/F2/F3/F4 已修（`828c3be`）；F5（测试连接不带密钥）、F7/F8/F9 待做 |
 | F6 | SSE 游标跨运行复用 | ✅ 已修 | `6a6d66f`：url 变化即重置 last_event_id（浏览器复验待做） |
 | G7 | `wf_id` 可空路径参数 | ✅ 已修 | `f6860cd` |
 | G9 | `datetime.utcnow()` 弃用 | ✅ 已修 | `776ec0e`：`core/time.py::utcnow()`（naive UTC），12 处收口 |
