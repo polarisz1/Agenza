@@ -71,8 +71,11 @@ pnpm contracts:check       # CI 用的漂移检测
    `contracts:check` 现在会归一化换行后比较，不再因 CRLF 假报漂移。
 3. **PowerShell 读文件**：`Get-Content` 默认按 ANSI 解码，读 UTF-8 中文会显示乱码——**不是文件损坏**，
    用 `-Encoding UTF8` 或 `read` 工具读。
-4. **uv 缓存权限**（历史问题）：早期 `uv run` 失败于 `Failed to initialize cache`，
+4. **改路由 docstring 也要重新生成契约**：FastAPI 把 handler 的 docstring 写进 OpenAPI 的
+   operation `description`，`contracts:check` 会逐字节比对，所以**注释改动也会让 CI 失败**。
+   改完跑 `pnpm contracts:generate && pnpm contracts:build`。
+5. **uv 缓存权限**（历史问题）：早期 `uv run` 失败于 `Failed to initialize cache`，
    现在缓存指向 `E:\dev\uv\cache`，且仓库内已有 `.venv`（`uv sync` 生成），可直接用。
-5. **`apps/data`**：`core/config.py` 的 `ROOT_DIR = parents[4]` 实际指向 `apps/`（注释写的是仓库根），
+6. **`apps/data`**：`core/config.py` 的 `ROOT_DIR = parents[4]` 实际指向 `apps/`（注释写的是仓库根），
    所以数据库落在 `apps/data/agentflow.db`、主密钥在 `apps/data/.secret.key`
    （已知缺陷 S13 / D-3，T8 会改成 env 显式注入）。该目录已被 `.gitignore` 的 `data/` 覆盖。
