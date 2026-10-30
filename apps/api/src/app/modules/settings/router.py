@@ -10,9 +10,13 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.api_deps import get_session
+from app.core.config import settings
 from app.core.response import ApiResponse, ClearResult, success
+from app.modules.providers.service import ProviderService
+from app.modules.runs.service import RunService
 from app.modules.settings.schemas import SettingsResponse, SystemInfo
 from app.modules.settings.service import SettingsService
+from app.modules.workflows.service import WorkflowService
 
 router = APIRouter()
 
@@ -29,12 +33,8 @@ def update_settings(data: dict = Body(...), session: Session = Depends(get_sessi
 
 @router.post("/system/clear-runs", response_model=ApiResponse[ClearResult])
 def clear_runs(session: Session = Depends(get_session)):
-    from app.modules.runs.models import Run
-
-    count = session.query(Run).count()
-    session.query(Run).delete()
-    session.commit()
-    return success({"cleared": count})
+    """清空全部运行记录（含节点级记录，走 runs 模块的 service）。"""
+    return success({"cleared": RunService.clear_all(session)})
 
 
 @router.get("/system/export")
@@ -52,19 +52,15 @@ def export_backup(session: Session = Depends(get_session)):
 
 @router.get("/system/info", response_model=ApiResponse[SystemInfo])
 def system_info(session: Session = Depends(get_session)):
-    from app.core.config import settings
-    from app.modules.providers.models import Provider
-    from app.modules.runs.models import Run
-    from app.modules.workflows.models import Workflow
-
+    """系统信息：各 feature 的计数统一通过对方 service 获取（AGENTS §2.1）。"""
     return success(
         {
             "app_name": settings.APP_NAME,
             "version": settings.APP_VERSION,
             "data_dir": settings.DATA_DIR,
             "db_url": settings.effective_database_url,
-            "workflow_count": session.query(Workflow).count(),
-            "run_count": session.query(Run).count(),
-            "provider_count": session.query(Provider).count(),
+            "workflow_count": WorkflowService.count(session),
+            "run_count": RunService.count(session),
+            "provider_count": ProviderService.count(session),
         }
     )

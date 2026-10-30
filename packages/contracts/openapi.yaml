@@ -808,6 +808,7 @@ paths:
       tags:
       - settings
       summary: Clear Runs
+      description: 清空全部运行记录（含节点级记录，走 runs 模块的 service）。
       operationId: clear_runs_api_settings_system_clear_runs_post
       responses:
         '200':
@@ -834,6 +835,7 @@ paths:
       tags:
       - settings
       summary: System Info
+      description: 系统信息：各 feature 的计数统一通过对方 service 获取（AGENTS §2.1）。
       operationId: system_info_api_settings_system_info_get
       responses:
         '200':

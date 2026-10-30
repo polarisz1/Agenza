@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.modules.settings.models import AppSetting
+from app.modules.settings.repository import SettingsRepository
 from app.modules.workflows.service import WorkflowService
 
 DEFAULTS = {
@@ -21,40 +21,31 @@ DEFAULTS = {
 
 class SettingsService:
     @staticmethod
-    def _get_json(session: Session, key: str, default=None):
-        row = session.get(AppSetting, key)
-        if not row:
-            return default
-        try:
-            return json.loads(row.value_json) if row.value_json else default
-        except Exception:
-            return default
+    def get_effective(session: Session, key: str):
+        """取某项设置的实际值；没存过就用默认值。
 
-    @staticmethod
-    def _set_json(session: Session, key: str, value) -> None:
-        row = session.get(AppSetting, key)
-        if row is None:
-            row = AppSetting(key=key)
-            session.add(row)
-        row.value_json = json.dumps(value, ensure_ascii=False)
-        session.commit()
+        引擎侧（retention / 节点默认超时）读这里，保证设置页改了真的生效（评审 S8）。
+        """
+        row = SettingsRepository.get(session, key)
+        if row is None or not row.value_json:
+            return DEFAULTS.get(key)
+        try:
+            return json.loads(row.value_json)
+        except Exception:
+            return DEFAULTS.get(key)
 
     @staticmethod
     def get_all(session: Session) -> dict:
-        out = dict(DEFAULTS)
-        for k in DEFAULTS:
-            v = SettingsService._get_json(session, k, DEFAULTS[k])
-            out[k] = v
+        out = {key: SettingsService.get_effective(session, key) for key in DEFAULTS}
         out["data_dir"] = settings.DATA_DIR
         out["app_version"] = settings.APP_VERSION
         return out
 
     @staticmethod
     def update(session: Session, data: dict) -> dict:
-        allowed_keys = set(DEFAULTS.keys())
-        for k, v in data.items():
-            if k in allowed_keys:
-                SettingsService._set_json(session, k, v)
+        for key, value in data.items():
+            if key in DEFAULTS:
+                SettingsRepository.upsert(session, key, json.dumps(value, ensure_ascii=False))
         return SettingsService.get_all(session)
 
     @staticmethod
@@ -64,7 +55,7 @@ class SettingsService:
         return {
             "app": settings.APP_NAME,
             "version": settings.APP_VERSION,
-            "exported_at": datetime.utcnow().isoformat() + "Z",
+            "exported_at": datetime.now(UTC).isoformat(),
             "settings": {key: data.get(key) for key in DEFAULTS},
             "workflows": WorkflowService.export_all(session),
         }

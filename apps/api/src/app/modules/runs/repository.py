@@ -100,6 +100,19 @@ class RunRepository:
         return [row[0] for row in rows]
 
     @staticmethod
+    def count(session: Session) -> int:
+        return session.query(Run).count()
+
+    @staticmethod
+    def clear_all(session: Session) -> int:
+        """清空全部运行记录，同时清掉节点级记录（否则留下孤儿数据，评审 S7）。"""
+        count = session.query(Run).count()
+        session.query(NodeRun).delete(synchronize_session=False)
+        session.query(Run).delete(synchronize_session=False)
+        session.commit()
+        return count
+
+    @staticmethod
     def delete_runs(session: Session, run_ids: list[str]) -> None:
         if not run_ids:
             return

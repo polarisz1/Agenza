@@ -360,7 +360,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Clear Runs */
+        /**
+         * Clear Runs
+         * @description 清空全部运行记录（含节点级记录，走 runs 模块的 service）。
+         */
         post: operations["clear_runs_api_settings_system_clear_runs_post"];
         delete?: never;
         options?: never;
@@ -395,7 +398,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** System Info */
+        /**
+         * System Info
+         * @description 系统信息：各 feature 的计数统一通过对方 service 获取（AGENTS §2.1）。
+         */
         get: operations["system_info_api_settings_system_info_get"];
         put?: never;
         post?: never;

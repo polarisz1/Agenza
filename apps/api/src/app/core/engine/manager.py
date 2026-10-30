@@ -42,6 +42,7 @@ class RunManager:
         graph: dict,
         inputs: dict,
         providers_registry: Any,
+        default_timeout: float | None = None,
         on_node_started: Callable[[str, dict], Awaitable[None]] | None = None,
         on_node_finished: NodeFinishedHook | None = None,
         on_run_finished: RunFinishedHook | None = None,
@@ -50,7 +51,11 @@ class RunManager:
         if self.is_running(run_id):
             raise RuntimeError(f"Run {run_id} already in progress")
 
-        scheduler = Scheduler(run_id=run_id, concurrency=settings.ENGINE_MAX_CONCURRENCY)
+        scheduler = Scheduler(
+            run_id=run_id,
+            concurrency=settings.ENGINE_MAX_CONCURRENCY,
+            default_timeout=default_timeout,
+        )
         task = asyncio.create_task(
             self._execute(
                 run_id=run_id,

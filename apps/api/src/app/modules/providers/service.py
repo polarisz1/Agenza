@@ -74,6 +74,10 @@ class ProviderService:
         return [_to_response(p) for p in ProviderRepository.list(session)]
 
     @staticmethod
+    def count(session: Session) -> int:
+        return len(ProviderRepository.list(session))
+
+    @staticmethod
     def get(session: Session, pid: str) -> ProviderResponse | None:
         p = ProviderRepository.get(session, pid)
         return _to_response(p) if p else None

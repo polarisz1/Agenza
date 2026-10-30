@@ -25,6 +25,7 @@ from app.modules.runs.schemas import (
     RunListItem,
     RunResponse,
 )
+from app.modules.settings.service import SettingsService
 from app.modules.workflows.service import WorkflowService
 
 
@@ -108,11 +109,17 @@ class RunService:
         providers_registry = get_providers_registry(session)
         manager: RunManager = get_run_manager()
 
+        # 节点默认超时取设置页的 default_timeout（评审 S8：设置项要真的生效）
+        default_timeout = SettingsService.get_effective(session, "default_timeout")
+
         await manager.start_run(
             run_id=run_id,
             graph=graph,
             inputs=inputs or {},
             providers_registry=providers_registry,
+            default_timeout=float(default_timeout)
+            if isinstance(default_timeout, int | float)
+            else None,
             on_node_started=_make_node_started(run_id),
             on_node_finished=_make_node_finished(run_id),
             on_run_finished=_make_run_finished(run_id, wf.id),
@@ -199,6 +206,15 @@ class RunService:
                 except Exception:
                     continue
         return outputs
+
+    @staticmethod
+    def count(session: Session) -> int:
+        return RunRepository.count(session)
+
+    @staticmethod
+    def clear_all(session: Session) -> int:
+        """清空全部运行记录（含节点级记录）。"""
+        return RunRepository.clear_all(session)
 
     @staticmethod
     async def cancel(run_id: str) -> bool:
@@ -320,8 +336,13 @@ def _make_run_finished(run_id: str, workflow_id: str):
                     total_tokens=total_tokens,
                 )
                 WorkflowService.mark_run(db, workflow_id)
-                # 保留策略：每个工作流只保留最近 RUN_RETENTION 条运行
-                keep = max(1, settings.RUN_RETENTION)
+                # 保留策略：优先用设置页的 retention_per_workflow（S8），
+                # 没设置过就退回环境配置 RUN_RETENTION
+                configured = SettingsService.get_effective(db, "retention_per_workflow")
+                keep = max(
+                    1,
+                    configured if isinstance(configured, int) else settings.RUN_RETENTION,
+                )
                 old_ids = RunRepository.list_older_run_ids(db, workflow_id, keep)
                 if old_ids:
                     RunRepository.delete_runs(db, old_ids)

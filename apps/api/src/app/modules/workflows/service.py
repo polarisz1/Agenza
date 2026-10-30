@@ -105,6 +105,10 @@ class WorkflowService:
         return _to_response(updated) if updated else None
 
     @staticmethod
+    def count(session: Session) -> int:
+        return len(WorkflowRepository.list(session)[0])
+
+    @staticmethod
     def delete(session: Session, wf_id: str) -> bool:
         return WorkflowRepository.delete(session, wf_id)
 

@@ -19,12 +19,19 @@ _MAX_RETRY = 3
 class Scheduler:
     """Executes nodes layer by layer, parallelizing within each layer."""
 
-    def __init__(self, run_id: str, concurrency: int = 4) -> None:
+    def __init__(
+        self,
+        run_id: str,
+        concurrency: int = 4,
+        default_timeout: float | None = None,
+    ) -> None:
         self.run_id = run_id
         self.semaphore = asyncio.Semaphore(concurrency)
         self.bus = get_event_bus()
         self._cancel_event = asyncio.Event()
         self._node_tasks: set[asyncio.Task] = set()
+        # 节点没配 timeout_s 时用这个值（来自设置页的 default_timeout）
+        self.default_timeout = default_timeout or _DEFAULT_NODE_TIMEOUT
 
     @property
     def cancelled(self) -> bool:
@@ -264,7 +271,7 @@ class Scheduler:
         )
 
         retry = _coerce_retry(config.get("retry"))
-        timeout = _coerce_timeout(config)
+        timeout = _coerce_timeout(config, self.default_timeout)
 
         started = time.perf_counter()
         result = await self._execute_node(executor, ctx, retry, timeout)
@@ -398,12 +405,13 @@ def _coerce_retry(value: Any) -> int:
         return 0
 
 
-def _coerce_timeout(config: dict) -> float | None:
-    raw = config.get("timeout_s", config.get("timeout", _DEFAULT_NODE_TIMEOUT))
+def _coerce_timeout(config: dict, default: float = _DEFAULT_NODE_TIMEOUT) -> float | None:
+    """节点级 timeout_s 优先；没配就用设置里的 default_timeout（<=0 表示不限制）。"""
+    raw = config.get("timeout_s", config.get("timeout", default))
     try:
         value = float(raw)
     except (TypeError, ValueError):
-        value = float(_DEFAULT_NODE_TIMEOUT)
+        value = float(default)
     return value if value > 0 else None
 
 
