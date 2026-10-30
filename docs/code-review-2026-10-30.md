@@ -149,7 +149,7 @@ F1–F9 以外没有其他前端 P1；构建阻断见 B6。桌面/打包类问�
 | G19 | `core/config.py:52` | `.env` 用相对路径加载，工作目录一变就失效（打包场景必踩） |
 | G20 | `useEditorStore.ts:244` | undo/redo 只按 id 存在性推断 `selectedId`，恢复的 `nodes.selected` 可能指向别的节点 → 画布高亮与右侧面板不一致 |
 | G21 | `types.ts:239` + `useEditorStore.ts:168` | 连线只查类型矩阵，不查环、不查入度 → 可造环、可多源灌入单输入节点（靠后端 422 兜底，体验差） |
-| G22 | `WorkflowList.tsx:31`、`AppSettings.tsx:38` | 加载只有 try/finally，**无 catch** → 接口失败是空表 + unhandled rejection，无错误态 |
+| G22 | `WorkflowList.tsx:31`、`AppSettings.tsx:38` | 加载只有 try/finally，**无 catch** → 接口失败是空表 + unhandled rejection，无错误态（已修，见 §10.4） |
 | G23 | `runs/schemas.py:8` | 后端 `RunStatus` 含 `waiting_input`，但引擎从不产生；前端未映射 → 若出现会显示英文原值 |
 | G24 | `runs/api/index.ts:13,18,57` | 手写 `WorkflowOption` / `RunListQuery`（违反契约单一事实源）；`?limit=200` 后端无此参数被静默忽略 |
 | G25 | `WorkflowList.tsx:121` | 搜索框每敲一个字符发一次请求，无防抖 |
@@ -328,7 +328,7 @@ Node 22.23.4 / pnpm 9.12.0 / Python 3.12.13（uv 管理），全部安装在 **E
 | S12 | 全 skipped 误判 cancelled | ✅ 已修 | `8f38cbf`：全 skipped 判 success，全 cancelled 才 cancelled |
 | S13 | `DATA_DIR` 少算一层 | ✅ 已修 | `86ba121`：`ROOT_DIR` 修正 + 默认 `<repo>/data` + 旧目录一次性搬迁（不覆盖、非默认目录不搬） |
 | S14 | 根级数组下标不可用 | ✅ 已修 | `4e0bd0c`：源/路径重新切分，`{{ arr[0] }}` 与 `{{ arr[0].c }}` 可用；校验侧不再误报字段 |
-| F1–F5、F7–F9 | 前端一致性问题 | ◐ 部分 | F1/F2/F3/F4（`828c3be`）、F7/F8/F9（`02d4bd9`）已修；仅 F5（测试连接不带密钥）待做 |
+| F1–F5、F7–F9 | 前端一致性问题 | ✅ 已修 | F1–F4（`828c3be`）、F7–F9（`02d4bd9`）、F5（`c0b1d1e`：test-by-id 由后端解密密钥） |
 | F6 | SSE 游标跨运行复用 | ✅ 已修 | `6a6d66f`：url 变化即重置 last_event_id（浏览器复验待做） |
 | G7 | `wf_id` 可空路径参数 | ✅ 已修 | `f6860cd` |
 | G9 | `datetime.utcnow()` 弃用 | ✅ 已修 | `776ec0e`：`core/time.py::utcnow()`（naive UTC），12 处收口 |
@@ -338,6 +338,7 @@ Node 22.23.4 / pnpm 9.12.0 / Python 3.12.13（uv 管理），全部安装在 **E
 | G14 | README 只有一行且是 UTF-16 | ✅ 已修 | `a102461`：转 UTF-8 并写清快速开始/命令/文档索引 |
 | G15 | `condition._coerce` 空实现 | ✅ 已修 | `4e0bd0c`：数值归一仅作用于 eq/neq/gt/lt，`contains` 保持原样 |
 | G18 | 密钥解密失败静默空串 | ✅ 已修 | `2fd0515`：抛 `KeyDecryptError` + `UnusableProvider` + 掩码提示 |
+| G22 | 列表/设置页无错误态 | ✅ 已修 | `c0b1d1e`：补 catch + Alert + 重试 |
 | G35 | `vite-env.d.ts` 悬空类型引用 | ✅ 已修 | `2439e09` |
 
 ---
