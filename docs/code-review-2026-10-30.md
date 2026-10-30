@@ -129,7 +129,7 @@ F1–F9 以外没有其他前端 P1；构建阻断见 B6。桌面/打包类问�
 | ID | 位置 | 问题 |
 |---|---|---|
 | G1 | 17 处（`modules/*/repository.py`、`settings/service.py`、`settings/router.py`、runs 回调） | repository 层自己 `commit()`，事务边界散落；多步写（duplicate / import / 保留策略清理）无法原子 |
-| G2 | `modules/settings/` | **缺 `repository.py`**（AGENTS §2.1 硬约束），`router.py:29-35, 51-65` 直接在路由里写 SQL 并 import 模型 |
+| G2 | `modules/settings/` | **缺 `repository.py`**（AGENTS §2.1 硬约束），`router.py:29-35, 51-65` 直接在路由里写 SQL 并 import 模型 → 已修（`93f7de6`：补 repository，路由只调 service） |
 | G3 | `modules/{runs,providers,settings}/` | **缺 `__init__.py`**（AGENTS §2.1 要求），当前靠命名空间包侥幸运行 |
 | G4 | `settings/router.py:25` | `update_settings(data: dict)` → OpenAPI 里是无类型 object，破坏"Pydantic 为单一事实源" |
 | G5 | `runs/router.py:54` + `workflows/router.py:118` | 两个入口都能发起运行（`POST /api/runs?workflow_id=` 与 `POST /api/workflows/{id}/runs`），语义重复 |
@@ -312,7 +312,7 @@ Node 22.23.4 / pnpm 9.12.0 / Python 3.12.13（uv 管理），全部安装在 **E
 | B1 | 条件分支无分流 | ✅ 已修 | `0418e31` 调度分流 / `eecc799` 双端口 / `39b01a9` 校验+回归；`test_scheduler_branches`、`test_run_e2e` |
 | B2 | 抽取不读 `fields_text` | ✅ 已修 | `fe9aeaf`；`test_extract` 7 条 |
 | B3 | 零测试 / 无 lint / CI 假作业 | ✅ 已修 | `2439e09`；用例 0 → 61，ESLint+Prettier 配置，CI 三 job 真跑 |
-| B4 | 无 alembic 迁移 | ⬜ T8 | — |
+| B4 | 无 alembic 迁移 | ✅ 已修 | `b835868`：`0001_baseline` + 启动 `upgrade head`，老库自动 stamp；`alembic check` 无漂移 |
 | B5 | Python 节点冻结后不可用 | ⬜ M4 前置验证 | — |
 | S1 | `ok` 只等于"无环" | ✅ 已修 | `284995f`：`ok = 无任何问题`、`blocking` 单独给出；前端删掉自建码表 |
 | S2 | 变量只校验源 | ✅ 已修 | `284995f`：字段级校验（`UNKNOWN_FIELD`，错误信息列出可用字段） |
@@ -320,13 +320,13 @@ Node 22.23.4 / pnpm 9.12.0 / Python 3.12.13（uv 管理），全部安装在 **E
 | S4 | provider 注册表单例竞态 | ✅ 已修 | `83b2ffa`：每次装载返回独立快照 |
 | S5 | SSE 占请求级 Session | ✅ 已修 | `e007a1e`：存在性检查用完即关，端点不再依赖请求 Session |
 | S6 | 回放事件无 seq | ✅ 已修 | `e007a1e`：回放补 `base_seq + i`，并新增 `has_history()` 判定何时才回放 |
-| S7 | 清空运行不删 node_run | ⬜ T8 | — |
-| S8 | 三个设置项空转 | ⬜ T8 | — |
+| S7 | 清空运行不删 node_run | ✅ 已修 | `93f7de6`：`RunRepository.clear_all` 同事务删两张表 |
+| S8 | 三个设置项空转 | ✅ 已修 | `93f7de6`：retention / default_timeout 生效；`auto_save` 仍写死（转 T10，需前端读取设置） |
 | S9 | Ollama `format:"text"` | ✅ 已修 | `2fd0515`：只在 json 模式带 `format`，MockTransport 断言请求体 |
 | S10 | Anthropic JSON 模式无效 | ✅ 已修 | `2fd0515`：加 `tool_choice` 并解析 `tool_use` 的 input |
 | S11 | 节点异常被吞 | ✅ 已修 | `8f38cbf`：`_guarded` 兜底 + 每层补漏 + 用例固定两层异常 |
 | S12 | 全 skipped 误判 cancelled | ✅ 已修 | `8f38cbf`：全 skipped 判 success，全 cancelled 才 cancelled |
-| S13 | `DATA_DIR` 少算一层 | ⬜ T8 | — |
+| S13 | `DATA_DIR` 少算一层 | ✅ 已修 | `86ba121`：`ROOT_DIR` 修正 + 默认 `<repo>/data` + 旧目录一次性搬迁（不覆盖、非默认目录不搬） |
 | S14 | 根级数组下标不可用 | ⬜ 待排 | `test_resolve_root_level_array_index` 以 xfail 守着 |
 | F1–F5、F7–F9 | 前端一致性问题 | ⬜ T10 | — |
 | F6 | SSE 游标跨运行复用 | ✅ 已修 | `6a6d66f`：url 变化即重置 last_event_id（浏览器复验待做） |
