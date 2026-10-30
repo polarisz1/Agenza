@@ -1,6 +1,7 @@
 /* ---------- 画布节点卡片 ---------- */
 
 .afn {
+  position: relative; /* 分支标签 .afn-branch 以此为定位基准 */
   width: 190px;
   padding: 9px 11px 10px;
   border: 1px solid #e2e0d8;
@@ -110,4 +111,35 @@
 
 .react-flow__handle.afn-handle.connectingto:not(.valid) {
   background: #c3c7c0;
+}
+
+/* 条件节点的两个分支端口：真=实心绿，假=空心灰 */
+.react-flow__handle.afn-handle--true {
+  background: #2f7059;
+}
+
+.react-flow__handle.afn-handle--false {
+  background: #b6bcb4;
+}
+
+/* 分支文字标签贴在手柄左侧，避免盖住连线 */
+.afn-branch {
+  position: absolute;
+  right: 8px;
+  transform: translateY(-50%);
+  font-size: 9px;
+  line-height: 1;
+  padding: 2px 3px;
+  border-radius: 4px;
+  pointer-events: none;
+  color: #fff;
+  opacity: 0.9;
+}
+
+.afn-branch--true {
+  background: #2f7059;
+}
+
+.afn-branch--false {
+  background: #9aa39a;
 }

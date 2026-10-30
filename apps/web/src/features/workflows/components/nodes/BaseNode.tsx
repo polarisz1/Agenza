@@ -43,15 +43,46 @@ function BaseNode({ data, selected }: NodeProps<EditorNode>) {
         <span className="afn-kind">{meta.label}</span>
       </div>
 
-      {meta.hasOutput && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          className="afn-handle"
-          role="button"
-          aria-label={`${data.label} 输出端口`}
-          title="输出端口"
-        />
+      {data.type === 'condition' ? (
+        <>
+          <Handle
+            id="true"
+            type="source"
+            position={Position.Right}
+            className="afn-handle afn-handle--true"
+            style={{ top: '35%' }}
+            role="button"
+            aria-label={`${data.label} 真分支输出端口`}
+            title="条件为真时走这支"
+          />
+          <span className="afn-branch afn-branch--true" style={{ top: '35%' }}>
+            真
+          </span>
+          <Handle
+            id="false"
+            type="source"
+            position={Position.Right}
+            className="afn-handle afn-handle--false"
+            style={{ top: '72%' }}
+            role="button"
+            aria-label={`${data.label} 假分支输出端口`}
+            title="条件为假时走这支"
+          />
+          <span className="afn-branch afn-branch--false" style={{ top: '72%' }}>
+            假
+          </span>
+        </>
+      ) : (
+        meta.hasOutput && (
+          <Handle
+            type="source"
+            position={Position.Right}
+            className="afn-handle"
+            role="button"
+            aria-label={`${data.label} 输出端口`}
+            title="输出端口"
+          />
+        )
       )}
     </div>
   );

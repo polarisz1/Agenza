@@ -286,6 +286,10 @@ export function isVariableSafeLabel(label: string): boolean {
 }
 
 export function canConnect(source: NodeType, target: NodeType): boolean {
+  // 条件节点输出的是"控制流"（走哪条分支），不承载数据，因此不参与端口类型矩阵：
+  // 下游的数据仍然从各自的祖先节点解析，这里只要求对端有输入端口。
+  if (source === 'condition') return NODE_META[target].hasInput;
+
   const sourceKind = NODE_META[source].outputKind;
   if (!sourceKind) return false;
   return NODE_META[target].accepts.includes(sourceKind);
@@ -342,7 +346,13 @@ export function serializeGraph(nodes: EditorNode[], edges: Edge[]): GraphDef {
         config,
       };
     }),
-    edges: edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
+    edges: edges.map((e) => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      // 条件节点的分支端口由 sourceHandle 承载（React Flow 原生字段）
+      from_port: e.sourceHandle === 'true' ? 'true' : e.sourceHandle === 'false' ? 'false' : null,
+    })),
   };
 
   // 编辑器内部 config 是宽松的 Record<string, any>（属性面板逐字段编辑），
@@ -377,11 +387,16 @@ export function deserializeGraph(graph: any): { nodes: EditorNode[]; edges: Edge
     };
   });
 
-  const edges: Edge[] = rawEdges.map((e) => ({
-    id: String(e.id || `e_${e.source}_${e.target}`),
-    source: String(e.source),
-    target: String(e.target),
-  }));
+  const edges: Edge[] = rawEdges.map((e) => {
+    const fromPort = e.from_port === 'true' || e.from_port === 'false' ? e.from_port : undefined;
+    return {
+      id: String(e.id || `e_${e.source}_${e.target}`),
+      source: String(e.source),
+      target: String(e.target),
+      sourceHandle: fromPort,
+      label: fromPort === 'true' ? '真' : fromPort === 'false' ? '假' : undefined,
+    };
+  });
 
   return { nodes, edges };
 }

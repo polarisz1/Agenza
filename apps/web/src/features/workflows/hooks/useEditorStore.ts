@@ -167,12 +167,27 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   },
 
   onConnect: (connection) => {
-    const { source, target } = connection;
+    const { source, target, sourceHandle } = connection;
     if (!source || !target || source === target) return;
-    if (get().edges.some((e) => e.source === source && e.target === target)) return;
+
+    // 条件节点的两个分支端口各自独立成边：同一对节点可以同时连 true 与 false
+    const branch =
+      sourceHandle === 'true' ? 'true' : sourceHandle === 'false' ? 'false' : undefined;
+    const duplicate = get().edges.some(
+      (e) => e.source === source && e.target === target && e.sourceHandle === branch,
+    );
+    if (duplicate) return;
+
     get().beginHistory();
     set({
-      edges: addEdge({ ...connection, id: `e_${source}_${target}` }, get().edges),
+      edges: addEdge(
+        {
+          ...connection,
+          id: `e_${source}_${target}_${branch ?? 'out'}`,
+          label: branch === 'true' ? '真' : branch === 'false' ? '假' : undefined,
+        },
+        get().edges,
+      ),
       dirty: true,
       rev: get().rev + 1,
     });
