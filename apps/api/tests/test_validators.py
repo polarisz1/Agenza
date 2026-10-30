@@ -6,8 +6,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.core.engine.validators import detect_cycle, kahn_layers, validate_graph
 
 
@@ -110,11 +108,114 @@ def test_condition_both_branches_wired_is_clean() -> None:
     assert "CONDITION_BRANCH_UNUSED" not in codes
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="S1：validate_graph 的 ok 只反映“无环”，MISSING_INPUT/OUTPUT 等不阻断运行",
-)
-def test_ok_should_reflect_all_blocking_issues() -> None:
+def test_ok_reflects_issues_and_blocking_flags() -> None:
+    """S1 回归：ok 不再只等于"无环"，缺输入/输出节点会被标为阻断。"""
     result = validate_graph([_node("n1")], [])
 
     assert result["ok"] is False
+    assert result["blocking"] is True
+    assert all(i["blocking"] for i in result["issues"] if i["code"] == "MISSING_OUTPUT")
+
+
+def _clean_flow(**extra_cfg) -> tuple[list[dict], list[dict]]:
+    """input → http → output 的最小可运行图。"""
+    nodes = [
+        _node("i", "input", key="text"),
+        _node("h", "http", url="https://example.com"),
+        _node("o", "output", field="result", source="{{ h.body }}"),
+    ]
+    edges = [_edge("i", "h"), _edge("h", "o")]
+    return nodes, edges
+
+
+def test_warning_only_graph_is_not_blocking() -> None:
+    """孤立节点只是提示，不应阻断运行。"""
+    nodes, edges = _clean_flow()
+    nodes.append(_node("lonely", "python", script="x"))
+
+    result = validate_graph(nodes, edges)
+
+    assert result["ok"] is False
+    assert result["blocking"] is False
+    assert [i["code"] for i in result["issues"]] == ["ISOLATED"]
+    assert result["issues"][0]["blocking"] is False
+
+
+def test_clean_flow_has_no_issues() -> None:
+    nodes, edges = _clean_flow()
+
+    result = validate_graph(nodes, edges)
+
+    assert result["ok"] is True
+    assert result["blocking"] is False
+    assert result["issues"] == []
+
+
+def test_unknown_variable_blocks() -> None:
+    nodes, edges = _clean_flow()
+    nodes[2]["config"]["source"] = "{{ ghost.body }}"
+
+    result = validate_graph(nodes, edges)
+
+    assert result["blocking"] is True
+    assert any(i["code"] == "UNKNOWN_VARIABLE" for i in result["issues"])
+
+
+def test_known_node_field_passes() -> None:
+    """http 的已知字段（body）不应报错。"""
+    nodes, edges = _clean_flow()
+
+    codes = [i["code"] for i in validate_graph(nodes, edges)["issues"]]
+
+    assert "UNKNOWN_FIELD" not in codes
+
+
+def test_unknown_field_on_typed_node_blocks() -> None:
+    """http 节点没有 statuss 字段 → UNKNOWN_FIELD 且阻断。"""
+    nodes, edges = _clean_flow()
+    nodes[2]["config"]["source"] = "{{ h.statuss }}"
+
+    result = validate_graph(nodes, edges)
+
+    assert result["blocking"] is True
+    issue = next(i for i in result["issues"] if i["code"] == "UNKNOWN_FIELD")
+    assert "status" in issue["message"], "错误信息应列出可用字段"
+
+
+def test_untyped_node_fields_are_not_checked() -> None:
+    """llm 的输出形状不可知，不应对字段报错（宁可少报也不误报）。"""
+    nodes = [
+        _node("l", "llm", prompt="x"),
+        _node("o", "output", field="result", source="{{ l.whatever }}"),
+    ]
+    edges = [_edge("l", "o")]
+
+    codes = [i["code"] for i in validate_graph(nodes, edges)["issues"]]
+
+    assert "UNKNOWN_FIELD" not in codes
+
+
+def test_extract_declared_fields_are_enforced() -> None:
+    nodes = [
+        _node("e", "extract", fields_text="title: 标题\nsummary"),
+        _node("o", "output", field="result", source="{{ e.title }}"),
+    ]
+    edges = [_edge("e", "o")]
+
+    assert not [i for i in validate_graph(nodes, edges)["issues"] if i["code"] == "UNKNOWN_FIELD"]
+
+    nodes[1]["config"]["source"] = "{{ e.missing }}"
+    issues = validate_graph(nodes, edges)["issues"]
+    assert any(i["code"] == "UNKNOWN_FIELD" for i in issues)
+
+
+def test_input_node_only_exposes_its_key() -> None:
+    nodes = [
+        _node("i", "input", key="text"),
+        _node("o", "output", field="result", source="{{ i.other }}"),
+    ]
+    edges = [_edge("i", "o")]
+
+    issues = validate_graph(nodes, edges)["issues"]
+
+    assert any(i["code"] == "UNKNOWN_FIELD" for i in issues)

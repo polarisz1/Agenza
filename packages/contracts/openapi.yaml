@@ -2284,6 +2284,10 @@ components:
         message:
           type: string
           title: Message
+        blocking:
+          type: boolean
+          title: Blocking
+          default: false
       type: object
       required:
       - code
@@ -2294,6 +2298,10 @@ components:
         ok:
           type: boolean
           title: Ok
+        blocking:
+          type: boolean
+          title: Blocking
+          default: false
         issues:
           items:
             $ref: '#/components/schemas/ValidateIssue'

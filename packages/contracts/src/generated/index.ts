@@ -1491,11 +1491,21 @@ export interface components {
             node_id: string;
             /** Message */
             message: string;
+            /**
+             * Blocking
+             * @default false
+             */
+            blocking: boolean;
         };
         /** ValidateResult */
         ValidateResult: {
             /** Ok */
             ok: boolean;
+            /**
+             * Blocking
+             * @default false
+             */
+            blocking: boolean;
             /** Issues */
             issues: components["schemas"]["ValidateIssue"][];
         };

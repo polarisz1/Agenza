@@ -29,7 +29,6 @@ import {
   type WorkflowResponse,
 } from '../api';
 import {
-  BLOCKING_ISSUE_CODES,
   NODE_DRAG_MIME,
   NODE_META,
   canConnect,
@@ -318,7 +317,8 @@ function EditorInner() {
 
   const handleValidate = async () => {
     const list = await runValidation();
-    const blocking = list.filter((i) => BLOCKING_ISSUE_CODES.has(i.code));
+    // 哪些问题算"阻断"由后端定义（issue.blocking），前端不再自建一套
+    const blocking = list.filter((i) => i.blocking);
     if (blocking.length) {
       message.error(`校验未通过：${blocking[0].message}`);
       focusNode(blocking[0].node_id);
@@ -359,7 +359,7 @@ function EditorInner() {
     }
 
     const list = await runValidation();
-    const blocking = list.filter((i) => BLOCKING_ISSUE_CODES.has(i.code));
+    const blocking = list.filter((i) => i.blocking);
     if (blocking.length) {
       message.error('校验未通过，已定位到问题节点');
       focusNode(blocking[0].node_id);
@@ -543,7 +543,7 @@ function EditorInner() {
                   >
                     <span
                       className={
-                        BLOCKING_ISSUE_CODES.has(issue.code)
+                        issue.blocking
                           ? 'afe-issue-code afe-issue-code--blocking'
                           : 'afe-issue-code'
                       }

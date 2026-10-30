@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.engine.contexts import NodeResult
 from app.core.engine.manager import RunManager, get_run_manager
-from app.core.engine.validators import validate_graph
+from app.core.engine.validators import BLOCKING_CODES, validate_graph
 from app.core.exceptions import AppError
 from app.core.logger import log
 from app.core.providers import get_providers_registry
@@ -79,8 +79,9 @@ class RunService:
             raise AppError(422, "Workflow is empty")
 
         check = validate_graph(nodes=graph.get("nodes", []), edges=graph.get("edges", []))
-        if not check["ok"]:
-            issues = "; ".join(i["message"] for i in check["issues"])
+        if check["blocking"]:
+            blocking = [i for i in check["issues"] if i["code"] in BLOCKING_CODES]
+            issues = "; ".join(i["message"] for i in blocking)
             raise AppError(422, f"Invalid graph: {issues}")
 
         missing = [

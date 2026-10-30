@@ -1,4 +1,11 @@
-"""DAG validator - cycle detection + required fields + variable refs."""
+"""DAG validator - 环检测 / 必填节点 / 变量引用（源与一级字段） / 条件分支。
+
+两套语义要分清：
+- `ok`      = 没有任何问题（UI 的「校验通过」徽标）
+- `blocking` = 存在会直接导致运行失败或结果错误的问题（决定「能不能运行」）
+
+只有 blocking 阻断运行；`ISOLATED`、条件分支提示这类属于建议级。
+"""
 
 from __future__ import annotations
 
@@ -6,6 +13,17 @@ import re
 from typing import Any
 
 _VAR_PATTERN = re.compile(r"\{\{\s*([^\s{}]+?)\s*\}\}")
+
+# 阻断运行的错误码：结构性错误 + 变量引用错误
+BLOCKING_CODES = frozenset(
+    {
+        "CYCLE",
+        "MISSING_INPUT",
+        "MISSING_OUTPUT",
+        "UNKNOWN_VARIABLE",
+        "UNKNOWN_FIELD",
+    }
+)
 
 
 def _iter_strings(value: Any):
@@ -20,13 +38,40 @@ def _iter_strings(value: Any):
             yield from _iter_strings(item)
 
 
+def node_output_fields(node: dict) -> set[str] | None:
+    """推断节点输出的**一级字段**；返回 None 表示形状不可知（不做字段校验）。
+
+    宁可少报也不误报：llm / python 的输出取决于运行结果，这里不猜。
+    """
+    node_type = node.get("type")
+    config = node.get("config") or {}
+
+    if node_type == "input":
+        key = config.get("key") or node.get("name") or ""
+        return {str(key)} if key else set()
+    if node_type == "http":
+        return {"status", "headers", "body"}
+    if node_type == "condition":
+        return {"condition", "true_branch"}
+    if node_type == "merge":
+        return {str(config.get("field") or "merged")}
+    if node_type == "output":
+        return {str(config.get("field") or "result")}
+    if node_type == "extract":
+        from app.core.engine.executors.extract import parse_fields
+
+        declared = {f["name"] for f in parse_fields(config.get("fields_text", ""))}
+        return declared or None
+    return None
+
+
 def validate_variables(nodes: list[dict]) -> list[dict]:
-    """检查 {{ 源.字段 }} 的“源”是否存在（节点名称 / 节点 id / inputs）。"""
-    known = {"inputs"}
+    """检查 {{ 源.字段 }}：源必须存在；已知输出形状时，一级字段也必须存在。"""
+    by_source: dict[str, dict] = {"inputs": {}}
     for node in nodes:
-        known.add(str(node.get("id", "")))
+        by_source[str(node.get("id", ""))] = node
         if node.get("name"):
-            known.add(str(node["name"]))
+            by_source[str(node["name"])] = node
 
     issues: list[dict] = []
     seen: set[tuple[str, str]] = set()
@@ -35,18 +80,45 @@ def validate_variables(nodes: list[dict]) -> list[dict]:
         node_id = str(node.get("id", ""))
         for text in _iter_strings(node.get("config", {})):
             for match in _VAR_PATTERN.finditer(text):
-                source = re.split(r"[.\[]", match.group(1), maxsplit=1)[0]
-                if source in known:
+                raw = match.group(1)
+                parts = re.split(r"[.\[]", raw, maxsplit=1)
+                source = parts[0]
+                field = ""
+                if len(parts) > 1:
+                    field = re.split(r"[.\[]", parts[1], maxsplit=1)[0]
+
+                if source not in by_source:
+                    if (node_id, source) not in seen:
+                        seen.add((node_id, source))
+                        issues.append(
+                            {
+                                "code": "UNKNOWN_VARIABLE",
+                                "node_id": node_id,
+                                "message": f"引用了不存在的节点/变量源 '{source}'",
+                            }
+                        )
                     continue
-                key = (node_id, source)
+
+                # inputs 的字段属于工作流级声明，这里不做判断
+                if not field or source == "inputs":
+                    continue
+
+                expected = node_output_fields(by_source[source])
+                if expected is None or field in expected:
+                    continue
+
+                key = (node_id, f"{source}.{field}")
                 if key in seen:
                     continue
                 seen.add(key)
                 issues.append(
                     {
-                        "code": "UNKNOWN_VARIABLE",
+                        "code": "UNKNOWN_FIELD",
                         "node_id": node_id,
-                        "message": f"引用了不存在的节点/变量源 '{source}'",
+                        "message": (
+                            f"'{source}' 没有字段 '{field}'"
+                            f"（可用：{', '.join(sorted(expected)) or '无'}）"
+                        ),
                     }
                 )
     return issues
@@ -145,7 +217,7 @@ def validate_branches(nodes: list[dict], edges: list[dict]) -> list[dict]:
 
 
 def validate_graph(nodes: list[dict], edges: list[dict]) -> dict[str, Any]:
-    """Run all structural validations. Returns {ok, issues}."""
+    """Run all structural validations. Returns {ok, blocking, issues}."""
     issues: list[dict] = []
 
     cycles = detect_cycle(nodes, edges)
@@ -187,4 +259,11 @@ def validate_graph(nodes: list[dict], edges: list[dict]) -> dict[str, Any]:
     issues.extend(validate_variables(nodes))
     issues.extend(validate_branches(nodes, edges))
 
-    return {"ok": len(cycles) == 0, "issues": issues}
+    for issue in issues:
+        issue["blocking"] = issue["code"] in BLOCKING_CODES
+
+    return {
+        "ok": not issues,
+        "blocking": any(issue["blocking"] for issue in issues),
+        "issues": issues,
+    }

@@ -221,10 +221,12 @@ class ValidateIssue(BaseModel):
     code: str
     node_id: str = ""
     message: str
+    blocking: bool = False
 
 
 class ValidateResult(BaseModel):
     ok: bool
+    blocking: bool = False
     issues: list[ValidateIssue]
 
 

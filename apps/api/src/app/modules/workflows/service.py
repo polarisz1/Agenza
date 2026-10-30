@@ -87,11 +87,11 @@ class WorkflowService:
         graph_json = body.graph.model_dump_json() if body.graph else None
         viewport_json = json.dumps(body.viewport) if body.viewport is not None else None
 
-        # Auto-set status: ready 需无环且无校验问题（至少一个输入与输出）
+        # Auto-set status：没有阻断问题时才算"已就绪"（提示级问题不影响可运行）
         new_status = None
         if body.graph is not None:
             result = WorkflowService._validate_dict(body.graph.model_dump())
-            new_status = "ready" if result["ok"] and not result["issues"] else "draft"
+            new_status = "draft" if result["blocking"] else "ready"
 
         updated = WorkflowRepository.update(
             session,
@@ -128,7 +128,7 @@ class WorkflowService:
     @staticmethod
     def validate(session: Session, graph: GraphDef) -> ValidateResult:
         result = WorkflowService._validate_dict(graph.model_dump())
-        return ValidateResult(ok=result["ok"], issues=result["issues"])
+        return ValidateResult(ok=result["ok"], blocking=result["blocking"], issues=result["issues"])
 
     @staticmethod
     def export_all(session: Session) -> list[dict]:

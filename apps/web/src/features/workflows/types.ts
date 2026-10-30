@@ -217,9 +217,6 @@ export type WorkflowInputField = components['schemas']['WorkflowInputField'];
 export type WorkflowStatus = components['schemas']['WorkflowListItem']['status'];
 export type ValidateIssue = components['schemas']['ValidateIssue'];
 
-/** 阻断运行的校验问题码 */
-export const BLOCKING_ISSUE_CODES = new Set(['CYCLE', 'MISSING_INPUT', 'MISSING_OUTPUT']);
-
 export function uid(prefix = 'n'): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
