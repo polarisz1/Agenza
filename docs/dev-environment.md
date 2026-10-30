@@ -45,15 +45,18 @@ uv run python -V   # 在 apps/api 下：Python 3.12.13
 pnpm install
 cd apps/api; uv sync --all-extras
 
+# 一条命令起前后端（Ctrl+C 一起停；脚本在 tools/scripts/dev.mjs）
+pnpm dev
+
 # 后端
 cd apps/api
 uv run ruff check src tests
 uv run ruff format --check src tests
 uv run pytest -q
-uv run python -m app.run          # 起服务（127.0.0.1:8000）
+uv run python -m app.run          # 只起后端（127.0.0.1:8000）
 
 # 前端
-pnpm --filter @agentflow/web dev          # 5173
+pnpm --filter @agentflow/web dev          # 只起前端（5173）
 pnpm --filter @agentflow/web lint
 pnpm --filter @agentflow/web format:check
 pnpm --filter @agentflow/web build

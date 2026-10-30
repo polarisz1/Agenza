@@ -24,14 +24,18 @@
 pnpm install
 uv sync --directory apps/api --all-extras
 
-# 2) 起后端（127.0.0.1:8000，改代码自动重载）
-pnpm dev:api
-
-# 3) 另开一个终端起前端（http://localhost:5173）
-pnpm dev:web
+# 2) 一条命令同时起后端与前端（Ctrl+C 一起停）
+pnpm dev
 ```
 
-打开 <http://localhost:5173> → 「工作流」→「新建」。首次使用先在「模型配置」里添加服务商
+`pnpm dev` 会并行启动：
+
+- 后端 <http://127.0.0.1:8000>（改代码自动重载）
+- 前端 <http://localhost:5173>（HMR；若 5173 被占用会自动换端口，以终端打印为准）
+
+> 也可以分开起：`pnpm dev:api` / `pnpm dev:web`。
+
+打开前端地址 → 「工作流」→「新建」。首次使用先在「模型配置」里添加服务商
 （OpenAI 兼容 / Ollama / Anthropic 兼容），否则 LLM 节点会提示"服务商未配置"。
 
 ## 常用命令
