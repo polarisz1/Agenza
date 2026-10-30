@@ -211,8 +211,8 @@
 |---|---|---|
 | 环境搭建 | ✅ | Node 22.23.4 / pnpm 9.12.0 / Python 3.12.13，全在 E 盘；见 `docs/dev-environment.md` |
 | T1 测试与门禁 | ✅ | `tsc -b` 0；`vite build` 成功；eslint 0；prettier 全通过；pytest **25 passed / 3 xfailed**；ruff check+format 0；CI 三 job 重写 |
-| T2 节点配置契约 | ⬜ 下一步 | — |
-| T3 条件分支 | ⬜ | 依赖 T2 的 `from_port` |
+| T2 节点配置契约 | ◐ 后端与契约完成，前端迁移待做 | 8 类 Node/Config schema 进 openapi；`GraphDef.nodes` 在 TS 侧已是 8 类型联合；33 passed / 3 xfailed；contracts:check OK |
+| T3 条件分支 | ⬜ | 依赖 T2 的 `from_port`（schema 已就位） |
 | T4 结构化抽取 | ⬜ | — |
 | T5 校验语义 | ⬜ | — |
 | T6 运行链健壮性 | ⬜ | — |
@@ -220,6 +220,10 @@
 | T8 数据一致性与迁移 | ⬜ | — |
 | T9 工程收口 | ⬜ | — |
 | T10 前端一致性 | ⬜ | — |
+
+**T2 剩余（下一轮）**：`types.ts` 删掉手写 `WorkflowGraphJSON` / `ValidateIssue`，改用
+`components['schemas']['GraphDef']` 派生；`NODE_META` / `DEFAULT_CONFIG` 用 `satisfies` 绑定生成类型；
+清掉 `useAutoSave.ts` / `WorkflowEditor.tsx` / `ModelSettings.tsx` 的 `as any`。
 
 **T1 期间新发现（已并入评审）**：CI 后端 job 原本是红的（ruff 207 错 + 52 文件未格式化）；`contracts:check` 在 Windows 因 CRLF 逐字节比较而假失败（已修脚本）；根级数组下标 `{{ a[0] }}` 不可用（记为 S14）。
 
