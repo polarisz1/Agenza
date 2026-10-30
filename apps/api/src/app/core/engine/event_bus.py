@@ -39,6 +39,10 @@ class EventBus:
         ]
         return queue, backlog
 
+    def has_history(self, run_id: str) -> bool:
+        """本进程是否见过这次运行的事件（后端重启后为 False）。"""
+        return bool(self._history.get(run_id))
+
     def unsubscribe(self, run_id: str, queue: asyncio.Queue) -> None:
         lst = self._queues.get(run_id)
         if lst and queue in lst:

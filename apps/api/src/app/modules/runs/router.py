@@ -92,16 +92,20 @@ async def run_events(
     run_id: str,
     last_event_id: str | None = Query(default=None),
     last_event_id_header: str | None = Header(default=None, alias="Last-Event-ID"),
-    session: Session = Depends(get_session),
 ):
     """SSE - 实时推送 run 事件。
 
-    - 连接时先回放内存事件历史（按 Last-Event-ID 补齐），
-    - 内存无历史（如后端重启）时回放已落库的 node_run，
+    - 先回放内存事件历史（按 Last-Event-ID 补齐）；
+    - 内存里完全没有这次运行的历史（如后端重启）时，用已落库的 node_run 兜底回放，
+      并给回放事件补上单调递增的 seq；
     - 之后持续订阅 EventBus 直到 run 结束。
+
+    注意：这里**不**用 `Depends(get_session)`。请求级 Session 会一直被这条长连接占着，
+    多个 SSE 客户端就能把连接池吃干。存在性检查用完即关。
     """
-    run = RunRepository.get(session, run_id)
-    if not run:
+    with SessionLocal() as db:
+        exists = RunRepository.get(db, run_id) is not None
+    if not exists:
         raise AppError(404, "Run not found")
 
     raw_last = last_event_id or last_event_id_header
@@ -120,8 +124,10 @@ async def run_events(
                     yield _to_sse(event)
                 if backlog[-1].get("event") == "run.finished":
                     return
-            else:
-                async for chunk, terminal in _replay_from_db(run_id):
+            elif not bus.has_history(run_id):
+                # 只有"本进程完全没有这次运行的历史"才走 DB 回放：
+                # 否则（客户端只是追平了）直接用队列等新事件，避免重复/乱序。
+                async for chunk, terminal in _replay_from_db(run_id, parsed_last or 0):
                     yield chunk
                     if terminal:
                         return
@@ -149,8 +155,11 @@ async def run_events(
     )
 
 
-async def _replay_from_db(run_id: str) -> AsyncIterator[tuple[str, bool]]:
+async def _replay_from_db(run_id: str, base_seq: int = 0) -> AsyncIterator[tuple[str, bool]]:
     """内存无事件历史时，用已落库的 node_run / run 状态兜底回放。
+
+    事件补上 `base_seq + i` 的序号，保证 SSE 的 `id:` 单调递增，
+    客户端下次带 Last-Event-ID 重连时能正确对齐（评审 S6）。
 
     产出 (SSE 文本, 是否为终止事件)。
     """
@@ -158,31 +167,35 @@ async def _replay_from_db(run_id: str) -> AsyncIterator[tuple[str, bool]]:
         run = RunRepository.get(db, run_id)
         nodes = RunRepository.list_node_runs(db, run_id)
         run_status = run.status if run else "failed"
+        rows = [
+            {
+                "event": "node.finished",
+                "run_id": run_id,
+                "node_id": nr.node_id,
+                "node_name": nr.node_name,
+                "node_type": nr.node_type,
+                "status": nr.status,
+                "duration_ms": nr.duration_ms,
+                "tokens_in": nr.tokens_in,
+                "tokens_out": nr.tokens_out,
+                "model": nr.model,
+                "error": nr.error,
+            }
+            for nr in nodes
+            if nr.status != "running"  # 未完成的节点不当作已结束回放
+        ]
 
-    for nr in nodes:
-        if nr.status == "running":
-            continue  # 未完成的节点不当作已结束回放
-        yield (
-            _to_sse(
-                {
-                    "event": "node.finished",
-                    "run_id": run_id,
-                    "node_id": nr.node_id,
-                    "node_name": nr.node_name,
-                    "node_type": nr.node_type,
-                    "status": nr.status,
-                    "duration_ms": nr.duration_ms,
-                    "tokens_in": nr.tokens_in,
-                    "tokens_out": nr.tokens_out,
-                    "model": nr.model,
-                    "error": nr.error,
-                }
-            ),
-            False,
-        )
+    seq = base_seq
+    for row in rows:
+        seq += 1
+        yield _to_sse({**row, "seq": seq}), False
 
     if run_status in _TERMINAL_RUN_STATUS:
-        yield _to_sse({"event": "run.finished", "run_id": run_id, "status": run_status}), True
+        seq += 1
+        yield (
+            _to_sse({"event": "run.finished", "run_id": run_id, "status": run_status, "seq": seq}),
+            True,
+        )
 
 
 def _to_sse(event: dict) -> str:
