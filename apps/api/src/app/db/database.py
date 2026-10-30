@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import Path
 
-from sqlalchemy import create_engine, event
+from alembic.config import Config as AlembicConfig
+from sqlalchemy import create_engine, event, inspect
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
+from alembic import command
 from app.core.config import settings
+from app.core.logger import log
 
 connect_args = {}
 if settings.effective_database_url.startswith("sqlite"):
@@ -47,28 +51,43 @@ def get_db() -> Iterator[Session]:
 
 
 def init_db() -> None:
-    """Create all tables on startup and clean up interrupted runs."""
-    from importlib import import_module
+    """启动时把库结构迁移到最新，并清理上次中断的运行。
 
-    # 副作用导入：把各 feature 的 models 注册到 Base.metadata 后再建表
-    for feature in ("providers", "runs", "settings", "workflows"):
-        import_module(f"app.modules.{feature}.models")
-
-    Base.metadata.create_all(bind=engine)
-    _ensure_node_run_columns()
+    结构来源是 alembic（`alembic/versions/0001_baseline.py` 起），不再用
+    `create_all`——否则模型与库会悄悄漂移，且没有回滚路径。
+    """
+    _upgrade_schema()
     _mark_interrupted_runs()
 
 
-def _ensure_node_run_columns() -> None:
-    """给已有的本地库补上新增列（SQLite/Postgres 都支持 ADD COLUMN）。"""
-    from sqlalchemy import inspect, text
+def _upgrade_schema() -> None:
+    """执行 alembic upgrade head；老库（无 alembic_version）先 stamp 基线。"""
+    api_root = Path(__file__).resolve().parents[3]  # apps/api
+    ini = api_root / "alembic.ini"
+    scripts = api_root / "alembic"
 
-    columns = {col["name"] for col in inspect(engine).get_columns("node_run")}
+    if not ini.exists() or not scripts.exists():
+        # 打包场景需随包携带 alembic 目录（M4-T2）；此处保留兜底但会告警
+        from importlib import import_module
+
+        log.warning("alembic 配置缺失，回退到 create_all 建表（打包时请提供 alembic 目录）")
+        for feature in ("providers", "runs", "settings", "workflows"):
+            import_module(f"app.modules.{feature}.models")
+        Base.metadata.create_all(bind=engine)
+        return
+
+    cfg = AlembicConfig(str(ini))
+    cfg.set_main_option("script_location", str(scripts))
+    cfg.set_main_option("sqlalchemy.url", settings.effective_database_url)
+
     with engine.begin() as conn:
-        if "started_at" not in columns:
-            conn.execute(text("ALTER TABLE node_run ADD COLUMN started_at TIMESTAMP"))
-        if "finished_at" not in columns:
-            conn.execute(text("ALTER TABLE node_run ADD COLUMN finished_at TIMESTAMP"))
+        cfg.attributes["connection"] = conn
+        existing = set(inspect(conn).get_table_names())
+        if existing and "alembic_version" not in existing:
+            # 历史版本是 create_all 建的库：标记为 baseline，不重建、不动数据
+            log.info("检测到历史库（无 alembic_version），标记为 baseline")
+            command.stamp(cfg, "head")
+        command.upgrade(cfg, "head")
 
 
 def _mark_interrupted_runs() -> None:

@@ -41,13 +41,30 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    # 应用内启动时（db/database.py）会把已有的连接塞进 config.attributes，
+    # 这样迁移和应用共用同一个 engine（WAL / foreign_keys PRAGMA 才生效）。
+    injected = config.attributes.get("connection")
+    if injected is not None:
+        context.configure(
+            connection=injected,
+            target_metadata=target_metadata,
+            render_as_batch=True,
+        )
+        with context.begin_transaction():
+            context.run_migrations()
+        return
+
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=True,
+        )
         with context.begin_transaction():
             context.run_migrations()
 
