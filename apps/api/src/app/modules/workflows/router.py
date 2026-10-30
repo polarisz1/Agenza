@@ -97,17 +97,16 @@ def duplicate_workflow(wf_id: str, session: Session = Depends(get_session)):
 
 @router.post("/{wf_id}/validate", response_model=ApiResponse[ValidateResult])
 def validate_workflow(
-    wf_id: str | None = None, body: GraphDef | None = None, session: Session = Depends(get_session)
+    wf_id: str, body: GraphDef | None = None, session: Session = Depends(get_session)
 ):
-    if body is None and wf_id is None:
-        raise AppError(400, "Provide body or wf_id")
-    if body is None:
-        wf = WorkflowService.get(session, wf_id)
-        if not wf:
-            raise AppError(404, "Workflow not found")
-        body = GraphDef(**wf.graph)
-    result = WorkflowService.validate(session, body)
-    return success(result)
+    """校验：给了 body 就校验 body，否则校验已保存的图。"""
+    if body is not None:
+        return success(WorkflowService.validate(session, body))
+
+    wf = WorkflowService.get(session, wf_id)
+    if not wf:
+        raise AppError(404, "Workflow not found")
+    return success(WorkflowService.validate(session, wf.graph))
 
 
 @router.get("/{wf_id}/validate", response_model=ApiResponse[ValidateResult])
@@ -116,8 +115,7 @@ def validate_workflow_saved(wf_id: str, session: Session = Depends(get_session))
     wf = WorkflowService.get(session, wf_id)
     if not wf:
         raise AppError(404, "Workflow not found")
-    result = WorkflowService.validate(session, GraphDef(**wf.graph))
-    return success(result)
+    return success(WorkflowService.validate(session, wf.graph))
 
 
 @router.post("/{wf_id}/runs", response_model=ApiResponse[RunResponse])

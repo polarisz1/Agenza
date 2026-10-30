@@ -243,15 +243,14 @@ paths:
       tags:
       - workflows
       summary: Validate Workflow
+      description: 校验：给了 body 就校验 body，否则校验已保存的图。
       operationId: validate_workflow_api_workflows__wf_id__validate_post
       parameters:
       - name: wf_id
         in: path
         required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
+          type: string
           title: Wf Id
       requestBody:
         content:
@@ -1178,6 +1177,68 @@ components:
           default: 0
       type: object
       title: ClearResult
+    ConditionConfig:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        retry:
+          type: integer
+          title: Retry
+          default: 0
+        timeout_s:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Timeout S
+        notes:
+          type: string
+          title: Notes
+          default: ''
+        left:
+          type: string
+          title: Left
+          default: ''
+        op:
+          type: string
+          enum:
+          - eq
+          - neq
+          - contains
+          - gt
+          - lt
+          - is_empty
+          title: Op
+          default: eq
+        right:
+          type: string
+          title: Right
+          default: ''
+      type: object
+      title: ConditionConfig
+    ConditionNode:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        position:
+          $ref: '#/components/schemas/Position'
+        type:
+          type: string
+          const: condition
+          title: Type
+          default: condition
+        config:
+          $ref: '#/components/schemas/ConditionConfig'
+      type: object
+      required:
+      - id
+      - name
+      title: ConditionNode
     DeleteResult:
       properties:
         deleted:
@@ -1199,6 +1260,98 @@ components:
       - id
       - name
       title: DuplicateResult
+    EdgeDef:
+      properties:
+        id:
+          type: string
+          title: Id
+        source:
+          type: string
+          title: Source
+        target:
+          type: string
+          title: Target
+        from_port:
+          anyOf:
+          - type: string
+            enum:
+            - 'true'
+            - 'false'
+          - type: 'null'
+          title: From Port
+      type: object
+      required:
+      - id
+      - source
+      - target
+      title: EdgeDef
+      description: 连线。`from_port` 区分条件节点的 true/false 分支（其余节点为 None）。
+    ExtractConfig:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        retry:
+          type: integer
+          title: Retry
+          default: 0
+        timeout_s:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Timeout S
+        notes:
+          type: string
+          title: Notes
+          default: ''
+        provider_id:
+          type: string
+          title: Provider Id
+          default: ''
+        model:
+          type: string
+          title: Model
+          default: ''
+        prompt:
+          type: string
+          title: Prompt
+          default: ''
+        fields_text:
+          type: string
+          title: Fields Text
+          default: ''
+        format:
+          type: string
+          enum:
+          - text
+          - json
+          title: Format
+          default: json
+      type: object
+      title: ExtractConfig
+    ExtractNode:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        position:
+          $ref: '#/components/schemas/Position'
+        type:
+          type: string
+          const: extract
+          title: Type
+          default: extract
+        config:
+          $ref: '#/components/schemas/ExtractConfig'
+      type: object
+      required:
+      - id
+      - name
+      title: ExtractNode
     GraphDef:
       properties:
         version:
@@ -1212,14 +1365,31 @@ components:
           title: Inputs
         nodes:
           items:
-            additionalProperties: true
-            type: object
+            oneOf:
+            - $ref: '#/components/schemas/InputNode'
+            - $ref: '#/components/schemas/LLMNode'
+            - $ref: '#/components/schemas/ExtractNode'
+            - $ref: '#/components/schemas/HttpNode'
+            - $ref: '#/components/schemas/PythonNode'
+            - $ref: '#/components/schemas/ConditionNode'
+            - $ref: '#/components/schemas/MergeNode'
+            - $ref: '#/components/schemas/OutputNode'
+            discriminator:
+              propertyName: type
+              mapping:
+                condition: '#/components/schemas/ConditionNode'
+                extract: '#/components/schemas/ExtractNode'
+                http: '#/components/schemas/HttpNode'
+                input: '#/components/schemas/InputNode'
+                llm: '#/components/schemas/LLMNode'
+                merge: '#/components/schemas/MergeNode'
+                output: '#/components/schemas/OutputNode'
+                python: '#/components/schemas/PythonNode'
           type: array
           title: Nodes
         edges:
           items:
-            additionalProperties: true
-            type: object
+            $ref: '#/components/schemas/EdgeDef'
           type: array
           title: Edges
       type: object
@@ -1233,6 +1403,262 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
+    HttpConfig:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        retry:
+          type: integer
+          title: Retry
+          default: 0
+        timeout_s:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Timeout S
+        notes:
+          type: string
+          title: Notes
+          default: ''
+        method:
+          type: string
+          title: Method
+          default: GET
+        url:
+          type: string
+          title: Url
+          default: ''
+        headers:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Headers
+        body:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Body
+      type: object
+      title: HttpConfig
+    HttpNode:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        position:
+          $ref: '#/components/schemas/Position'
+        type:
+          type: string
+          const: http
+          title: Type
+          default: http
+        config:
+          $ref: '#/components/schemas/HttpConfig'
+      type: object
+      required:
+      - id
+      - name
+      title: HttpNode
+    InputConfig:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        retry:
+          type: integer
+          title: Retry
+          default: 0
+        timeout_s:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Timeout S
+        notes:
+          type: string
+          title: Notes
+          default: ''
+        key:
+          type: string
+          title: Key
+          default: ''
+        data_type:
+          type: string
+          enum:
+          - text
+          - number
+          - bool
+          - json
+          title: Data Type
+          default: text
+        required:
+          type: boolean
+          title: Required
+          default: false
+        default:
+          title: Default
+        description:
+          type: string
+          title: Description
+          default: ''
+      type: object
+      title: InputConfig
+    InputNode:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        position:
+          $ref: '#/components/schemas/Position'
+        type:
+          type: string
+          const: input
+          title: Type
+          default: input
+        config:
+          $ref: '#/components/schemas/InputConfig'
+      type: object
+      required:
+      - id
+      - name
+      title: InputNode
+    LLMConfig:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        retry:
+          type: integer
+          title: Retry
+          default: 0
+        timeout_s:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Timeout S
+        notes:
+          type: string
+          title: Notes
+          default: ''
+        provider_id:
+          type: string
+          title: Provider Id
+          default: ''
+        model:
+          type: string
+          title: Model
+          default: ''
+        system:
+          type: string
+          title: System
+          default: ''
+        prompt:
+          type: string
+          title: Prompt
+          default: ''
+        temperature:
+          type: number
+          title: Temperature
+          default: 0.7
+        max_tokens:
+          type: integer
+          title: Max Tokens
+          default: 2048
+        format:
+          type: string
+          enum:
+          - text
+          - json
+          title: Format
+          default: text
+      type: object
+      title: LLMConfig
+    LLMNode:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        position:
+          $ref: '#/components/schemas/Position'
+        type:
+          type: string
+          const: llm
+          title: Type
+          default: llm
+        config:
+          $ref: '#/components/schemas/LLMConfig'
+      type: object
+      required:
+      - id
+      - name
+      title: LLMNode
+    MergeConfig:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        retry:
+          type: integer
+          title: Retry
+          default: 0
+        timeout_s:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Timeout S
+        notes:
+          type: string
+          title: Notes
+          default: ''
+        strategy:
+          type: string
+          enum:
+          - all
+          - any
+          title: Strategy
+          default: all
+        field:
+          type: string
+          title: Field
+          default: merged
+      type: object
+      title: MergeConfig
+    MergeNode:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        position:
+          $ref: '#/components/schemas/Position'
+        type:
+          type: string
+          const: merge
+          title: Type
+          default: merge
+        config:
+          $ref: '#/components/schemas/MergeConfig'
+      type: object
+      required:
+      - id
+      - name
+      title: MergeNode
     NodeRunDetail:
       properties:
         id:
@@ -1346,6 +1772,76 @@ components:
       required:
       - status
       title: NodeTestResult
+    OutputConfig:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        retry:
+          type: integer
+          title: Retry
+          default: 0
+        timeout_s:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Timeout S
+        notes:
+          type: string
+          title: Notes
+          default: ''
+        field:
+          type: string
+          title: Field
+          default: result
+        source:
+          type: string
+          title: Source
+          default: ''
+        format:
+          type: string
+          enum:
+          - text
+          - json
+          title: Format
+          default: text
+      type: object
+      title: OutputConfig
+    OutputNode:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        position:
+          $ref: '#/components/schemas/Position'
+        type:
+          type: string
+          const: output
+          title: Type
+          default: output
+        config:
+          $ref: '#/components/schemas/OutputConfig'
+      type: object
+      required:
+      - id
+      - name
+      title: OutputNode
+    Position:
+      properties:
+        x:
+          type: number
+          title: X
+          default: 0
+        y:
+          type: number
+          title: Y
+          default: 0
+      type: object
+      title: Position
     ProviderCreate:
       properties:
         kind:
@@ -1482,6 +1978,53 @@ components:
           title: Enabled
       type: object
       title: ProviderUpdate
+    PythonConfig:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        retry:
+          type: integer
+          title: Retry
+          default: 0
+        timeout_s:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Timeout S
+        notes:
+          type: string
+          title: Notes
+          default: ''
+        script:
+          type: string
+          title: Script
+          default: ''
+      type: object
+      title: PythonConfig
+    PythonNode:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        position:
+          $ref: '#/components/schemas/Position'
+        type:
+          type: string
+          const: python
+          title: Type
+          default: python
+        config:
+          $ref: '#/components/schemas/PythonConfig'
+      type: object
+      required:
+      - id
+      - name
+      title: PythonNode
     RunCreate:
       properties:
         inputs:
@@ -1729,6 +2272,23 @@ components:
       - run_count
       - provider_count
       title: SystemInfo
+    ValidateIssue:
+      properties:
+        code:
+          type: string
+          title: Code
+        node_id:
+          type: string
+          title: Node Id
+          default: ''
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - code
+      - message
+      title: ValidateIssue
     ValidateResult:
       properties:
         ok:
@@ -1736,8 +2296,7 @@ components:
           title: Ok
         issues:
           items:
-            additionalProperties: true
-            type: object
+            $ref: '#/components/schemas/ValidateIssue'
           type: array
           title: Issues
       type: object
@@ -1948,9 +2507,7 @@ components:
           - ready
           title: Status
         graph:
-          additionalProperties: true
-          type: object
-          title: Graph
+          $ref: '#/components/schemas/GraphDef'
         viewport:
           anyOf:
           - additionalProperties: true

@@ -39,7 +39,7 @@ class RunService:
         wf = WorkflowService.get(session, workflow_id)
         if not wf:
             raise AppError(404, "Workflow not found")
-        return await RunService._start(session, wf, wf.graph, inputs, trigger)
+        return await RunService._start(session, wf, wf.graph.model_dump(), inputs, trigger)
 
     @staticmethod
     async def rerun(session: Session, run_id: str) -> RunResponse:

@@ -111,7 +111,10 @@ export interface paths {
          */
         get: operations["validate_workflow_saved_api_workflows__wf_id__validate_get"];
         put?: never;
-        /** Validate Workflow */
+        /**
+         * Validate Workflow
+         * @description 校验：给了 body 就校验 body，否则校验已保存的图。
+         */
         post: operations["validate_workflow_api_workflows__wf_id__validate_post"];
         delete?: never;
         options?: never;
@@ -704,6 +707,56 @@ export interface components {
              */
             cleared: number;
         };
+        /** ConditionConfig */
+        ConditionConfig: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Retry
+             * @default 0
+             */
+            retry: number;
+            /** Timeout S */
+            timeout_s?: number | null;
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /**
+             * Left
+             * @default
+             */
+            left: string;
+            /**
+             * Op
+             * @default eq
+             * @enum {string}
+             */
+            op: "eq" | "neq" | "contains" | "gt" | "lt" | "is_empty";
+            /**
+             * Right
+             * @default
+             */
+            right: string;
+        };
+        /** ConditionNode */
+        ConditionNode: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            position?: components["schemas"]["Position"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "condition";
+            config?: components["schemas"]["ConditionConfig"];
+        };
         /** DeleteResult */
         DeleteResult: {
             /**
@@ -719,6 +772,80 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * EdgeDef
+         * @description 连线。`from_port` 区分条件节点的 true/false 分支（其余节点为 None）。
+         */
+        EdgeDef: {
+            /** Id */
+            id: string;
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+            /** From Port */
+            from_port?: ("true" | "false") | null;
+        };
+        /** ExtractConfig */
+        ExtractConfig: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Retry
+             * @default 0
+             */
+            retry: number;
+            /** Timeout S */
+            timeout_s?: number | null;
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /**
+             * Provider Id
+             * @default
+             */
+            provider_id: string;
+            /**
+             * Model
+             * @default
+             */
+            model: string;
+            /**
+             * Prompt
+             * @default
+             */
+            prompt: string;
+            /**
+             * Fields Text
+             * @default
+             */
+            fields_text: string;
+            /**
+             * Format
+             * @default json
+             * @enum {string}
+             */
+            format: "text" | "json";
+        };
+        /** ExtractNode */
+        ExtractNode: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            position?: components["schemas"]["Position"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "extract";
+            config?: components["schemas"]["ExtractConfig"];
+        };
         /** GraphDef */
         GraphDef: {
             /**
@@ -729,18 +856,236 @@ export interface components {
             /** Inputs */
             inputs?: components["schemas"]["WorkflowInputField"][];
             /** Nodes */
-            nodes?: {
-                [key: string]: unknown;
-            }[];
+            nodes?: (components["schemas"]["InputNode"] | components["schemas"]["LLMNode"] | components["schemas"]["ExtractNode"] | components["schemas"]["HttpNode"] | components["schemas"]["PythonNode"] | components["schemas"]["ConditionNode"] | components["schemas"]["MergeNode"] | components["schemas"]["OutputNode"])[];
             /** Edges */
-            edges?: {
-                [key: string]: unknown;
-            }[];
+            edges?: components["schemas"]["EdgeDef"][];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HttpConfig */
+        HttpConfig: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Retry
+             * @default 0
+             */
+            retry: number;
+            /** Timeout S */
+            timeout_s?: number | null;
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /**
+             * Method
+             * @default GET
+             */
+            method: string;
+            /**
+             * Url
+             * @default
+             */
+            url: string;
+            /** Headers */
+            headers?: {
+                [key: string]: unknown;
+            } | null;
+            /** Body */
+            body?: string | null;
+        };
+        /** HttpNode */
+        HttpNode: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            position?: components["schemas"]["Position"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "http";
+            config?: components["schemas"]["HttpConfig"];
+        };
+        /** InputConfig */
+        InputConfig: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Retry
+             * @default 0
+             */
+            retry: number;
+            /** Timeout S */
+            timeout_s?: number | null;
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /**
+             * Key
+             * @default
+             */
+            key: string;
+            /**
+             * Data Type
+             * @default text
+             * @enum {string}
+             */
+            data_type: "text" | "number" | "bool" | "json";
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /** Default */
+            default?: unknown;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+        };
+        /** InputNode */
+        InputNode: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            position?: components["schemas"]["Position"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "input";
+            config?: components["schemas"]["InputConfig"];
+        };
+        /** LLMConfig */
+        LLMConfig: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Retry
+             * @default 0
+             */
+            retry: number;
+            /** Timeout S */
+            timeout_s?: number | null;
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /**
+             * Provider Id
+             * @default
+             */
+            provider_id: string;
+            /**
+             * Model
+             * @default
+             */
+            model: string;
+            /**
+             * System
+             * @default
+             */
+            system: string;
+            /**
+             * Prompt
+             * @default
+             */
+            prompt: string;
+            /**
+             * Temperature
+             * @default 0.7
+             */
+            temperature: number;
+            /**
+             * Max Tokens
+             * @default 2048
+             */
+            max_tokens: number;
+            /**
+             * Format
+             * @default text
+             * @enum {string}
+             */
+            format: "text" | "json";
+        };
+        /** LLMNode */
+        LLMNode: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            position?: components["schemas"]["Position"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "llm";
+            config?: components["schemas"]["LLMConfig"];
+        };
+        /** MergeConfig */
+        MergeConfig: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Retry
+             * @default 0
+             */
+            retry: number;
+            /** Timeout S */
+            timeout_s?: number | null;
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /**
+             * Strategy
+             * @default all
+             * @enum {string}
+             */
+            strategy: "all" | "any";
+            /**
+             * Field
+             * @default merged
+             */
+            field: string;
+        };
+        /** MergeNode */
+        MergeNode: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            position?: components["schemas"]["Position"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "merge";
+            config?: components["schemas"]["MergeConfig"];
         };
         /** NodeRunDetail */
         NodeRunDetail: {
@@ -824,6 +1169,69 @@ export interface components {
              */
             duration_ms: number;
         };
+        /** OutputConfig */
+        OutputConfig: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Retry
+             * @default 0
+             */
+            retry: number;
+            /** Timeout S */
+            timeout_s?: number | null;
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /**
+             * Field
+             * @default result
+             */
+            field: string;
+            /**
+             * Source
+             * @default
+             */
+            source: string;
+            /**
+             * Format
+             * @default text
+             * @enum {string}
+             */
+            format: "text" | "json";
+        };
+        /** OutputNode */
+        OutputNode: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            position?: components["schemas"]["Position"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "output";
+            config?: components["schemas"]["OutputConfig"];
+        };
+        /** Position */
+        Position: {
+            /**
+             * X
+             * @default 0
+             */
+            x: number;
+            /**
+             * Y
+             * @default 0
+             */
+            y: number;
+        };
         /** ProviderCreate */
         ProviderCreate: {
             /**
@@ -891,6 +1299,45 @@ export interface components {
             default_model?: string | null;
             /** Enabled */
             enabled?: boolean | null;
+        };
+        /** PythonConfig */
+        PythonConfig: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Retry
+             * @default 0
+             */
+            retry: number;
+            /** Timeout S */
+            timeout_s?: number | null;
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /**
+             * Script
+             * @default
+             */
+            script: string;
+        };
+        /** PythonNode */
+        PythonNode: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            position?: components["schemas"]["Position"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "python";
+            config?: components["schemas"]["PythonConfig"];
         };
         /** RunCreate */
         RunCreate: {
@@ -1033,14 +1480,24 @@ export interface components {
             /** Provider Count */
             provider_count: number;
         };
+        /** ValidateIssue */
+        ValidateIssue: {
+            /** Code */
+            code: string;
+            /**
+             * Node Id
+             * @default
+             */
+            node_id: string;
+            /** Message */
+            message: string;
+        };
         /** ValidateResult */
         ValidateResult: {
             /** Ok */
             ok: boolean;
             /** Issues */
-            issues: {
-                [key: string]: unknown;
-            }[];
+            issues: components["schemas"]["ValidateIssue"][];
         };
         /** ValidationError */
         ValidationError: {
@@ -1159,10 +1616,7 @@ export interface components {
              * @enum {string}
              */
             status: "draft" | "ready";
-            /** Graph */
-            graph: {
-                [key: string]: unknown;
-            };
+            graph: components["schemas"]["GraphDef"];
             /** Viewport */
             viewport?: {
                 [key: string]: unknown;
@@ -1501,7 +1955,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                wf_id: string | null;
+                wf_id: string;
             };
             cookie?: never;
         };
