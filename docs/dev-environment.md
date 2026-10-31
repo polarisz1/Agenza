@@ -83,6 +83,16 @@ pnpm contracts:check       # CI 用的漂移检测
    改完跑 `pnpm contracts:generate && pnpm contracts:build`。
 5. **uv 缓存权限**（历史问题）：早期 `uv run` 失败于 `Failed to initialize cache`，
    现在缓存指向 `E:\dev\uv\cache`，且仓库内已有 `.venv`（`uv sync` 生成），可直接用。
-6. **`apps/data`**：`core/config.py` 的 `ROOT_DIR = parents[4]` 实际指向 `apps/`（注释写的是仓库根），
-   所以数据库落在 `apps/data/agentflow.db`、主密钥在 `apps/data/.secret.key`
-   （已知缺陷 S13 / D-3，T8 会改成 env 显式注入）。该目录已被 `.gitignore` 的 `data/` 覆盖。
+6. **数据目录**：已改为默认 `<repo>/data/agentflow.db`（T8 修掉 `ROOT_DIR` 少算一层的问题），
+   主密钥在同目录 `.secret.key`；可用 `DATA_DIR` 覆盖。该目录已被 `.gitignore` 的 `data/` 覆盖。
+7. **`curl` 的 TLS 不可用**：本机 `curl.exe` 走 Schannel，会报
+   `AcquireCredentialsHandle failed: SEC_E_NO_CREDENTIALS`（表现为 `http_code=000`，
+   但 DNS/TCP 都通）。**不是网络问题**。下载东西改用 Node 的 `fetch`（自带 TLS）
+   或 `uv`/`pnpm`，例如：`node -e "fetch(url).then(r=>r.arrayBuffer()).then(b=>require('fs').writeFileSync(out,Buffer.from(b)))"`。
+8. **在受限沙箱（workspace-write）里跑命令时**：`uv` 缓存与 `TEMP` 必须指到仓库内，
+   否则 `uv` 报 `Failed to initialize cache`、PyInstaller onefile 解压失败：
+   ```powershell
+   $env:UV_CACHE_DIR = "$PWD\.tmp\uv-cache"
+   $env:TEMP = $env:TMP = "$PWD\.tmp\sys-temp"
+   uv run --directory apps/api pytest -q -p no:cacheprovider --basetemp="$env:TEMP\pt"
+   ```

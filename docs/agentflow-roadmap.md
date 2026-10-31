@@ -82,9 +82,9 @@
 |---|---|---|---|---|
 | D-1 | 条件分支的图表示法 | 边只有 source/target，分支未实现 | 边加 `from_port`（取值 `true` / `false`，改动最小、与现有单 Handle 兼容） | M3.5-T3 前 |
 | D-2 | 双运行入口 | `POST /api/runs?workflow_id=` 与 `POST /api/workflows/{id}/runs` 并存 | 保留后端 POST /api/runs 但标 deprecated，前端只用 workflows 入口 | M3.5-T6 |
-| D-3 | 数据目录位置 | `config.py` 的 `ROOT_DIR` 少算一层 → 实际落在 `apps/data`；注释写的是 `AgentFlow/` | 开发态 `AgentFlow/data`，打包态 Electron `userData/agentflow`，由 env 显式注入 | M3.5-T8 |
-| D-4 | 桌面更新范围 | 设计写了壳/后端/前端三层热更，代码零 | v0.1 只做壳更新；后端/前端热更延后 | M4 排期时 |
-| D-5 | Python 节点在打包后的解释器 | 用 `sys.executable`，冻结后就是 exe 自己 | 三选一：随包内置精简解释器（+~30MB）／要求用户自备 Python／首版禁用并明确提示 | M4 前置验证 |
+| D-3 | 数据目录位置 | 已改为默认 `<repo>/data` 并支持 `DATA_DIR` 注入；打包态待接 Electron `userData` | 开发态 `<repo>/data`，打包态 `userData/agentflow`，由 `--data-dir` 显式注入 | M4-T1 |
+| D-4 | 桌面更新范围 | 设计写了壳/后端/前端三层热更，代码零 | **v1 不做自动更新**，只留"检查更新 → 打开下载页"；签名同样延后 | M4 排期时 |
+| D-5 | Python 节点在打包后的解释器 | **已定案：随包内置 embeddable CPython**（实测 10.6MB 压缩 / 21.5MB 解压，`-I -S` 下中文往返正常）。依据见 `docs/m4-spike-notes.md` ① | 否决"要求用户自备 Python"（支持成本 + 结果不可复现）与"禁用脚本节点"（砍掉唯一逃生口） | ✅ 已定 |
 | D-6 | 契约兼容性门禁 | 只有漂移检查，无兼容性检查 | 引入 openapi-diff，破坏性变更需在 PR 描述里说明 | M3.5-T2 后 |
 | D-7 | 成本展示 | 只存 token | 维持"只展示 token"，不换算费用 | P1 |
 | D-8 | 运行保留条数 | 硬编码 `RUN_RETENTION=200`，设置页的同类项是装饰 | 打通设置项后再谈"可配置"，默认 200 | M3.5-T8 |
@@ -230,12 +230,15 @@
 
 **T1 期间新发现（已并入评审）**：CI 后端 job 原本是红的（ruff 207 错 + 52 文件未格式化）；`contracts:check` 在 Windows 因 CRLF 逐字节比较而假失败（已修脚本）；根级数组下标 `{{ a[0] }}` 不可用（记为 S14）。
 
-### 5.2 M4 · 桌面化（未开始）
+### 5.2 M4 · 桌面化（前置验证 ① 已通过，② 待做）
 
-**前置技术验证（先做，可失败早止损）**：
-1. 冻结进程能否跑 Python 节点（D-5 三选一）——这是唯一可能推翻桌面方案的技术点；
-2. 后端 `--host/--port` 与数据目录/DIST 目录改为 **env + CLI 注入**（不再按 `__file__` 推算）；
-3. 前端产物由后端挂载还是 Electron `loadFile` 二选一（当前两者都不成立）。
+**前置技术验证（先做，可失败早止损）**：完整记录见 `docs/m4-spike-notes.md`。
+
+| # | 验证项 | 状态 | 结论 |
+|---|---|---|---|
+| 1 | 冻结进程能否跑 Python 节点（D-5） | ✅ 通过 | 冻结后 `sys.executable` 就是 exe（B5 复现）；内置 embeddable CPython（`-I -S`）可正常跑脚本、中文往返正常 → **D-5 定为方案 A**；打包用 onedir，产物 49.5MB（解释器 21.5MB），热启动 0.6s |
+| 2 | 端口 / 数据目录 / dist / 迁移目录注入 | ⬜ 待做 | `run.py` 不解析 argv、`config` 数据目录按 `__file__` 推算、`main.py` 与 `db/database.py` 的路径同样按 `__file__` 推算 —— 四项必须改成显式注入 |
+| 3 | 前端产物托管方式 | ✅ 已定 | 后端托管（`MOUNT_FRONTEND` + dist 目录）；现有 E2E 已在真实浏览器里走通，选 A 不选 `loadFile` |
 
 **任务**（在前置验证通过后）：
 
