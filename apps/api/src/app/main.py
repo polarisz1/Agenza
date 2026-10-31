@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,8 +13,7 @@ from app.core.exceptions import AppError
 from app.core.logger import log
 from app.db.database import init_db
 
-# main.py → app → src → api → apps，前端产物在 apps/web/dist
-FRONTEND_DIST = Path(__file__).resolve().parents[3] / "web" / "dist"
+# 前端产物位置统一由 settings.frontend_dist 决定（开发态回退仓库布局，打包态取注入的资源目录）
 
 
 @asynccontextmanager
@@ -104,10 +102,11 @@ app.include_router(settings_router, prefix="/api/settings", tags=["settings"])
 # ============ Root ============
 @app.get("/", tags=["root"])
 def root():
-    if settings.MOUNT_FRONTEND and (FRONTEND_DIST / "index.html").exists():
+    dist = settings.frontend_dist
+    if settings.MOUNT_FRONTEND and (dist / "index.html").exists():
         from fastapi.responses import FileResponse
 
-        return FileResponse(FRONTEND_DIST / "index.html")
+        return FileResponse(dist / "index.html")
     return {
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION,
@@ -126,8 +125,8 @@ if settings.MOUNT_FRONTEND:
     from fastapi.responses import FileResponse, JSONResponse
     from fastapi.staticfiles import StaticFiles
 
-    # main.py → app → src → api → apps，前端产物在 apps/web/dist
-    frontend_dist = FRONTEND_DIST
+    # 前端产物的位置由 settings 决定：打包态取注入的资源目录，开发态回退仓库布局
+    frontend_dist = settings.frontend_dist
     if (frontend_dist / "index.html").exists():
         app.mount(
             "/assets",

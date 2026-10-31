@@ -237,7 +237,7 @@
 | # | 验证项 | 状态 | 结论 |
 |---|---|---|---|
 | 1 | 冻结进程能否跑 Python 节点（D-5） | ✅ 通过 | 冻结后 `sys.executable` 就是 exe（B5 复现）；内置 embeddable CPython（`-I -S`）可正常跑脚本、中文往返正常 → **D-5 定为方案 A**；打包用 onedir，产物 49.5MB（解释器 21.5MB），热启动 0.6s |
-| 2 | 端口 / 数据目录 / dist / 迁移目录注入 | ⬜ 待做 | `run.py` 不解析 argv、`config` 数据目录按 `__file__` 推算、`main.py` 与 `db/database.py` 的路径同样按 `__file__` 推算 —— 四项必须改成显式注入 |
+| 2 | 端口 / 数据目录 / dist / 迁移目录注入 | ✅ 完成 | 新增 `app/run.py`（argparse → 写环境 → 再 import app，优先级 CLI > env > 默认）；`Settings` 增加 `RESOURCE_DIR` 与 `frontend_dist`/`alembic_ini`/`alembic_dir`；冻结态强制关 reload、默认托管前端。实测：注入资源目录后 `/` 返回其 index.html、迁移表齐全（`alembic_version=0001`）、数据落在注入目录；132 passed + E2E 4 绿 |
 | 3 | 前端产物托管方式 | ✅ 已定 | 后端托管（`MOUNT_FRONTEND` + dist 目录）；现有 E2E 已在真实浏览器里走通，选 A 不选 `loadFile` |
 
 **任务**（在前置验证通过后）：

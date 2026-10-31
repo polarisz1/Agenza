@@ -37,16 +37,46 @@ embeddable CPython（`--add-data pyemb;pyemb`）跑同一个 runner（验证修�
 
 **D-5 定案**：选方案 A（随包内置 embeddable CPython），不选"要求用户自备 Python"，也不砍脚本节点。
 
-## ② 端口 / 数据目录 / 前端 dist / 迁移目录的注入 —— 待做（属产品代码）
+## ② 端口 / 数据目录 / 前端 dist / 迁移目录的注入 —— **已完成**
 
-现状（已核实）：
-- `apps/api/src/app/run.py` 只读 `settings`，**不解析 argv**；而 `electron/main.js` 在传 `--port`
-- `core/config.py` 的数据目录默认 `<repo>/data`，冻结后没有"repo"概念
-- `main.py:18` 的前端 dist 按 `__file__` 推算
-- `db/database.py` 的 alembic 目录同样按 `__file__` 推算，找不到会回退 `create_all`（迁移会静默失效）
+**做法**：新增 `apps/api/src/app/run.py` 作为唯一启动入口（argparse → 写环境 → 再 import app），
+`Settings` 增加 `RESOURCE_DIR` 与三个派生路径（`frontend_dist` / `alembic_ini` / `alembic_dir`），
+`main.py` 与 `db/database.py` 不再用 `__file__` 推算。
+
+优先级：**命令行 > 环境变量 > 默认值**；冻结环境下 `reload` 强制关闭、`MOUNT_FRONTEND` 默认开启。
+
+**验证**（模拟打包布局：`.tmp/m4-res/` 里放 `frontend-dist/` + `alembic/` + `alembic.ini`）：
+
+```
+启动：python -m app.run --host 127.0.0.1 --port 8021 \
+        --data-dir <repo>/.tmp/m4-data --resource-dir <repo>/.tmp/m4-res --mount-frontend
+
+/health          → {"status":"ok"}
+/                → 200，返回注入目录里的 index.html（<div id="root"> 命中）
+/workflows       → 200，SPA 回退到同一 index.html
+/api/workflows   → 200（API 不受影响）
+数据目录          → 注入的 .tmp/m4-data/agentflow.db 被创建
+迁移              → 表齐全 + alembic_version = 0001（说明用的是注入的 alembic 目录）
+```
+
+回归：全量 132 passed（新增 15 条覆盖优先级/reload 关闭/资源目录回退/mount 开关），
+`pnpm check` exit 0，Playwright 4 条用例仍全绿（E2E 走的就是"env 注入启动"这条路）。
+
+**顺带**：`run.py` 无参数运行时行为与改造前一致（`pnpm dev:api` 不受影响）。
 
 ## ③ 前端产物由谁托管 —— 后端托管（已被现有 E2E 间接证明）
 
 E2E 用 `MOUNT_FRONTEND=true` 让后端托管 `apps/web/dist`，Playwright 能完整操作界面，
 说明"后端托管 dist"这条路径在真实浏览器里是通的，不需要额外 spike。
 选择：v1 用后端托管；`loadFile/app://` 不列入待办。
+
+## 待用户拍板：打包形态与 AGENTS §5 冲突
+
+`AGENTS.md` §5 写的是「PyInstaller **单文件** exe」，但本次实测：
+
+| 形态 | 启动耗时 | 实测问题 |
+|---|---|---|
+| onedir | 0.6s | 无（不写系统 TEMP） |
+| onefile | 未测到（受限环境里卡在解压 DLL 到 TEMP） | 每次启动都要解压到 TEMP，启动更慢、被杀软扫描概率更高 |
+
+建议把 §5 改成 onedir；但 AGENTS.md 属"不得随意修改"，需要你确认后我再动。

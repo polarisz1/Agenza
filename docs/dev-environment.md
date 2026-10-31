@@ -58,6 +58,8 @@ uv run ruff check src tests
 uv run ruff format --check src tests
 uv run pytest -q
 uv run python -m app.run          # 只起后端（127.0.0.1:8000）
+# 注入式启动（打包/E2E 用的同一套参数，优先级 CLI > env > 默认）
+uv run python -m app.run --port 8021 --data-dir D:\tmp\af-data --resource-dir D:\tmp\af-res --mount-frontend
 
 # 前端
 pnpm --filter @agentflow/web dev          # 只起前端（5173）

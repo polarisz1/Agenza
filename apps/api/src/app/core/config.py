@@ -13,6 +13,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 ROOT_DIR = Path(__file__).resolve().parents[5]  # AgentFlow/
 DATA_DIR = ROOT_DIR / "data"
 
+# 服务默认监听地址：打包后由 CLI/环境变量覆盖（见 app/run.py）
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8000
+
 
 def relocate_legacy_data_dir(legacy: Path, target: Path) -> bool:
     """把旧位置的数据目录搬到新位置（一次性）。
@@ -37,8 +41,8 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # ---- Server ----
-    HOST: str = "127.0.0.1"
-    PORT: int = 8000
+    HOST: str = DEFAULT_HOST
+    PORT: int = DEFAULT_PORT
 
     # ---- CORS ----
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
@@ -48,12 +52,50 @@ class Settings(BaseSettings):
 
     # ---- Directories ----
     DATA_DIR: str = str(DATA_DIR)
+    # 打包后由外层（Electron / 命令行）注入：目录下含 frontend-dist/ 与 alembic/
+    # 为空表示开发态，所有资源按仓库布局推算
+    RESOURCE_DIR: str = ""
     # SECRET_FILE is derived at runtime; not a BaseSettings field
     # (avoids class-body eval when DATA_DIR is still str)
 
     @property
     def secret_file(self) -> str:
         return str(Path(self.DATA_DIR) / ".secret.key")
+
+    @property
+    def resource_root(self) -> Path | None:
+        """显式注入的资源根目录；未注入或不存在时返回 None。"""
+        if not self.RESOURCE_DIR:
+            return None
+        path = Path(self.RESOURCE_DIR)
+        return path if path.is_dir() else None
+
+    @property
+    def frontend_dist(self) -> Path:
+        """前端产物目录：资源目录优先（打包态），否则回退到仓库布局（开发态）。
+
+        评审 B5/②：此前 main.py 用 `__file__` 推算，冻结后指向 `_MEIPASS` 内部，必然 404。
+        """
+        root = self.resource_root
+        if root is not None and (root / "frontend-dist").is_dir():
+            return root / "frontend-dist"
+        return ROOT_DIR / "apps" / "web" / "dist"
+
+    @property
+    def alembic_ini(self) -> Path:
+        """alembic.ini：资源目录优先，否则仓库内的 apps/api/alembic.ini。"""
+        root = self.resource_root
+        if root is not None and (root / "alembic.ini").is_file():
+            return root / "alembic.ini"
+        return ROOT_DIR / "apps" / "api" / "alembic.ini"
+
+    @property
+    def alembic_dir(self) -> Path:
+        """迁移脚本目录：资源目录优先，否则仓库内的 apps/api/alembic。"""
+        root = self.resource_root
+        if root is not None and (root / "alembic").is_dir():
+            return root / "alembic"
+        return ROOT_DIR / "apps" / "api" / "alembic"
 
     # ---- Engine ----
     ENGINE_MAX_CONCURRENCY: int = 4

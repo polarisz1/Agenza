@@ -81,10 +81,13 @@ def _relocate_legacy_data() -> None:
 
 
 def _upgrade_schema() -> None:
-    """执行 alembic upgrade head；老库（无 alembic_version）先 stamp 基线。"""
-    api_root = Path(__file__).resolve().parents[3]  # apps/api
-    ini = api_root / "alembic.ini"
-    scripts = api_root / "alembic"
+    """执行 alembic upgrade head；老库（无 alembic_version）先 stamp 基线。
+
+    迁移目录优先取注入的资源目录（打包态），否则用仓库布局（开发态）——
+    此前按 `__file__` 推算，冻结后找不到就会静默回退 create_all，升级路径断掉。
+    """
+    ini = settings.alembic_ini
+    scripts = settings.alembic_dir
 
     if not ini.exists() or not scripts.exists():
         # 打包场景需随包携带 alembic 目录（M4-T2）；此处保留兜底但会告警
