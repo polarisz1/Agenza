@@ -1,91 +1,292 @@
+/**
+ * AgentFlow 桌面壳：负责后端进程的完整生命周期。
+ *
+ * 打包后没有"手动起的后端"了，壳必须自己：
+ *   1) 找一个空闲端口  2) spawn backend.exe 并把端口/数据目录传进去
+ *   3) 轮询 /health 直到就绪  4) 开窗口 loadURL(同源地址)  5) 退出/崩溃时收尸
+ *
+ * 关键约定（与后端契约一致，见 apps/api/src/app/run.py）：
+ *   backend.exe --host 127.0.0.1 --port <port> --data-dir <userData> --log-level warning
+ */
 const { app, BrowserWindow, Tray, Menu, ipcMain, dialog, shell, Notification } = require('electron');
-const path = require('path');
-const { spawn } = require('child_process');
-const fs = require('fs');
-const { URL } = require('url');
+const path = require('node:path');
+const fs = require('node:fs');
+const http = require('node:http');
+const net = require('node:net');
+const { spawn, spawnSync } = require('node:child_process');
+
+// 必须在使用 app.getPath('userData') 之前改名：否则会落到 package.json 的
+// scoped 包名目录（%APPDATA%\@agentflow\electron-shell），既有可读性问题，
+// 也会让"数据目录"与产品名对不上。displayed 名称仍是 AgentFlow。
+app.setName('AgentFlow');
+
+const DEV = !app.isPackaged;
+const DEV_URL = process.env.AGENTFLOW_DEV_URL || 'http://localhost:5173';
+const HEALTH_TIMEOUT_MS = Number(process.env.AGENTFLOW_HEALTH_TIMEOUT_MS || 30000);
+
+const USER_DATA_DIR = app.getPath('userData');
+const LOG_DIR = path.join(USER_DATA_DIR, 'logs');
+const LOG_FILE = path.join(LOG_DIR, 'backend.log');
+const RUNTIME_FILE = path.join(USER_DATA_DIR, 'backend-runtime.json');
 
 let mainWin = null;
 let tray = null;
 let backendProc = null;
-let backendPort = 8000;
-let appIsQuitting = false;
+let backendPort = 0;
+let quitting = false;
+let logStream = null;
 
-const DEV = !app.isPackaged;
-const USER_DATA_DIR = app.getPath('userData');
-const DEV_URL = process.env.AGENTFLOW_DEV_URL || 'http://localhost:5173';
+// ---------------------------------------------------------------- 工具
 
-/** Find a free TCP port (fallback to port 8001 if the probe fails). */
-function findFreePort() {
+function logToFile(line) {
   try {
-    const net = require('net');
-    return new Promise((resolve) => {
-      const srv = net.createServer();
-      srv.listen(0, '127.0.0.1', () => {
-        const port = srv.address().port;
-        srv.close(() => resolve(port));
-      });
-    });
+    if (!logStream) {
+      fs.mkdirSync(LOG_DIR, { recursive: true });
+      logStream = fs.createWriteStream(LOG_FILE, { flags: 'a' });
+    }
+    logStream.write(line.endsWith('\n') ? line : line + '\n');
   } catch {
-    return Promise.resolve(8001);
+    /* 日志失败不能影响启动 */
   }
 }
 
-/** Poll the backend /health endpoint until it responds. */
-async function waitForBackend(port, timeoutMs = 30000) {
-  const http = require('http');
-  const deadline = Date.now() + timeoutMs;
-  return new Promise((resolve, reject) => {
-    const tryOnce = () => {
-      if (Date.now() > deadline) {
-        reject(new Error(`Backend did not start within ${timeoutMs}ms`));
-        return;
-      }
-      const req = http.get(`http://127.0.0.1:${port}/health`, { timeout: 2000 }, (res) => {
-        if (res.statusCode === 200) {
-          resolve();
-        } else {
-          setTimeout(tryOnce, 500);
-        }
-      });
-      req.on('error', () => setTimeout(tryOnce, 500));
-      req.on('timeout', () => { req.destroy(); setTimeout(tryOnce, 500); });
-    };
-    tryOnce();
+function writeRuntime(info) {
+  try {
+    fs.mkdirSync(USER_DATA_DIR, { recursive: true });
+    fs.writeFileSync(RUNTIME_FILE, JSON.stringify(info, null, 2), 'utf8');
+  } catch {
+    /* 非致命 */
+  }
+}
+
+function readRuntime() {
+  try {
+    return JSON.parse(fs.readFileSync(RUNTIME_FILE, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function findFreePort() {
+  return new Promise((resolve) => {
+    const srv = net.createServer();
+    srv.unref();
+    srv.on('error', () => resolve(0));
+    srv.listen(0, '127.0.0.1', () => {
+      const { port } = srv.address();
+      srv.close(() => resolve(port));
+    });
   });
+}
+
+function pingHealth(port) {
+  return new Promise((resolve) => {
+    const req = http.get({ host: '127.0.0.1', port, path: '/health', timeout: 2000 }, (res) => {
+      res.resume();
+      resolve(res.statusCode === 200);
+    });
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
+
+async function waitForBackend(port, timeoutMs = HEALTH_TIMEOUT_MS) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    // 进程提前退出就没必要再等了，直接失败（省 30s 白等）
+    if (backendProc === null) throw new Error('后端进程启动后立即退出（详见日志）');
+    if (await pingHealth(port)) return;
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  throw new Error(`后端起不来：${timeoutMs}ms 内 /health 没有返回 200`);
+}
+
+// ---------------------------------------------------------------- 后端
+
+/** 打包布局优先（electron-builder 的 extraResources: to: backend），开发态回退到构建产物。 */
+function resolveBackendExe() {
+  const candidates = [
+    process.env.AGENTFLOW_BACKEND_EXE,
+    path.join(process.resourcesPath || '', 'backend', 'backend.exe'),
+    path.join(process.resourcesPath || '', 'backend.exe'),
+    path.join(__dirname, '..', 'apps', 'api', 'dist_backend', 'backend.exe'),
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+/** 清理上次崩溃/强杀留下的后端（否则它会一直占着端口与数据库）。 */
+function cleanupStaleBackend() {
+  // 优先用后端自己写的 pid 文件：单文件 exe 有"引导进程 + 服务进程"两代，
+  // 壳记的 pid 可能是先退出的那一代（实测会漏杀，孤儿一直占端口）
+  const pidFile = path.join(USER_DATA_DIR, 'backend.pid');
+  const recorded = readRuntime();
+
+  const candidates = [];
+  try {
+    const raw = fs.readFileSync(pidFile, 'utf8').trim();
+    if (raw) candidates.push(Number(raw));
+  } catch {
+    /* 没有 pid 文件 */
+  }
+  if (recorded?.pid) candidates.push(Number(recorded.pid));
+
+  let killed = false;
+  for (const pid of candidates) {
+    if (!Number.isInteger(pid) || pid <= 0) continue;
+    try {
+      process.kill(pid, 0); // 只探活
+    } catch {
+      continue; // 已经不在
+    }
+    logToFile(`[shell] 清理遗留后端 pid=${pid}`);
+    killTree(pid);
+    killed = true;
+  }
+
+  fs.rmSync(pidFile, { force: true });
+  fs.rmSync(RUNTIME_FILE, { force: true });
+  return killed;
+}
+
+function killTree(pid) {
+  if (!pid) return;
+  if (process.platform === 'win32') {
+    // Windows 上 SIGTERM 对 python 子进程常常无效，必须杀进程树
+    spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore' });
+    return;
+  }
+  try {
+    process.kill(pid, 'SIGTERM');
+  } catch {
+    /* 已退出 */
+  }
 }
 
 async function startBackend() {
-  if (DEV) {
-    // Dev: assume FastAPI started manually via `pnpm dev:api`
-    return;
+  const exe = resolveBackendExe();
+  if (!exe) {
+    throw new Error(
+      '找不到后端程序 backend.exe。\n' +
+        '打包产物应在 resources/backend/backend.exe；开发验证可设 AGENTFLOW_BACKEND_EXE 指定路径。',
+    );
   }
 
-  backendPort = await findFreePort();
-  const backendExe = path.join(process.resourcesPath, 'backend.exe');
+  backendPort = (await findFreePort()) || 8000;
+  const args = [
+    '--host',
+    '127.0.0.1',
+    '--port',
+    String(backendPort),
+    '--data-dir',
+    USER_DATA_DIR,
+    '--log-level',
+    'warning',
+  ];
 
-  if (!fs.existsSync(backendExe)) {
-    console.error(`[AgentFlow] backend.exe not found at ${backendExe}`);
-    return;
-  }
+  logToFile(`\n[shell] ${new Date().toISOString()} spawn ${exe} ${args.join(' ')}`);
 
-  backendProc = spawn(backendExe, ['--host', '127.0.0.1', '--port', String(backendPort)], {
+  backendProc = spawn(exe, args, {
     cwd: USER_DATA_DIR,
-    detached: false,
     stdio: ['ignore', 'pipe', 'pipe'],
-    windowsHide: false,
+    windowsHide: true,
   });
 
-  backendProc.stdout?.on('data', (d) => process.stdout.write(`[backend] ${d}`));
-  backendProc.stderr?.on('data', (d) => process.stderr.write(`[backend] ${d}`));
-  backendProc.on('exit', (code) => {
-    console.warn(`[AgentFlow] backend exited with code ${code}`);
+  backendProc.stdout?.on('data', (buf) => logToFile(`[backend] ${buf.toString().trimEnd()}`));
+  backendProc.stderr?.on('data', (buf) => logToFile(`[backend] ${buf.toString().trimEnd()}`));
+
+  backendProc.on('error', (err) => {
+    logToFile(`[shell] spawn 失败：${err.message}`);
     backendProc = null;
   });
-  backendProc.on('error', (err) => console.error('[AgentFlow] backend spawn error', err));
 
-  console.log(`[AgentFlow] Waiting for backend on port ${backendPort}...`);
+  backendProc.on('exit', (code, signal) => {
+    const exited = `[shell] backend 退出 code=${code} signal=${signal}`;
+    logToFile(exited);
+    backendProc = null;
+    if (!quitting) handleBackendCrash(exited);
+  });
+
+  writeRuntime({ pid: backendProc.pid, port: backendPort, startedAt: new Date().toISOString() });
+
   await waitForBackend(backendPort);
-  console.log(`[AgentFlow] Backend ready on port ${backendPort}`);
+  logToFile(`[shell] backend ready on http://127.0.0.1:${backendPort}`);
+  return backendPort;
+}
+
+function stopBackend() {
+  const proc = backendProc;
+  backendProc = null;
+  fs.rmSync(RUNTIME_FILE, { force: true });
+  if (!proc || proc.exitCode !== null) return;
+  logToFile(`[shell] 停止 backend pid=${proc.pid}`);
+  killTree(proc.pid);
+}
+
+/** 后端在运行途中挂掉：给用户可操作的提示，而不是一个报错的空窗口。 */
+async function handleBackendCrash(detail) {
+  if (!mainWin || mainWin.isDestroyed()) return;
+  const { response } = await dialog.showMessageBox(mainWin, {
+    type: 'error',
+    title: '后端已停止',
+    message: 'AgentFlow 的后端服务意外退出。',
+    detail: `${detail}\n\n日志：${LOG_FILE}`,
+    buttons: ['重启后端', '打开日志目录', '退出'],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+  });
+  if (response === 1) {
+    shell.openPath(LOG_DIR);
+    return;
+  }
+  if (response === 2) {
+    quitting = true;
+    app.quit();
+    return;
+  }
+  try {
+    await startBackend();
+    mainWin.loadURL(backendUrl());
+  } catch (err) {
+    await showStartupError(err);
+  }
+}
+
+function backendUrl() {
+  return `http://127.0.0.1:${backendPort}/`;
+}
+
+/** 启动期失败：重试 / 打开日志 / 退出。返回 false 表示用户选择退出。 */
+async function showStartupError(err) {
+  const { response } = await dialog.showMessageBox({
+    type: 'error',
+    title: 'AgentFlow 启动失败',
+    message: '后端服务未能启动。',
+    detail: `${err.message}\n\n日志：${LOG_FILE}`,
+    buttons: ['重试', '打开日志目录', '退出'],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+  });
+  if (response === 1) {
+    shell.openPath(LOG_DIR);
+    return true;
+  }
+  if (response === 2) return false;
+  return true;
+}
+
+// ---------------------------------------------------------------- 窗口
+
+function isLocalUrl(url) {
+  return typeof url === 'string' && url.startsWith(`http://127.0.0.1:${backendPort}`);
 }
 
 function createWindow() {
@@ -96,6 +297,7 @@ function createWindow() {
     minHeight: 700,
     autoHideMenuBar: true,
     show: false,
+    backgroundColor: '#0f1115',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -104,100 +306,147 @@ function createWindow() {
     },
   });
 
-  const url = DEV
-    ? DEV_URL
-    : `http://127.0.0.1:${backendPort}/`;
-
+  const url = DEV ? DEV_URL : backendUrl();
   mainWin.loadURL(url);
   mainWin.once('ready-to-show', () => mainWin.show());
 
-  mainWin.on('close', (e) => {
-    if (!appIsQuitting) {
-      e.preventDefault();
+  mainWin.on('close', (event) => {
+    // 有托盘时关窗只隐藏（还能从托盘叫回来）；没有托盘时必须真关，
+    // 否则用户点了叉就再也找不回窗口，只剩后台幽灵进程。
+    if (!quitting && tray) {
+      event.preventDefault();
       mainWin.hide();
     }
   });
 
-  mainWin.webContents.on('did-fail-load', (e, code, desc) => {
-    console.error('[AgentFlow] Failed to load:', code, desc);
+  mainWin.on('closed', () => {
+    mainWin = null;
+  });
+
+  mainWin.webContents.on('did-fail-load', (_event, code, description, validatedUrl) => {
+    logToFile(`[shell] did-fail-load ${code} ${description} ${validatedUrl}`);
+  });
+
+  // 只允许停留在本地后端；外链交给系统浏览器（AGENTS §6）
+  mainWin.webContents.setWindowOpenHandler(({ url: target }) => {
+    if (isLocalUrl(target)) return { action: 'allow' };
+    if (/^https?:/i.test(target)) shell.openExternal(target);
+    return { action: 'deny' };
+  });
+  mainWin.webContents.on('will-navigate', (event, target) => {
+    if (isLocalUrl(target) || (DEV && target.startsWith(DEV_URL))) return;
+    event.preventDefault();
+    if (/^https?:/i.test(target)) shell.openExternal(target);
   });
 }
 
-function setupTray() {
-  // Try to load icon; gracefully fall back on missing asset
-  let icon;
-  try {
-    icon = path.join(__dirname, 'icon.ico');
-  } catch { icon = null; }
+function showWindow() {
+  if (!mainWin || mainWin.isDestroyed()) {
+    createWindow();
+    return;
+  }
+  if (mainWin.isMinimized()) mainWin.restore();
+  mainWin.show();
+  mainWin.focus();
+}
 
-  tray = new Tray(icon || __dirname);
+// ---------------------------------------------------------------- 托盘 / IPC
+
+function setupTray() {
+  const iconPath = path.join(__dirname, 'icon.ico');
+  if (!fs.existsSync(iconPath)) {
+    // 没有图标就别硬建托盘（建一个空图标托盘比没有更糟）
+    logToFile('[shell] 未找到 icon.ico，跳过托盘');
+    return;
+  }
+  tray = new Tray(iconPath);
   tray.setToolTip('AgentFlow');
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: '打开窗口', click: () => { createWindow(); mainWin?.show(); mainWin?.focus(); } },
+      { label: '打开窗口', click: showWindow },
       { label: '打开数据目录', click: () => shell.openPath(USER_DATA_DIR) },
+      { label: '打开日志', click: () => shell.openPath(LOG_FILE) },
       { type: 'separator' },
-      { label: '退出 AgentFlow', click: () => { appIsQuitting = true; app.quit(); } },
-    ])
+      {
+        label: '退出 AgentFlow',
+        click: () => {
+          quitting = true;
+          app.quit();
+        },
+      },
+    ]),
   );
   tray.on('click', () => {
-    if (!mainWin) createWindow();
-    mainWin.isVisible() ? mainWin.hide() : (mainWin.show(), mainWin.focus());
+    if (mainWin && mainWin.isVisible()) mainWin.hide();
+    else showWindow();
   });
 }
 
 function setupIPC() {
-  ipcMain.handle('get-backend-port', () => backendPort);
-
   ipcMain.handle('open-data-dir', () => shell.openPath(USER_DATA_DIR));
-
-  ipcMain.handle('notify', (_e, title, body) => {
-    if (Notification.isSupported()) {
-      new Notification({ title, body }).show();
-    }
+  ipcMain.handle('open-log-dir', () => shell.openPath(LOG_DIR));
+  ipcMain.handle('notify', (_event, title, body) => {
+    if (Notification.isSupported()) new Notification({ title, body }).show();
   });
-
-  ipcMain.handle('open-save-dialog', async (_e, options) => {
-    return await dialog.showSaveDialog(mainWin, options || {});
-  });
-
-  ipcMain.handle('open-file-dialog', async (_e, options) => {
-    return await dialog.showOpenDialog(mainWin, options || {});
-  });
+  ipcMain.handle('open-save-dialog', (_event, options) =>
+    dialog.showSaveDialog(mainWin, options || {}),
+  );
+  ipcMain.handle('open-file-dialog', (_event, options) =>
+    dialog.showOpenDialog(mainWin, options || {}),
+  );
 }
 
-// ---- App Lifecycle ----
-app.whenReady().then(async () => {
-  try {
-    await startBackend();
-  } catch (err) {
-    console.error('[AgentFlow] Backend startup failed:', err);
-  }
-  createWindow();
-  setupTray();
-  setupIPC();
+// ---------------------------------------------------------------- 生命周期
 
-  if (!DEV) {
-    // electron-updater setup goes here (Phase 1+)
-    // require('electron-updater').autoUpdater.checkForUpdatesAndNotify();
-  }
-});
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => showWindow());
 
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow();
-});
+  app.whenReady().then(async () => {
+    setupIPC();
 
-app.on('before-quit', () => {
-  appIsQuitting = true;
-});
+    if (DEV) {
+      // 开发态：后端由 `pnpm dev` 起（Vite 代理到 127.0.0.1:8000）
+      createWindow();
+      setupTray();
+      return;
+    }
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+    cleanupStaleBackend();
+    for (;;) {
+      try {
+        await startBackend();
+        break;
+      } catch (err) {
+        logToFile(`[shell] 启动失败：${err.message}`);
+        if (!(await showStartupError(err))) {
+          quitting = true;
+          app.quit();
+          return;
+        }
+      }
+    }
 
-app.on('quit', () => {
-  if (backendProc) {
-    console.log('[AgentFlow] Terminating backend...');
-    try { backendProc.kill('SIGTERM'); } catch {}
-  }
-});
+    createWindow();
+    setupTray();
+  });
+
+  app.on('activate', () => showWindow());
+
+  app.on('before-quit', () => {
+    quitting = true;
+    stopBackend();
+  });
+
+  app.on('window-all-closed', () => {
+    // 窗口关闭被拦截成隐藏，这里只在"真的没有窗口"时兜底
+    if (process.platform !== 'darwin' && (!tray || quitting)) app.quit();
+  });
+
+  app.on('will-quit', () => {
+    stopBackend();
+    logStream?.end();
+  });
+}

@@ -161,3 +161,23 @@ def test_importing_run_does_not_create_settings() -> None:
 
     assert out.returncode == 0, out.stderr
     assert "CLEAN" in out.stdout, "app.run 在导入阶段就创建了 Settings，注入参数会失效"
+
+
+def test_write_pid_file_helps_shell_cleanup(monkeypatch, tmp_path) -> None:
+    """后端要把**自己**的 pid 写进数据目录。
+
+    单文件 exe 有"引导进程 + 服务进程"两代，桌面壳记录的是引导进程；
+    它先退出时壳会漏杀孤儿（实测孤儿一直占着端口和库锁），所以由后端自报 pid。
+    """
+    import os
+
+    from app.core.config import settings
+    from app.run import _write_pid_file
+
+    monkeypatch.setattr(settings, "DATA_DIR", str(tmp_path))
+
+    _write_pid_file()
+
+    pid_file = tmp_path / "backend.pid"
+    assert pid_file.is_file()
+    assert pid_file.read_text(encoding="utf-8").strip() == str(os.getpid())

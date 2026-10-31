@@ -127,6 +127,51 @@ backend.exe --port 8031 --data-dir <tmp> --log-level warning
 （`WinError 5` / `DENY(DC)`），因此 `build.py` 的最后一步"装机到 dist_backend"在本机失败；
 在普通环境上该步骤正常。构建产物本身已跑通验证。
 
+## ④ Electron 装配 + 安装包冒烟（已跑通）
+
+**装配做的事**（`electron/main.js`）：壳负责后端全生命周期——找空闲端口 → spawn
+`resources/backend/backend.exe`（带 `--port/--data-dir/--log-level`）→ 轮询 `/health` →
+`loadURL(127.0.0.1:port)` → 退出/崩溃收尸。
+
+| 能力 | 实现要点 |
+|---|---|
+| 端口 | `net.listen(0)` 取空闲端口，避免 8000 冲突 |
+| 数据目录 | `--data-dir %APPDATA%\AgentFlow`（`app.setName` 在建窗口前调用，否则会落到 scoped 包名目录） |
+| 就绪等待 | 轮询 `/health`，30s 超时；进程提前退出立即失败（不白等） |
+| 启动失败 | 对话框「重试 / 打开日志目录 / 退出」，不再白屏 |
+| 日志 | `userData/logs/backend.log`（后端 stdout/stderr 落盘，托盘可打开） |
+| 单实例 | `requestSingleInstanceLock()`，第二次启动聚焦已有窗口 |
+| 孤儿清理 | 后端自写 `backend.pid`；启动时按它 kill 进程树（**不能用壳记的 pid**：单文件 exe 有引导/服务两代） |
+| 退出清理 | `before-quit`/`will-quit` → `taskkill /T /F` |
+| 导航 | 只允许 `127.0.0.1:<port>`，外链走系统浏览器 |
+
+**unpacked 实测**（`electron-builder --dir`）：启动后 1 个主进程 + 后端 `--port 60307
+--data-dir ...\Roaming\AgentFlow`，`/health` 200、`/` 返回 SPA；日志 6 行（DEBUG 已关）；
+关窗后 `backend.exe` 归零；强杀壳造出孤儿后重启，日志出现 `清理遗留后端 pid=16596`、
+旧端口释放、新实例正常。
+
+**NSIS 安装包实测**（`AgentFlow Setup 0.1.0.exe`，117.8MB）：
+
+```
+1) 静默安装 /S  → 安装目录 ✓  开始菜单快捷方式 1  桌面快捷方式 1
+2) 启动          → 主进程 1；后端 :56416；/health 200；/ 返回 SPA
+3) 关闭窗口      → AgentFlow 0  backend 0
+4) 静默卸载 /S  → 安装目录已删  快捷方式 0/0  注册表项 0  用户数据保留
+```
+
+**过程中修掉的 4 个真问题**：
+1. `app.setName` 未调用 → 数据目录落到 `%APPDATA%\@agentflow\electron-shell`（含斜杠）
+2. 打包态 `DEBUG` 默认 True → 每条 SQL 都进日志（几秒上百行）
+3. 无托盘图标时"关窗只隐藏" → 应用变后台幽灵（改成:有托盘才隐藏）
+4. 卸载后残留**空**安装目录 → NSIS 工作目录在 `$INSTDIR`；用 `build/installer.nsh`
+   的 `customUnInstall` 里 `SetOutPath $TEMP` + `RMDir "$INSTDIR"` 解决
+
+**构建环境注意**（仅本机）：`ELECTRON_RUN_AS_NODE` 会从父进程继承（VS Code 终端常见），
+不清理会让 Electron 把自己当 Node 跑（报 `Cannot read properties of undefined (reading 'isPackaged')`）；
+GitHub 下载被墙时用 `ELECTRON_MIRROR` / `ELECTRON_BUILDER_BINARIES_MIRROR` 指向 npmmirror；
+无管理员权限时 `winCodeSign` 解压（含符号链接）会失败，用
+`--config.win.signAndEditExecutable=false` 跳过（代价：exe 无自定义图标/版本信息）。
+
 ## 待用户拍板：打包形态与 AGENTS §5 冲突
 
 `AGENTS.md` §5 写的是「PyInstaller **单文件** exe」，但本次实测：

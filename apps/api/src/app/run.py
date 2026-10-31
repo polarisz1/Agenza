@@ -120,11 +120,35 @@ def resolve_launch(
     )
 
 
+def _write_pid_file() -> None:
+    """把当前进程 pid 写进数据目录，供桌面壳清理"上次崩溃留下的孤儿后端"。
+
+    为什么不能用壳记录的 pid：单文件 exe 有引导进程 + 真正的服务进程两代，
+    引导进程先死时，壳记的 pid 就指错了对象（实测孤儿会一直占着端口和库）。
+    """
+    try:
+        from pathlib import Path
+
+        from app.core.config import settings
+
+        target = Path(settings.DATA_DIR) / "backend.pid"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(str(os.getpid()), encoding="utf-8")
+    except OSError:
+        pass  # 非致命：拿不到就让壳退回到 runtime.json 的 pid
+
+
 def main(argv: Sequence[str] | None = None) -> None:
-    plan = resolve_launch(os.environ, sys.argv[1:] if argv is None else argv, frozen=is_frozen())
+    frozen = is_frozen()
+    plan = resolve_launch(os.environ, sys.argv[1:] if argv is None else argv, frozen=frozen)
 
     # 必须在 import app.main 之前写环境：Settings 是导入时创建的单例
     os.environ.update(plan.as_env())
+
+    if frozen and "DEBUG" not in os.environ:
+        # 打包态默认不调试：DEBUG=True 会让 SQLAlchemy 打印每条 SQL，
+        # 日志噪音大、也拖慢启动（实测几秒就上百行）
+        os.environ["DEBUG"] = "false"
 
     import uvicorn
 
@@ -137,6 +161,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         from app.main import app as application
 
         target = application
+
+    _write_pid_file()
 
     uvicorn.run(
         target,
