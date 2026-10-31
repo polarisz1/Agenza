@@ -240,6 +240,10 @@
 | 2 | 端口 / 数据目录 / dist / 迁移目录注入 | ✅ 完成 | 新增 `app/run.py`（argparse → 写环境 → 再 import app，优先级 CLI > env > 默认）；`Settings` 增加 `RESOURCE_DIR` 与 `frontend_dist`/`alembic_ini`/`alembic_dir`；冻结态强制关 reload、默认托管前端。实测：注入资源目录后 `/` 返回其 index.html、迁移表齐全（`alembic_version=0001`）、数据落在注入目录；132 passed + E2E 4 绿 |
 | 3 | 前端产物托管方式 | ✅ 已定 | 后端托管（`MOUNT_FRONTEND` + dist 目录）；现有 E2E 已在真实浏览器里走通，选 A 不选 `loadFile` |
 
+**D-5 已落地**：Python 节点改为 `resolve_python_bin()`（`PYTHON_BIN` > 资源目录 `pyemb/python.exe` > 开发态当前解释器），
+打包态找不到内置解释器时给可读错误而非退回 `sys.executable`；runner 容忍 BOM。
+验证：`PYTHON_BIN` 指向 embeddable 3.12.10 时脚本确实跑在该解释器上；后端 141 passed。
+
 **任务**（在前置验证通过后）：
 
 | 任务 | 内容 | 验收 |

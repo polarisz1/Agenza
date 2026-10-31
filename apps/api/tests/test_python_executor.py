@@ -100,3 +100,28 @@ async def test_cancellation_propagates() -> None:
 
     with pytest.raises(asyncio.CancelledError):
         await task
+
+
+async def test_script_with_bom_still_runs() -> None:
+    """带 BOM 的脚本要能跑：记事本/PowerShell 另存的 UTF-8 往往带 BOM，
+    而 `exec()` 遇到 U+FEFF 会直接 SyntaxError（runner 因此用 utf-8-sig 读）。"""
+    script = "\ufeffagentflow_result = {'ok': True}\n"
+
+    result = await PythonExecutor().execute(_ctx(script))
+
+    assert result.status == "success", result.error
+    assert result.output == {"ok": True}
+
+
+async def test_reports_clear_error_when_interpreter_missing(monkeypatch) -> None:
+    """打包态找不到内置解释器时，节点要给出可读错误，而不是退回 sys.executable。"""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "PYTHON_BIN", "")
+    monkeypatch.setattr(type(settings), "is_packaged", property(lambda self: True))
+    monkeypatch.setattr(type(settings), "resource_root", property(lambda self: None))
+
+    result = await PythonExecutor().execute(_ctx("agentflow_result = {}\n"))
+
+    assert result.status == "failed"
+    assert "pyemb" in (result.error or "")

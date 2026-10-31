@@ -37,6 +37,31 @@ embeddable CPython（`--add-data pyemb;pyemb`）跑同一个 runner（验证修�
 
 **D-5 定案**：选方案 A（随包内置 embeddable CPython），不选"要求用户自备 Python"，也不砍脚本节点。
 
+### D-5 落地（已实现）
+
+`core/engine/executors/python.py` 不再直接用 `sys.executable`，改为 `resolve_python_bin()`：
+
+| 优先级 | 来源 | 场景 |
+|---|---|---|
+| 1 | `PYTHON_BIN` 环境变量 | 运维/调试，或本地验证打包效果 |
+| 2 | `<resource-dir>/pyemb/python.exe` | **打包态唯一正确来源** |
+| 3 | 当前进程解释器 | 开发态（venv） |
+
+打包态若找不到内置解释器，节点直接返回可读错误（"请在打包时把 embeddable CPython 放进
+resources/pyemb/"），**绝不退回 `sys.executable`**——那等于再起一个后端。
+
+顺带把 runner 读脚本改成 `utf-8-sig`：带 BOM 的脚本（记事本/PowerShell 另存常见）
+以前会 `SyntaxError: invalid non-printable character U+FEFF`。
+
+实测（宿主是 venv 3.12.13，脚本跑在随包 3.12.10 上）：
+
+```
+settings.PYTHON_BIN = ...\.tmp\spike-py\pyemb\python.exe
+当前进程解释器      = ...\apps\api\.venv\Scripts\python.exe
+output: {'exe': '...\pyemb\python.exe', 'ver': '3.12.10'}
+用了 PYTHON_BIN 指定的解释器: True
+```
+
 ## ② 端口 / 数据目录 / 前端 dist / 迁移目录的注入 —— **已完成**
 
 **做法**：新增 `apps/api/src/app/run.py` 作为唯一启动入口（argparse → 写环境 → 再 import app），

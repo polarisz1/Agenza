@@ -101,6 +101,8 @@ class Settings(BaseSettings):
     ENGINE_MAX_CONCURRENCY: int = 4
     RUN_RETENTION: int = 200
     DEFAULT_TIMEOUT: int = 120
+    # 跑用户脚本用的解释器；留空表示走默认解析（打包态=资源目录里的 pyemb，开发态=当前解释器）
+    PYTHON_BIN: str = ""
 
     # ---- Frontend ----
     MOUNT_FRONTEND: bool = False

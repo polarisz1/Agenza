@@ -15,6 +15,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from app.core.config import settings
 from app.core.engine.contexts import NodeContext, NodeResult
 from app.core.engine.executors.base import BaseExecutor
 
@@ -45,6 +46,49 @@ def _child_env(tmp: Path) -> dict[str, str]:
     return env
 
 
+# 随包内置解释器的候选相对路径（Windows 是 python.exe，类 Unix 在 bin/ 下）
+_BUNDLED_CANDIDATES = ("pyemb/python.exe", "pyemb/bin/python3")
+
+
+def resolve_python_bin(
+    *,
+    explicit: str = "",
+    resource_dir: Path | None = None,
+    frozen: bool = False,
+) -> tuple[str | None, str | None]:
+    """选出跑用户脚本的解释器，返回 `(路径, 错误信息)`。
+
+    优先级（评审 D-5）：
+    1. `PYTHON_BIN` 显式指定（运维/调试用）
+    2. 资源目录里的随包解释器 `pyemb/python.exe`（打包态的唯一正确来源）
+    3. 开发态回退到当前进程的解释器（venv 里的 python）
+
+    打包后 `sys.executable` 就是 `backend.exe` 自己，**绝不能**再拿它当解释器，
+    否则等于再起一个后端（M4 前置验证 ① 已实测复现）。
+    """
+    if explicit.strip():
+        candidate = Path(explicit.strip())
+        if candidate.is_file():
+            return str(candidate), None
+        return None, f"PYTHON_BIN 指向的解释器不存在：{explicit}"
+
+    if resource_dir is not None:
+        for relative in _BUNDLED_CANDIDATES:
+            bundled = resource_dir / relative
+            if bundled.is_file():
+                return str(bundled), None
+
+    if frozen:
+        hint = f"{resource_dir}" if resource_dir is not None else "未提供 --resource-dir"
+        return None, (
+            "找不到可用的 Python 解释器：打包环境里期望随包内置 "
+            f"pyemb/python.exe（资源目录：{hint}）。"
+            "请在打包时把 embeddable CPython 放进 resources/pyemb/。"
+        )
+
+    return sys.executable, None
+
+
 class PythonExecutor(BaseExecutor):
     node_type = "python"
 
@@ -53,6 +97,14 @@ class PythonExecutor(BaseExecutor):
         timeout = config.get("timeout_s", 60)
         if not script:
             return NodeResult(status="failed", error="Empty script")
+
+        python_bin, resolve_error = resolve_python_bin(
+            explicit=settings.PYTHON_BIN,
+            resource_dir=settings.resource_root,
+            frozen=settings.is_packaged,
+        )
+        if python_bin is None:
+            return NodeResult(status="failed", error=resolve_error)
 
         input_data = {"inputs": ctx.run_inputs, "upstream": ctx.upstream}
 
@@ -66,7 +118,7 @@ class PythonExecutor(BaseExecutor):
 
         try:
             proc = await asyncio.create_subprocess_exec(
-                sys.executable,
+                python_bin,
                 "-I",
                 "-S",
                 str(tmp / "runner.py"),
@@ -125,7 +177,8 @@ from pathlib import Path
 
 def main():
     namespace = {}
-    exec(Path('script.py').read_text(encoding='utf-8'), namespace)
+    # utf-8-sig：容忍脚本带 BOM（PowerShell/记事本另存常见），否则 exec 会 SyntaxError
+    exec(Path('script.py').read_text(encoding='utf-8-sig'), namespace)
     result = namespace.get('agentflow_result', None)
     if result is None:
         print('Script did not produce result via agentflow_result', file=sys.stderr)
