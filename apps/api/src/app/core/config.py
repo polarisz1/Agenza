@@ -8,14 +8,12 @@ from pathlib import Path
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.defaults import DEFAULT_HOST, DEFAULT_LOG_LEVEL, DEFAULT_PORT
+
 # config.py 位于 apps/api/src/app/core → parents[5] 才是仓库根
 # （此前写成 parents[4]，数据目录因此落在 apps/data，评审 S13）
 ROOT_DIR = Path(__file__).resolve().parents[5]  # AgentFlow/
 DATA_DIR = ROOT_DIR / "data"
-
-# 服务默认监听地址：打包后由 CLI/环境变量覆盖（见 app/run.py）
-DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = 8000
 
 
 def relocate_legacy_data_dir(legacy: Path, target: Path) -> bool:
@@ -64,11 +62,26 @@ class Settings(BaseSettings):
 
     @property
     def resource_root(self) -> Path | None:
-        """显式注入的资源根目录；未注入或不存在时返回 None。"""
-        if not self.RESOURCE_DIR:
-            return None
-        path = Path(self.RESOURCE_DIR)
-        return path if path.is_dir() else None
+        """随包资源根目录。
+
+        1. `--resource-dir` / `RESOURCE_DIR` 显式指定（onedir / 外置资源）
+        2. 单文件（onefile）运行时，PyInstaller 会把 `--add-data` 的内容解压到
+           `sys._MEIPASS`，那里就是资源根目录
+        """
+        if self.RESOURCE_DIR:
+            path = Path(self.RESOURCE_DIR)
+            return path if path.is_dir() else None
+
+        if self.is_packaged:
+            import sys
+
+            meipass = getattr(sys, "_MEIPASS", None)
+            if meipass:
+                extracted = Path(meipass)
+                if extracted.is_dir():
+                    return extracted
+
+        return None
 
     @property
     def frontend_dist(self) -> Path:
@@ -108,7 +121,7 @@ class Settings(BaseSettings):
     MOUNT_FRONTEND: bool = False
 
     # ---- Logging ----
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: str = DEFAULT_LOG_LEVEL
 
     model_config = SettingsConfigDict(
         env_file=".env",

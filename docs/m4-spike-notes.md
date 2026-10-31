@@ -95,6 +95,38 @@ E2E 用 `MOUNT_FRONTEND=true` 让后端托管 `apps/web/dist`，Playwright 能�
 说明"后端托管 dist"这条路径在真实浏览器里是通的，不需要额外 spike。
 选择：v1 用后端托管；`loadFile/app://` 不列入待办。
 
+## ③ 打包链路（已跑通）
+
+**做法**：`pyinstaller/backend.spec`（单文件，按 AGENTS §5）+ `pyinstaller/build.py`（检查前置、调用
+PyInstaller、把产物装到 `apps/api/dist_backend/`，与 `electron-builder.yml` 的 `extraResources` 对齐）。
+资源全部塞进 exe：`alembic/`、`alembic.ini`、`frontend-dist/`、`pyemb/`。
+
+**实测（35–40MB 单文件）**：
+
+```
+backend.exe --port 8031 --data-dir <tmp> --log-level warning
+  /health         → 200
+  /               → 200，返回 exe 内的 index.html（SPA 可用）
+  /api/workflows  → 200
+  数据目录         → 注入目录里出现 agentflow.db；没有再落到 AppData
+  迁移             → 建表 + alembic_version=0001（用的是 exe 内的 alembic）
+  跑一条工作流      → 状态 success；脚本节点输出
+                     exe = ...\_MEI000045502\pyemb\python.exe，ver = 3.12.10
+                     （即用了随包解释器，而不是 backend.exe 自己）
+```
+
+**过程中修掉的两个真问题**：
+
+1. `uvicorn.run("app.main:app")` 用字符串导入，冻结后解析不到 → `run.py` 在非 reload 时直接传 app 对象；
+   spec 里再用 `collect_submodules("app")` 兜住动态导入。
+2. `run.py` 顶部 `from app.core.config import ...` 会**在写环境变量之前**实例化 `Settings`，
+   导致 `--data-dir` 等全部失效（实测库写到了 `AppData\data`）→ 默认值移到无副作用的
+   `app/core/defaults.py`，并加了一条子进程回归测试守住这个约束。
+
+**环境限制（仅影响本机沙箱，不影响正常构建）**：当前沙箱禁止删除/覆盖已存在的文件
+（`WinError 5` / `DENY(DC)`），因此 `build.py` 的最后一步"装机到 dist_backend"在本机失败；
+在普通环境上该步骤正常。构建产物本身已跑通验证。
+
 ## 待用户拍板：打包形态与 AGENTS §5 冲突
 
 `AGENTS.md` §5 写的是「PyInstaller **单文件** exe」，但本次实测：

@@ -14,9 +14,7 @@ import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-from app.core.config import DEFAULT_HOST, DEFAULT_PORT
-
-DEFAULT_LOG_LEVEL = "INFO"
+from app.core.defaults import DEFAULT_HOST, DEFAULT_LOG_LEVEL, DEFAULT_PORT
 
 
 @dataclass(frozen=True)
@@ -130,8 +128,18 @@ def main(argv: Sequence[str] | None = None) -> None:
 
     import uvicorn
 
+    # reload 只认 "module:attr" 字符串；不 reload 时直接传对象，
+    # 这样 PyInstaller 能静态发现 app.main（否则冻结后 uvicorn 导入不到它）
+    target: str | object
+    if plan.reload:
+        target = "app.main:app"
+    else:
+        from app.main import app as application
+
+        target = application
+
     uvicorn.run(
-        "app.main:app",
+        target,
         host=plan.host,
         port=plan.port,
         reload=plan.reload,

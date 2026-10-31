@@ -142,3 +142,22 @@ def test_mount_flag_from_env_is_strict_boolean(raw: str, expected: bool) -> None
     plan = resolve_launch({"MOUNT_FRONTEND": raw}, [])
 
     assert plan.mount_frontend is expected
+
+
+def test_importing_run_does_not_create_settings() -> None:
+    """`app.run` 被导入时不能提前实例化 Settings。
+
+    否则 `--data-dir` / `--port` 这些注入值全部失效（实测：打包后的库写到了
+    AppData 而不是指定目录）。用子进程验证，避免被其他测试的导入顺序干扰。
+    """
+    import subprocess
+    import sys
+
+    code = (
+        "import sys, app.run; "
+        "print('SETTINGS_CREATED' if 'app.core.config' in sys.modules else 'CLEAN')"
+    )
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=60)
+
+    assert out.returncode == 0, out.stderr
+    assert "CLEAN" in out.stdout, "app.run 在导入阶段就创建了 Settings，注入参数会失效"
