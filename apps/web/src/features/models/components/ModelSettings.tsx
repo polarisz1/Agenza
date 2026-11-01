@@ -23,6 +23,7 @@ import {
   testProviderById,
 } from '../api';
 import type { ProviderResponse } from '../api';
+import EmptyState from '@/shared/components/EmptyState';
 
 const KINDS: { value: string; label: string }[] = [
   { value: 'openai-compat', label: 'OpenAI 兼容（GPT / DeepSeek 等）' },
@@ -59,19 +60,17 @@ export default function ModelSettings() {
     load();
   }, [load]);
 
+  const openCreate = useCallback(() => {
+    setEditingId(null);
+    form.resetFields();
+    setOpen(true);
+  }, [form]);
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <div style={{ fontSize: 20, fontWeight: 600 }}>模型与密钥</div>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setEditingId(null);
-            form.resetFields();
-            setOpen(true);
-          }}
-        >
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
           添加服务商
         </Button>
       </div>
@@ -95,6 +94,22 @@ export default function ModelSettings() {
         rowKey="id"
         loading={loading}
         dataSource={items}
+        scroll={{ x: 1100 }}
+        locale={{
+          emptyText: loading ? (
+            <span />
+          ) : (
+            <EmptyState
+              title="还没有配置模型服务商"
+              description="支持 OpenAI 兼容（DeepSeek 等）、Ollama 本地、Anthropic 兼容。"
+              action={
+                <Button type="primary" onClick={openCreate}>
+                  添加服务商
+                </Button>
+              }
+            />
+          ),
+        }}
         columns={[
           { title: '名称', dataIndex: 'name' },
           {

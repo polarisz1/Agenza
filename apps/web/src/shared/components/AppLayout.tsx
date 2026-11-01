@@ -7,7 +7,10 @@ import {
   UserOutlined,
   RobotOutlined,
 } from '@ant-design/icons';
+import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+
+import { http } from '@/shared/lib/http';
 
 const { Header, Sider, Content } = Layout;
 
@@ -22,6 +25,26 @@ export default function AppLayout() {
   const { message } = App.useApp();
   const { token } = theme.useToken();
   const loc = useLocation();
+  // 后端不可达时常驻提示（B8），每 30s 探测一次
+  const [offline, setOffline] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        await http.get('/api/settings/system/info');
+        if (!cancelled) setOffline(false);
+      } catch {
+        if (!cancelled) setOffline(true);
+      }
+    };
+    void check();
+    const timer = window.setInterval(() => void check(), 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -61,8 +84,13 @@ export default function AppLayout() {
             padding: '0 24px',
           }}
         >
-          <div style={{ fontWeight: 500 }}>
-            {menu.find((m) => loc.pathname.startsWith(m.key))?.label || 'AgentFlow'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+            <span style={{ color: '#8b9088', fontSize: 12 }}>AgentFlow</span>
+            <span style={{ color: '#c0c3bb' }}>/</span>
+            <span style={{ fontWeight: 600 }}>
+              {menu.find((m) => loc.pathname === m.key || loc.pathname.startsWith(`${m.key}/`))
+                ?.label || '工作流'}
+            </span>
           </div>
           <Dropdown
             menu={{
@@ -92,6 +120,25 @@ export default function AppLayout() {
             </span>
           </Dropdown>
         </Header>
+        {offline && (
+          <div
+            style={{
+              padding: '6px 24px',
+              background: '#fdf2ea',
+              borderBottom: '1px solid #efd8b8',
+              color: '#a86612',
+              fontSize: 12,
+            }}
+          >
+            无法连接后端 · 读操作会失败
+            <a
+              style={{ marginLeft: 10, color: '#1f4e3d', fontWeight: 600 }}
+              onClick={() => window.location.reload()}
+            >
+              重试
+            </a>
+          </div>
+        )}
         <Content style={{ padding: 24, background: '#f4f5f2', minHeight: 'calc(100vh - 64px)' }}>
           <Outlet />
         </Content>

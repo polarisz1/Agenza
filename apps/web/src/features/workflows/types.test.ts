@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { canConnect, deserializeGraph, serializeGraph, type EditorNode } from './types';
+import {
+  canConnect,
+  deserializeGraph,
+  nodeDetail,
+  nodeSummary,
+  serializeGraph,
+  type EditorNode,
+} from './types';
 
 /**
  * 图序列化与端口矩阵（含条件分支的 from_port 往返）。
@@ -96,5 +103,47 @@ describe('canConnect', () => {
 
   it('没有输出端口的节点不能作为起点', () => {
     expect(canConnect('output', 'llm')).toBe(false);
+  });
+});
+
+describe('节点卡摘要（v2）', () => {
+  function data(type: EditorNode['data']['type'], config: Record<string, unknown>) {
+    return { type, label: 'N', config };
+  }
+
+  it('LLM：主行模型/温度，次行提示词首行', () => {
+    const node = data('llm', {
+      model: 'deepseek-chat',
+      temperature: 0.3,
+      system: '你是摘要助手',
+      prompt: '请摘要',
+    });
+    expect(nodeSummary(node)).toBe('deepseek-chat · T=0.3');
+    expect(nodeDetail(node)).toBe('你是摘要助手');
+  });
+
+  it('抽取：主行字段数，次行前三个字段名', () => {
+    const node = data('extract', {
+      fields_text: 'sentiment: 情感\nkeywords：关键词\nsummary: 摘要\nignored',
+    });
+    expect(nodeSummary(node)).toBe('4 个目标字段');
+    expect(nodeDetail(node)).toBe('sentiment / keywords / summary');
+  });
+
+  it('条件：主行用符号表达比较，次行说明双分支', () => {
+    const node = data('condition', { left: '{{ LLM1 }}', op: 'contains', right: 'error' });
+    expect(nodeSummary(node)).toBe('{{ LLM1 }} 包含 error');
+    expect(nodeDetail(node)).toBe('真 / 假 两个分支');
+  });
+
+  it('HTTP：从完整 URL 提取 host；未填完整时保持原样', () => {
+    expect(nodeSummary(data('http', { url: 'https://api.example.com/v1/x' }))).toBe(
+      'GET api.example.com',
+    );
+    expect(nodeSummary(data('http', { url: '{{ 输入1.url }}' }))).toBe('GET {{ 输入1.url }}');
+  });
+
+  it('输出：来源留空时提示"首个上游"', () => {
+    expect(nodeSummary(data('output', { field: 'result' }))).toBe('result ← 首个上游');
   });
 });

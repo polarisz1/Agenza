@@ -1,8 +1,9 @@
-import { Alert, App, Button, Dropdown, Input, Select, Table, Tag, Space, Popconfirm } from 'antd';
+import { Alert, App, Button, Dropdown, Input, Select, Skeleton, Table, Tag, Space } from 'antd';
 import {
   PlusOutlined,
   SearchOutlined,
   EditOutlined,
+  MoreOutlined,
   CopyOutlined,
   DeleteOutlined,
 } from '@ant-design/icons';
@@ -12,11 +13,12 @@ import { useNavigate } from 'react-router-dom';
 import { listWorkflows, deleteWorkflow, duplicateWorkflow, createWorkflow } from '../api';
 import type { WorkflowListItem } from '../api';
 import { WORKFLOW_TEMPLATES } from '../templates';
+import EmptyState from '@/shared/components/EmptyState';
 import { formatDateTime } from '@/shared/utils/datetime';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 
 export default function WorkflowList() {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const nav = useNavigate();
   const [items, setItems] = useState<WorkflowListItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,6 +77,34 @@ export default function WorkflowList() {
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleDuplicate = async (id: string) => {
+    try {
+      await duplicateWorkflow(id);
+      message.success('已复制');
+      load();
+    } catch (err: any) {
+      message.error(err?.message || '复制失败');
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    modal.confirm({
+      title: '确定删除该工作流？',
+      content: '将一并删除该工作流的全部运行记录。此操作不可撤销。',
+      okText: '删除',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deleteWorkflow(id);
+          message.success('已删除');
+          load();
+        } catch (err: any) {
+          message.error(err?.message || '删除失败');
+        }
+      },
+    });
   };
 
   const menuItems = [
@@ -160,103 +190,122 @@ export default function WorkflowList() {
         />
       )}
 
-      <Table
-        rowKey="id"
-        loading={loading}
-        dataSource={items}
-        columns={[
-          {
-            title: '名称',
-            dataIndex: 'name',
-            render: (text, record) => <a onClick={() => nav(`/workflows/${record.id}`)}>{text}</a>,
-          },
-          {
-            title: '描述',
-            dataIndex: 'description',
-            ellipsis: true,
-            render: (value?: string | null) => value || '—',
-          },
-          {
-            // 不再展示不可控的"草稿/就绪"（D-13）：按当前图实时给出可用性
-            title: '可用性',
-            key: 'availability',
-            width: 120,
-            render: (_, record) =>
-              record.blocking_count > 0 ? (
-                <Tag color="red">{record.blocking_count} 个阻断</Tag>
-              ) : record.issue_count > 0 ? (
-                <Tag color="orange">{record.issue_count} 个提示</Tag>
-              ) : (
-                <Tag color="green">可用</Tag>
-              ),
-          },
-          { title: '节点数', dataIndex: 'node_count', width: 90 },
-          {
-            title: '最近运行',
-            dataIndex: 'last_run_at',
-            width: 180,
-            render: (value) => formatDateTime(value),
-          },
-          {
-            title: '最近编辑',
-            dataIndex: 'updated_at',
-            width: 180,
-            render: (value) => formatDateTime(value),
-          },
-          {
-            title: '操作',
-            key: 'ops',
-            width: 180,
-            render: (_, record) => (
-              <Space>
-                <Button
-                  type="link"
-                  size="small"
-                  icon={<EditOutlined />}
-                  onClick={() => nav(`/workflows/${record.id}`)}
-                >
-                  编辑
-                </Button>
-                <Button
-                  type="link"
-                  size="small"
-                  icon={<CopyOutlined />}
-                  onClick={async () => {
-                    try {
-                      await duplicateWorkflow(record.id);
-                      message.success('已复制');
-                      load();
-                    } catch (err: any) {
-                      message.error(err?.message || '复制失败');
-                    }
-                  }}
-                >
-                  复制
-                </Button>
-                <Popconfirm
-                  title="确定删除该工作流？"
-                  description="将一并删除该工作流的全部运行记录。此操作不可撤销。"
-                  okText="删除"
-                  okButtonProps={{ danger: true }}
-                  onConfirm={async () => {
-                    try {
-                      await deleteWorkflow(record.id);
-                      message.success('已删除');
-                      load();
-                    } catch (err: any) {
-                      message.error(err?.message || '删除失败');
-                    }
-                  }}
-                >
-                  <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-                    删除
-                  </Button>
-                </Popconfirm>
-              </Space>
+      {loading && items.length === 0 ? (
+        <div style={{ padding: 20, background: '#fff', borderRadius: 10 }}>
+          <Skeleton active paragraph={{ rows: 6 }} />
+        </div>
+      ) : (
+        <Table
+          rowKey="id"
+          loading={loading}
+          dataSource={items}
+          scroll={{ x: 1140 }}
+          locale={{
+            emptyText: loading ? (
+              <span />
+            ) : (
+              <EmptyState
+                title={debouncedQ ? '没有匹配的工作流' : '还没有工作流'}
+                description={
+                  debouncedQ
+                    ? '换个关键词，或清除搜索条件。'
+                    : '新建一张空白画布，或等模板中心上线后从模板开始。'
+                }
+                action={
+                  debouncedQ ? (
+                    <Button onClick={() => setQ('')}>清除搜索</Button>
+                  ) : (
+                    <Button type="primary" onClick={() => void handleCreate('blank')}>
+                      新建空白工作流
+                    </Button>
+                  )
+                }
+              />
             ),
-          },
-        ]}
-      />
+          }}
+          columns={[
+            {
+              title: '名称',
+              dataIndex: 'name',
+              width: 260,
+              render: (text, record) => (
+                <a onClick={() => nav(`/workflows/${record.id}`)}>{text}</a>
+              ),
+            },
+            {
+              title: '描述',
+              dataIndex: 'description',
+              ellipsis: true,
+              render: (value?: string | null) => value || '—',
+            },
+            {
+              // 不再展示不可控的"草稿/就绪"（D-13）：按当前图实时给出可用性
+              title: '可用性',
+              key: 'availability',
+              width: 120,
+              render: (_, record) =>
+                record.blocking_count > 0 ? (
+                  <Tag color="red">{record.blocking_count} 个阻断</Tag>
+                ) : record.issue_count > 0 ? (
+                  <Tag color="orange">{record.issue_count} 个提示</Tag>
+                ) : (
+                  <Tag color="green">可用</Tag>
+                ),
+            },
+            { title: '节点数', dataIndex: 'node_count', width: 80 },
+            {
+              title: '最近运行',
+              dataIndex: 'last_run_at',
+              width: 170,
+              render: (value) => formatDateTime(value),
+            },
+            {
+              title: '最近编辑',
+              dataIndex: 'updated_at',
+              width: 150,
+              render: (value) => formatDateTime(value),
+            },
+            {
+              title: '操作',
+              key: 'ops',
+              width: 130,
+              fixed: 'right',
+              render: (_, record) => (
+                <Space size={2}>
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => nav(`/workflows/${record.id}`)}
+                  >
+                    编辑
+                  </Button>
+                  <Dropdown
+                    trigger={['click']}
+                    menu={{
+                      items: [
+                        { key: 'duplicate', label: '复制', icon: <CopyOutlined /> },
+                        { key: 'delete', label: '删除', icon: <DeleteOutlined />, danger: true },
+                      ],
+                      onClick: ({ key }) => {
+                        if (key === 'duplicate') void handleDuplicate(record.id);
+                        if (key === 'delete') handleDelete(record.id);
+                      },
+                    }}
+                  >
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<MoreOutlined />}
+                      aria-label="更多操作"
+                    />
+                  </Dropdown>
+                </Space>
+              ),
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }

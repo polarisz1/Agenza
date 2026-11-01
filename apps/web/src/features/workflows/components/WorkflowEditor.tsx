@@ -44,6 +44,7 @@ import { useAutoSave } from '../hooks/useAutoSave';
 import { useEditorStore } from '../hooks/useEditorStore';
 import { useVariables } from '../hooks/useVariables';
 import { nodeTypes } from './nodes';
+import CommandPalette from './CommandPalette';
 import NodeLibrary from './NodeLibrary';
 import PropertyPanel from './PropertyPanel';
 import RunDrawer from './RunDrawer';
@@ -68,7 +69,6 @@ function EditorInner() {
 
   const workflowId = useEditorStore((s) => s.workflowId);
   const name = useEditorStore((s) => s.name);
-  const status = useEditorStore((s) => s.status);
   const nodes = useEditorStore((s) => s.nodes);
   const edges = useEditorStore((s) => s.edges);
   const viewport = useEditorStore((s) => s.viewport);
@@ -87,6 +87,8 @@ function EditorInner() {
   const copySelection = useEditorStore((s) => s.copySelection);
   const pasteClipboard = useEditorStore((s) => s.pasteClipboard);
   const duplicateSelection = useEditorStore((s) => s.duplicateSelection);
+  const toggleSelectedEnabled = useEditorStore((s) => s.toggleSelectedEnabled);
+  const deleteSelected = useEditorStore((s) => s.deleteSelected);
   const onNodesChange = useEditorStore((s) => s.onNodesChange);
   const onEdgesChange = useEditorStore((s) => s.onEdgesChange);
   const onConnect = useEditorStore((s) => s.onConnect);
@@ -122,6 +124,15 @@ function EditorInner() {
   const [starting, setStarting] = useState(false);
   const [inputsOpen, setInputsOpen] = useState(false);
   const [drawerCollapsed, setDrawerCollapsed] = useState(false);
+  // F2：命令面板 / 节点搜索 / 右键菜单
+  const [palette, setPalette] = useState<'command' | 'node' | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{
+    x: number;
+    y: number;
+    kind: 'node' | 'pane' | 'edge';
+    nodeId?: string;
+    edgeId?: string;
+  } | null>(null);
 
   const creatingRef = useRef(false);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -229,6 +240,16 @@ function EditorInner() {
       if (editing) return;
 
       const key = event.key.toLowerCase();
+      if ((event.ctrlKey || event.metaKey) && key === 'k') {
+        event.preventDefault();
+        setPalette('command');
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && key === 'f') {
+        event.preventDefault();
+        setPalette('node');
+        return;
+      }
       if ((event.ctrlKey || event.metaKey) && key === 'c') {
         event.preventDefault();
         copySelection();
@@ -272,17 +293,41 @@ function EditorInner() {
       else if (running) nextStatus = 'queued';
 
       const hasIssue = issueIds.has(node.id);
-      if (node.data.runtimeStatus === nextStatus && node.data.hasIssue === hasIssue) {
+      const runtimeDurationMs = live?.durationMs;
+      const runtimeTokens = live ? (live.tokensIn ?? 0) + (live.tokensOut ?? 0) : undefined;
+      const runtimeError = live?.error ?? undefined;
+      if (
+        node.data.runtimeStatus === nextStatus &&
+        node.data.hasIssue === hasIssue &&
+        node.data.runtimeDurationMs === runtimeDurationMs &&
+        node.data.runtimeTokens === runtimeTokens &&
+        node.data.runtimeError === runtimeError
+      ) {
         return node;
       }
-      return { ...node, data: { ...node.data, runtimeStatus: nextStatus, hasIssue } };
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          runtimeStatus: nextStatus,
+          hasIssue,
+          runtimeDurationMs,
+          runtimeTokens,
+          runtimeError,
+        },
+      };
     });
   }, [nodes, run.nodes, run.status, issueIds]);
+
+  // 记录最近一次连线被拒的原因，供 onConnectEnd 提示（F2/T5.2.5）
+  const lastConnectionIssue = useRef<string | null>(null);
 
   const isValidConnection = useCallback(
     (connection: Connection | Edge) => {
       // 类型矩阵 / 入度 / 环，统一由 connectionIssue 判断（评审 G21）
-      return connectionIssue(nodes, edges, connection) === null;
+      const issue = connectionIssue(nodes, edges, connection);
+      lastConnectionIssue.current = issue;
+      return issue === null;
     },
     [nodes, edges],
   );
@@ -473,6 +518,55 @@ function EditorInner() {
     navigate('/workflows');
   }, [navigate, saveNow, message]);
 
+  const debugFromMenu = useCallback(
+    async (nodeId: string) => {
+      setCtxMenu(null);
+      try {
+        const result = await handleDebug(nodeId);
+        if (result.status === 'success') message.success('调试成功');
+        else message.error(result.error || '调试失败');
+      } catch (err: any) {
+        message.error(err?.message || '调试失败');
+      }
+    },
+    [handleDebug, message],
+  );
+
+  // 右键菜单：点空白/滚动/Esc 关闭
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const close = () => setCtxMenu(null);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+    window.addEventListener('click', close);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [ctxMenu]);
+
+  // 命令面板的条目随当前工作流状态变化，直接构造（只在面板打开时使用）
+  const commands = [
+    { id: 'run', label: '运行工作流', hint: '▶ 运行', run: () => void handleRun() },
+    { id: 'save', label: '保存', hint: 'Ctrl+S', run: () => void saveNow() },
+    { id: 'layout', label: '自动布局', run: handleAutoLayout },
+    {
+      id: 'fit',
+      label: '适应视图',
+      run: () => flow.fitView({ padding: 0.25, duration: 300 }),
+    },
+    { id: 'undo', label: '撤销', hint: 'Ctrl+Z', run: undo },
+    { id: 'redo', label: '重做', hint: 'Ctrl+Shift+Z', run: redo },
+    { id: 'find', label: '搜索节点', hint: 'Ctrl+F', run: () => setPalette('node') },
+    { id: 'runs', label: '打开运行记录', run: () => navigate('/runs') },
+    { id: 'models', label: '打开模型配置', run: () => navigate('/models') },
+    { id: 'settings', label: '打开本机设置', run: () => navigate('/settings') },
+  ];
+
   return (
     <div className="afe-root">
       <div className="afe-header">
@@ -487,11 +581,6 @@ function EditorInner() {
             onChange={(e) => setName(e.target.value)}
             aria-label="工作流名称"
           />
-          <span
-            className={status === 'ready' ? 'afe-tag afe-tag--success' : 'afe-tag afe-tag--draft'}
-          >
-            {status === 'ready' ? '就绪' : '草稿'}
-          </span>
 
           <span className="afe-save-state">
             {saveState === 'saving' && <span className="afe-dim">保存中…</span>}
@@ -567,6 +656,34 @@ function EditorInner() {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              onConnectEnd={() => {
+                const issue = lastConnectionIssue.current;
+                lastConnectionIssue.current = null;
+                if (issue) message.warning(`无法连接：${issue}`);
+              }}
+              onNodeContextMenu={(event, node) => {
+                event.preventDefault();
+                select(node.id);
+                setCtxMenu({
+                  x: event.clientX,
+                  y: event.clientY,
+                  kind: 'node',
+                  nodeId: node.id,
+                });
+              }}
+              onPaneContextMenu={(event) => {
+                event.preventDefault();
+                setCtxMenu({ x: event.clientX, y: event.clientY, kind: 'pane' });
+              }}
+              onEdgeContextMenu={(event, edge) => {
+                event.preventDefault();
+                setCtxMenu({
+                  x: event.clientX,
+                  y: event.clientY,
+                  kind: 'edge',
+                  edgeId: edge.id,
+                });
+              }}
               onNodeDragStart={beginHistory}
               onSelectionChange={handleSelectionChange}
               onMoveEnd={(event, next) => setViewport(next, Boolean(event))}
@@ -657,6 +774,144 @@ function EditorInner() {
         loading={starting}
         onCancel={() => setInputsOpen(false)}
         onSubmit={(values) => void startRun(values)}
+      />
+
+      {ctxMenu && (
+        <div
+          className="afe-ctx"
+          style={{
+            left: Math.min(ctxMenu.x, window.innerWidth - 210),
+            top: Math.min(ctxMenu.y, window.innerHeight - 300),
+          }}
+          onClick={(event) => event.stopPropagation()}
+          role="menu"
+        >
+          {ctxMenu.kind === 'node' && (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  copySelection();
+                  setCtxMenu(null);
+                  message.success('已复制，可在画布上 Ctrl+V 粘贴');
+                }}
+              >
+                复制
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  duplicateSelection();
+                  setCtxMenu(null);
+                }}
+              >
+                创建副本 <span className="afe-ctx-kbd">Ctrl+D</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  toggleSelectedEnabled();
+                  setCtxMenu(null);
+                }}
+              >
+                启用 / 禁用
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => ctxMenu.nodeId && void debugFromMenu(ctxMenu.nodeId)}
+              >
+                调试此节点
+              </button>
+              <div className="afe-ctx-sep" />
+              <button
+                type="button"
+                role="menuitem"
+                className="danger"
+                onClick={() => {
+                  deleteSelected();
+                  setCtxMenu(null);
+                }}
+              >
+                删除 <span className="afe-ctx-kbd">Del</span>
+              </button>
+            </>
+          )}
+
+          {ctxMenu.kind === 'pane' && (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  pasteClipboard();
+                  setCtxMenu(null);
+                }}
+              >
+                粘贴 <span className="afe-ctx-kbd">Ctrl+V</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setSelection(nodes.map((node) => node.id));
+                  setCtxMenu(null);
+                }}
+              >
+                全选 <span className="afe-ctx-kbd">Ctrl+A</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  handleAutoLayout();
+                  setCtxMenu(null);
+                }}
+              >
+                自动布局
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  flow.fitView({ padding: 0.25, duration: 300 });
+                  setCtxMenu(null);
+                }}
+              >
+                适应视图
+              </button>
+            </>
+          )}
+
+          {ctxMenu.kind === 'edge' && (
+            <button
+              type="button"
+              role="menuitem"
+              className="danger"
+              onClick={() => {
+                if (ctxMenu.edgeId) onEdgesChange([{ id: ctxMenu.edgeId, type: 'remove' }]);
+                setCtxMenu(null);
+              }}
+            >
+              删除连线
+            </button>
+          )}
+        </div>
+      )}
+
+      <CommandPalette
+        open={palette !== null}
+        mode={palette ?? 'command'}
+        nodes={nodes}
+        commands={commands}
+        onClose={() => setPalette(null)}
+        onPickNode={(nodeId) => {
+          setPalette(null);
+          focusNode(nodeId);
+        }}
       />
     </div>
   );

@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { listRuns, listWorkflowOptions, rerunRun } from '../api';
 import type { RunListItem, WorkflowOption } from '../api';
 import { triggerLabel } from '../meta';
+import EmptyState from '@/shared/components/EmptyState';
 import { formatDateTime } from '@/shared/utils/datetime';
 
 const { RangePicker } = DatePicker;
@@ -145,6 +146,18 @@ export default function RunList() {
         rowKey="id"
         loading={loading}
         dataSource={items}
+        scroll={{ x: 1200 }}
+        locale={{
+          emptyText: loading ? (
+            <span />
+          ) : (
+            <EmptyState
+              title="还没有运行记录"
+              description="打开一个工作流，点「▶ 运行」后这里会出现记录。"
+              action={<Button onClick={() => nav('/workflows')}>去工作流</Button>}
+            />
+          ),
+        }}
         rowSelection={{
           selectedRowKeys: selected,
           onChange: (keys) => setSelected(keys as string[]),
@@ -156,9 +169,10 @@ export default function RunList() {
           {
             title: '运行编号',
             dataIndex: 'id',
+            width: 180,
             render: (text) => <a onClick={() => nav(`/runs/${text}`)}>{text}</a>,
           },
-          { title: '工作流', dataIndex: 'workflow_name' },
+          { title: '工作流', dataIndex: 'workflow_name', width: 220 },
           {
             title: '状态',
             dataIndex: 'status',
@@ -188,7 +202,8 @@ export default function RunList() {
           {
             title: '操作',
             key: 'ops',
-            width: 160,
+            width: 180,
+            fixed: 'right',
             render: (_, record) => (
               <Space>
                 <Button type="link" size="small" onClick={() => nav(`/runs/${record.id}`)}>

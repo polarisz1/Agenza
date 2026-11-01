@@ -29,6 +29,10 @@ export interface NodeData extends Record<string, unknown> {
   /** 未知类型节点保留的原始 type，保存时原样写回 */
   unknownType?: string;
   runtimeStatus?: RuntimeStatus;
+  /** 最近一次运行元信息（节点卡 v2 显示耗时/token/错误首行） */
+  runtimeDurationMs?: number;
+  runtimeTokens?: number;
+  runtimeError?: string | null;
   hasIssue?: boolean;
 }
 
@@ -226,12 +230,12 @@ export const CONDITION_OPS = [
 ] as const;
 
 export const STATUS_TEXT: Record<RuntimeStatus, string> = {
-  queued: '◷ 排队',
-  running: '● 运行中',
-  success: '✓ 成功',
-  failed: '✕ 失败',
-  skipped: '⊘ 已跳过',
-  cancelled: '⊘ 已取消',
+  queued: '排队',
+  running: '运行中',
+  success: '成功',
+  failed: '失败',
+  skipped: '已跳过',
+  cancelled: '已取消',
 };
 
 export type GraphDef = components['schemas']['GraphDef'];
@@ -287,32 +291,106 @@ function labelPrefix(type: NodeType): string {
   }
 }
 
-/** 节点卡片上的摘要行 */
+/** 节点卡片主摘要：一眼看出这个节点在做什么（F2 节点卡 v2） */
 export function nodeSummary(data: NodeData): string {
   const c = data.config || {};
   switch (data.type) {
     case 'unknown':
-      return `未知类型 ${data.unknownType ?? ''}（原样保留，不会被改写）`;
+      return `未知类型 ${data.unknownType ?? ''}`;
     case 'input':
       return `字段 ${c.key || '未命名'} · ${c.data_type || 'text'}`;
     case 'llm':
-      return c.model ? `${c.model} · T=${c.temperature ?? 0.7}` : '未选择模型';
-    case 'extract':
-      return c.fields_text
-        ? `${String(c.fields_text).split('\n').filter(Boolean).length} 个目标字段`
-        : '未设置目标字段';
-    case 'http':
-      return `${c.method || 'GET'} ${c.url || '未填写地址'}`;
+      return `${c.model || '未选择模型'} · T=${c.temperature ?? 0.7}`;
+    case 'extract': {
+      const count = String(c.fields_text || '')
+        .split('\n')
+        .filter((line: string) => line.trim()).length;
+      return count ? `${count} 个目标字段` : '未设置目标字段';
+    }
+    case 'http': {
+      const url = String(c.url || '');
+      let host = url;
+      try {
+        host = new URL(url).host || url;
+      } catch {
+        // 还没填完整地址（例如 "{{ 输入1.url }}"）时保持原样
+      }
+      return `${c.method || 'GET'} ${host || '未填写地址'}`;
+    }
     case 'python':
-      return `脚本 ${String(c.script || '').split('\n').length} 行 · 超时 ${c.timeout_s ?? 60}s`;
+      return `脚本 ${String(c.script || '').split('\n').length} 行`;
     case 'condition':
-      return `${c.left || '?'} ${c.op || 'eq'} ${c.right || '?'}`;
+      return `${c.left || '?'} ${conditionSymbol(c.op)} ${
+        c.op === 'is_empty' ? '' : c.right || '?'
+      }`.trim();
     case 'merge':
       return `${c.strategy === 'any' ? '任一到达' : '全部到达'} → ${c.field || 'merged'}`;
     case 'output':
-      return `${c.field || 'result'} ← ${c.source || '未选择来源'}`;
+      return `${c.field || 'result'} ← ${c.source || '首个上游'}`;
     default:
       return '';
+  }
+}
+
+/** 节点卡片次摘要：补充信息（1 行省略） */
+export function nodeDetail(data: NodeData): string {
+  const c = data.config || {};
+  switch (data.type) {
+    case 'unknown':
+      return '原样保留，保存时不改写';
+    case 'input':
+      return c.required ? '必填' : '可选';
+    case 'llm':
+      return firstLine(c.system) || firstLine(c.prompt) || '未填写提示词';
+    case 'extract': {
+      const names = String(c.fields_text || '')
+        .split('\n')
+        .map((line: string) =>
+          line
+            .trim()
+            .replace(/^[-*]\s*/, '')
+            .split(/[:：]/)[0]
+            ?.trim(),
+        )
+        .filter(Boolean)
+        .slice(0, 3);
+      return names.length ? names.join(' / ') : '每行一个字段名';
+    }
+    case 'http':
+      return `超时 ${c.timeout_s ?? 30}s`;
+    case 'python':
+      return `超时 ${c.timeout_s ?? 60}s`;
+    case 'condition':
+      return '真 / 假 两个分支';
+    case 'merge':
+      return `字段 ${c.field || 'merged'}`;
+    case 'output':
+      return `格式 ${c.format || 'text'}`;
+    default:
+      return '';
+  }
+}
+
+function firstLine(value: unknown): string {
+  const text = String(value ?? '').trim();
+  if (!text) return '';
+  return text.split('\n')[0].slice(0, 80);
+}
+
+function conditionSymbol(op: unknown): string {
+  switch (op) {
+    case 'neq':
+      return '≠';
+    case 'contains':
+      return '包含';
+    case 'gt':
+      return '>';
+    case 'lt':
+      return '<';
+    case 'is_empty':
+      return '为空';
+    default:
+      return '=';
   }
 }
 
