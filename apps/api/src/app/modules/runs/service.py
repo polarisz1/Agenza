@@ -17,9 +17,9 @@ from app.core.engine.manager import RunManager, get_run_manager
 from app.core.engine.validators import BLOCKING_CODES, validate_graph
 from app.core.exceptions import AppError
 from app.core.logger import log
-from app.core.providers import get_providers_registry
 from app.core.time import utcnow
 from app.db.database import SessionLocal
+from app.modules.providers.service import build_registry
 from app.modules.runs.models import NodeRun, Run
 from app.modules.runs.repository import RunRepository
 from app.modules.runs.schemas import (
@@ -116,7 +116,7 @@ class RunService:
             session.rollback()
             raise AppError(409, "Workflow already has a running run") from None
 
-        providers_registry = get_providers_registry(session)
+        providers_registry = build_registry(session)
         manager: RunManager = get_run_manager()
 
         # 节点默认超时取设置页的 default_timeout（评审 S8：设置项要真的生效）

@@ -11,12 +11,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.core import providers as providers_module
 from app.core.engine.contexts import NodeContext
 from app.core.engine.executors.llm import LLMExecutor
-from app.core.providers import get_providers_registry
 from app.core.providers.base import ProviderError, ProviderRegistry, UnusableProvider
 from app.core.security import KeyDecryptError, KeyManager
+from app.modules.providers import service as providers_service
 from app.modules.providers.service import _masked
 
 
@@ -38,10 +37,10 @@ def test_registry_registers_unusable_provider_when_key_is_broken(monkeypatch) ->
         default_model="m",
     )
     monkeypatch.setattr(
-        providers_module.ProviderRepository, "list_enabled", lambda _session: [broken]
+        providers_service.ProviderRepository, "list_enabled", lambda _session: [broken]
     )
 
-    registry = get_providers_registry(session=object())  # type: ignore[arg-type]
+    registry = providers_service.build_registry(session=object())  # type: ignore[arg-type]
 
     adapter = registry.get("pv_broken")
     assert isinstance(adapter, UnusableProvider)

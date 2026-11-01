@@ -13,7 +13,7 @@ from app.core.engine.contexts import NodeContext
 from app.core.engine.registry import build_default_registry
 from app.core.engine.validators import validate_graph
 from app.core.exceptions import AppError
-from app.core.providers import get_providers_registry
+from app.modules.providers.service import build_registry
 from app.modules.workflows.repository import WorkflowRepository
 from app.modules.workflows.schemas import (
     DuplicateResult,
@@ -258,7 +258,7 @@ class WorkflowService:
             upstream=merged_upstream,
             available=available,
             node_names={n["id"]: (n.get("name") or n["id"]) for n in graph.get("nodes", [])},
-            providers=get_providers_registry(session),
+            providers=build_registry(session),
         )
         started = time.perf_counter()
         result = await executor.execute(ctx)

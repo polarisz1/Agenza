@@ -8,9 +8,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from app.core import providers as providers_module
-from app.core.providers import get_providers_registry
 from app.core.security import KeyManager
+from app.modules.providers import service as providers_service
 
 
 def _fake_provider(pid: str, kind: str = "openai-compat") -> SimpleNamespace:
@@ -25,10 +24,10 @@ def _fake_provider(pid: str, kind: str = "openai-compat") -> SimpleNamespace:
 
 def test_each_call_returns_an_isolated_snapshot(monkeypatch) -> None:
     rows = [_fake_provider("pv_1"), _fake_provider("pv_2", kind="ollama")]
-    monkeypatch.setattr(providers_module.ProviderRepository, "list_enabled", lambda _session: rows)
+    monkeypatch.setattr(providers_service.ProviderRepository, "list_enabled", lambda _session: rows)
 
-    first = get_providers_registry(session=object())  # type: ignore[arg-type]
-    second = get_providers_registry(session=object())  # type: ignore[arg-type]
+    first = providers_service.build_registry(session=object())  # type: ignore[arg-type]
+    second = providers_service.build_registry(session=object())  # type: ignore[arg-type]
 
     assert first is not second, "必须是新实例，不能共用模块级单例"
     assert first.get("pv_1") is not None
@@ -41,8 +40,8 @@ def test_each_call_returns_an_isolated_snapshot(monkeypatch) -> None:
 
 def test_unknown_provider_kind_is_skipped(monkeypatch) -> None:
     rows = [_fake_provider("pv_x", kind="mystery")]
-    monkeypatch.setattr(providers_module.ProviderRepository, "list_enabled", lambda _session: rows)
+    monkeypatch.setattr(providers_service.ProviderRepository, "list_enabled", lambda _session: rows)
 
-    registry = get_providers_registry(session=object())  # type: ignore[arg-type]
+    registry = providers_service.build_registry(session=object())  # type: ignore[arg-type]
 
     assert registry.get("pv_x") is None

@@ -7,8 +7,14 @@ import uuid
 import httpx
 from sqlalchemy.orm import Session
 
+from app.core.logger import log
 from app.core.providers.anthropic_compat import AnthropicCompatProvider
-from app.core.providers.base import ProviderAdapter, describe_http_error
+from app.core.providers.base import (
+    ProviderAdapter,
+    ProviderRegistry,
+    UnusableProvider,
+    describe_http_error,
+)
 from app.core.providers.ollama import OllamaProvider
 from app.core.providers.openai_compat import OpenAICompatProvider
 from app.core.security import KeyDecryptError, KeyManager
@@ -21,6 +27,34 @@ from app.modules.providers.schemas import (
     ProviderTestResult,
     ProviderUpdate,
 )
+
+
+def build_registry(session: Session) -> ProviderRegistry:
+    """按当前数据库内容构建一份服务商**快照**（评审 S4 / A2）。
+
+    每次调用都是新实例：运行中的节点持有自己那次的快照，此时用户去
+    「单节点调试」或发起新运行，不会把在途节点的 provider 清空。
+    放在模块层（而非 core）是因为它需要读库——core 不得反向依赖 modules。
+    """
+    registry = ProviderRegistry()
+    for provider in ProviderRepository.list_enabled(session):
+        try:
+            api_key = KeyManager.decrypt(provider.api_key_enc)
+        except KeyDecryptError as exc:
+            # 密钥解不开：注册一个会明确报错的占位实现，而不是拿空串去请求（那样只会 401）
+            log.warning(f"Provider {provider.id} 密钥无法解密：{exc}")
+            registry.register(provider.id, UnusableProvider(str(exc)))
+            continue
+
+        adapter = _adapter(
+            provider.kind,
+            provider.base_url,
+            api_key,
+            provider.default_model,
+        )
+        if adapter:
+            registry.register(provider.id, adapter)
+    return registry
 
 
 def _masked(key_enc: str | None) -> str:
