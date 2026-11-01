@@ -44,6 +44,9 @@ export default defineConfig({
       PORT: String(PORT),
       DEBUG: 'false',
       DATA_DIR,
+      // 后端日志里有中文；Windows 下不强制 UTF-8 会在测试日志里变成乱码
+      PYTHONUTF8: '1',
+      PYTHONIOENCODING: 'utf-8',
     },
   },
 });
