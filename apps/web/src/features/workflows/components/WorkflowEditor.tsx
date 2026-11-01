@@ -83,6 +83,10 @@ function EditorInner() {
   const setName = useEditorStore((s) => s.setName);
   const setViewport = useEditorStore((s) => s.setViewport);
   const select = useEditorStore((s) => s.select);
+  const setSelection = useEditorStore((s) => s.setSelection);
+  const copySelection = useEditorStore((s) => s.copySelection);
+  const pasteClipboard = useEditorStore((s) => s.pasteClipboard);
+  const duplicateSelection = useEditorStore((s) => s.duplicateSelection);
   const onNodesChange = useEditorStore((s) => s.onNodesChange);
   const onEdgesChange = useEditorStore((s) => s.onEdgesChange);
   const onConnect = useEditorStore((s) => s.onConnect);
@@ -220,11 +224,30 @@ function EditorInner() {
         event.preventDefault();
         if (event.shiftKey) redo();
         else undo();
+        return;
+      }
+      if (editing) return;
+
+      const key = event.key.toLowerCase();
+      if ((event.ctrlKey || event.metaKey) && key === 'c') {
+        event.preventDefault();
+        copySelection();
+      } else if ((event.ctrlKey || event.metaKey) && key === 'v') {
+        event.preventDefault();
+        pasteClipboard();
+      } else if ((event.ctrlKey || event.metaKey) && key === 'd') {
+        event.preventDefault();
+        duplicateSelection();
+      } else if ((event.ctrlKey || event.metaKey) && key === 'a') {
+        event.preventDefault();
+        setSelection(useEditorStore.getState().nodes.map((node) => node.id));
+      } else if (event.key === 'Escape') {
+        setSelection([]);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [saveNow, undo, redo]);
+  }, [saveNow, undo, redo, copySelection, pasteClipboard, duplicateSelection, setSelection]);
 
   // 有未保存修改时，关闭页面前提醒
   useEffect(() => {
@@ -266,9 +289,9 @@ function EditorInner() {
 
   const handleSelectionChange = useCallback(
     ({ nodes: selected }: { nodes: EditorNode[] }) => {
-      select(selected[0]?.id ?? null);
+      setSelection(selected.map((node) => node.id));
     },
-    [select],
+    [setSelection],
   );
 
   const addNodeAtCenter = (type: NodeType) => {

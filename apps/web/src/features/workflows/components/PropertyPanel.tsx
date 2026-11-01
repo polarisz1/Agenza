@@ -42,6 +42,10 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
   const { message } = App.useApp();
   const nodes = useEditorStore((s) => s.nodes);
   const selectedId = useEditorStore((s) => s.selectedId);
+  const selectedIds = useEditorStore((s) => s.selectedIds);
+  const deleteSelected = useEditorStore((s) => s.deleteSelected);
+  const duplicateSelection = useEditorStore((s) => s.duplicateSelection);
+  const toggleSelectedEnabled = useEditorStore((s) => s.toggleSelectedEnabled);
   const description = useEditorStore((s) => s.description);
   const setDescription = useEditorStore((s) => s.setDescription);
   const historyVersion = useEditorStore((s) => s.historyVersion);
@@ -194,6 +198,31 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
       setDebugging(false);
     }
   };
+
+  if (selectedIds.length > 1) {
+    return (
+      <aside className="afe-props">
+        <div className="afe-props-head">
+          <h3>批量操作</h3>
+        </div>
+        <div className="afe-props-empty">
+          <p>已选中 {selectedIds.length} 个节点</p>
+          <p className="afe-dim">可以一起移动、复制、启用/禁用或删除；按 Esc 取消选择。</p>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+            <Button size="small" onClick={duplicateSelection}>
+              复制
+            </Button>
+            <Button size="small" onClick={toggleSelectedEnabled}>
+              启用 / 禁用
+            </Button>
+            <Button size="small" danger onClick={deleteSelected}>
+              删除
+            </Button>
+          </div>
+        </div>
+      </aside>
+    );
+  }
 
   if (!selected) {
     return (
