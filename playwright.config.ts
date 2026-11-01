@@ -27,6 +27,8 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     viewport: { width: 1440, height: 900 },
+    // 默认跳过首次引导（F4）；引导用例自己清掉这个标记
+    storageState: 'e2e/.auth.json',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },

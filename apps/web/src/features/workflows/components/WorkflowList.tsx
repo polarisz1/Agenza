@@ -10,12 +10,22 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { listWorkflows, deleteWorkflow, duplicateWorkflow, createWorkflow } from '../api';
+import {
+  listWorkflows,
+  deleteWorkflow,
+  duplicateWorkflow,
+  createWorkflow,
+  listProviderOptions,
+} from '../api';
 import type { WorkflowListItem } from '../api';
 import { WORKFLOW_TEMPLATES } from '../templates';
 import EmptyState from '@/shared/components/EmptyState';
+import OnboardingWizard from './OnboardingWizard';
+import TemplateGallery from './TemplateGallery';
 import { formatDateTime } from '@/shared/utils/datetime';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
+
+const ONBOARDING_KEY = 'agentflow.onboarded.v2';
 
 export default function WorkflowList() {
   const { message, modal } = App.useApp();
@@ -25,8 +35,9 @@ export default function WorkflowList() {
   const [creating, setCreating] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [q, setQ] = useState('');
-  const [status, setStatus] = useState<string>('');
   const [sort, setSort] = useState<string>('updated_desc');
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // 搜索防抖：每敲一个字就发一次请求既浪费也容易乱序（评审 G25）
   const debouncedQ = useDebouncedValue(q, 300);
@@ -35,7 +46,7 @@ export default function WorkflowList() {
     setLoading(true);
     setLoadError(null);
     try {
-      const data = await listWorkflows(debouncedQ || undefined, status || undefined, sort);
+      const data = await listWorkflows(debouncedQ || undefined, undefined, sort);
       setItems(data);
     } catch (err: any) {
       // 以前只有 try/finally：接口失败会变成空表 + unhandled rejection（G22）
@@ -44,13 +55,29 @@ export default function WorkflowList() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedQ, status, sort]);
+  }, [debouncedQ, sort]);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  // 首次使用（无工作流 + 无服务商）时弹引导；完成/跳过写本地标记（F4）
+  useEffect(() => {
+    if (loading || items.length > 0) return;
+    if (localStorage.getItem(ONBOARDING_KEY) === '1') return;
+    let cancelled = false;
+    listProviderOptions()
+      .then((providers) => {
+        if (!cancelled && providers.length === 0) setShowOnboarding(true);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, items.length]);
+
   const handleCreate = async (key: string) => {
+    setGalleryOpen(false);
     setCreating(true);
     try {
       if (key === 'blank') {
@@ -107,20 +134,6 @@ export default function WorkflowList() {
     });
   };
 
-  const menuItems = [
-    { key: 'blank', label: '空白工作流' },
-    { type: 'divider' as const },
-    ...WORKFLOW_TEMPLATES.map((template) => ({
-      key: template.key,
-      label: (
-        <div>
-          <div>模板 · {template.name}</div>
-          <div style={{ fontSize: 11, color: '#8b9088' }}>{template.description}</div>
-        </div>
-      ),
-    })),
-  ];
-
   return (
     <div>
       <div
@@ -135,16 +148,6 @@ export default function WorkflowList() {
       >
         <div style={{ fontSize: 20, fontWeight: 600 }}>工作流</div>
         <Space wrap>
-          <Select
-            value={status}
-            style={{ width: 120 }}
-            onChange={setStatus}
-            options={[
-              { value: '', label: '全部状态' },
-              { value: 'draft', label: '草稿' },
-              { value: 'ready', label: '已就绪' },
-            ]}
-          />
           <Select
             value={sort}
             style={{ width: 140 }}
@@ -163,15 +166,14 @@ export default function WorkflowList() {
             onChange={(e) => setQ(e.target.value)}
             onPressEnter={load}
           />
-          <Dropdown
-            menu={{ items: menuItems, onClick: ({ key }) => void handleCreate(key) }}
-            trigger={['click']}
-            disabled={creating}
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            loading={creating}
+            onClick={() => setGalleryOpen(true)}
           >
-            <Button type="primary" icon={<PlusOutlined />} loading={creating}>
-              新建工作流
-            </Button>
-          </Dropdown>
+            新建工作流
+          </Button>
         </Space>
       </div>
 
@@ -306,6 +308,22 @@ export default function WorkflowList() {
           ]}
         />
       )}
+
+      <TemplateGallery
+        open={galleryOpen}
+        creating={creating}
+        onClose={() => setGalleryOpen(false)}
+        onPick={(key) => void handleCreate(key)}
+      />
+
+      <OnboardingWizard
+        open={showOnboarding}
+        onClose={(done) => {
+          setShowOnboarding(false);
+          if (done) localStorage.setItem(ONBOARDING_KEY, '1');
+        }}
+        onOpenWorkflow={(workflowId) => nav(`/workflows/${workflowId}`)}
+      />
     </div>
   );
 }

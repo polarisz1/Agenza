@@ -67,7 +67,7 @@ async function startRun(page: Page) {
 test('模板创建 + 填写输入 + 运行成功', async ({ page }) => {
   await page.goto('/workflows');
   await page.getByRole('button', { name: '新建工作流' }).click();
-  await page.getByText('模板 · Python 数据处理').click();
+  await page.locator('.afe-tpl-card').filter({ hasText: 'Python 数据处理' }).click();
 
   await expect(page).toHaveURL(/\/workflows\/wf_/);
   await expect(page.locator('.react-flow__node')).toHaveCount(3);

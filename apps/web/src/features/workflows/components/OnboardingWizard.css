@@ -1,0 +1,152 @@
+/* ---------- 首次引导（F4） ---------- */
+.afe-onb-modal .ant-modal-content {
+  padding: 20px 22px 18px;
+  border-radius: 14px;
+}
+
+.afe-onb-head {
+  display: flex;
+  align-items: center;
+}
+
+.afe-onb-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.afe-onb-skip {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--afe-ink-500);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.afe-onb-steps {
+  display: flex;
+  gap: 6px;
+  margin: 14px 0 16px;
+}
+
+.afe-onb-steps span {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: #e9ece7;
+}
+
+.afe-onb-steps span.on {
+  background: var(--afe-brand-500);
+}
+
+.afe-onb-title {
+  margin-bottom: 12px;
+  color: var(--afe-ink-700);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.afe-onb-hint {
+  margin-top: 6px;
+  color: var(--afe-ink-500);
+  font-size: 11.5px;
+}
+
+.afe-onb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.afe-onb-field > label {
+  color: var(--afe-ink-700);
+  font-size: 12px;
+}
+
+.afe-onb-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.afe-onb-foot-right {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.afe-onb-link {
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--afe-brand-500);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.afe-onb-templates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.afe-onb-tpl {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--afe-line);
+  border-radius: 10px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.afe-onb-tpl:hover:not(:disabled) {
+  border-color: var(--afe-brand-400);
+}
+
+.afe-onb-tpl.on {
+  border-color: var(--afe-brand-500);
+  background: var(--afe-brand-50);
+  box-shadow: 0 0 0 2px rgba(47, 112, 89, 0.12);
+}
+
+.afe-onb-tpl:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.afe-onb-tpl-name {
+  color: var(--afe-ink-900);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.afe-onb-tpl-desc {
+  color: var(--afe-ink-500);
+  font-size: 11.5px;
+  line-height: 17px;
+}
+
+.afe-onb-tpl-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.afe-onb-tpl-meta .ant-tag {
+  margin-inline-end: 0;
+}
+
+.afe-onb-lock {
+  color: var(--afe-ink-500);
+  font-size: 11px;
+}

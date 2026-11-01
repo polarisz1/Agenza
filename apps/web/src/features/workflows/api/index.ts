@@ -121,6 +121,24 @@ export async function listProviderModels(providerId: string): Promise<string[]> 
   return data.items ?? [];
 }
 
+// ---- 首次引导专用（F4）：放在 workflows 的 api 层，避免直接依赖其他 feature 的 api ----
+
+export type ProviderCreate = components['schemas']['ProviderCreate'];
+export type ProviderTestResult = components['schemas']['ProviderTestResult'];
+
+export async function createProviderForOnboarding(body: ProviderCreate): Promise<ProviderOption> {
+  return http.post<ProviderOption>('/api/providers', body);
+}
+
+export async function testProviderForOnboarding(body: ProviderCreate): Promise<ProviderTestResult> {
+  return http.post<ProviderTestResult>('/api/providers/test', body);
+}
+
+/** 轮询运行状态（引导里的示例运行用） */
+export async function getRunStatus(runId: string): Promise<components['schemas']['RunDetail']> {
+  return http.get<components['schemas']['RunDetail']>(`/api/runs/${runId}`);
+}
+
 /** 导入工作流：confirm=false 预览重名处理，confirm=true 写入 */
 export async function importWorkflows(
   payload: unknown,
