@@ -25,7 +25,7 @@ const KINDS: { value: ProviderCreate['kind']; label: string; hint: string }[] = 
 ];
 
 const DEFAULTS: Record<string, { base_url: string; default_model: string }> = {
-  'openai-compat': { base_url: 'https://api.deepseek.com/v1', default_model: 'deepseek-chat' },
+  'openai-compat': { base_url: 'https://api.deepseek.com/v1', default_model: 'deepseek-flash' },
   ollama: { base_url: 'http://localhost:11434', default_model: 'qwen2.5:7b' },
   'anthropic-compat': {
     base_url: 'https://api.anthropic.com',

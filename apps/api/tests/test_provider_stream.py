@@ -141,6 +141,41 @@ def test_anthropic_json_mode_falls_back_to_non_stream_chat(monkeypatch) -> None:
     assert deltas == []
 
 
+def test_anthropic_json_falls_back_when_tool_choice_unsupported() -> None:
+    """部分兼容端点不支持 tool_choice：应退化为提示词 + 文本 JSON 解析。"""
+    calls: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        calls.append(payload)
+        if "tools" in payload:
+            return httpx.Response(
+                400,
+                json={"error": {"message": "Thinking mode does not support this tool_choice"}},
+            )
+        return httpx.Response(
+            200,
+            json={
+                "model": "claude-test",
+                "content": [{"type": "text", "text": '{"sentiment": "正面"}'}],
+                "usage": {"input_tokens": 3, "output_tokens": 2},
+            },
+        )
+
+    provider = AnthropicCompatProvider(
+        base_url="https://example.com",
+        api_key="k",
+        transport=httpx.MockTransport(handler),
+    )
+    result = _run(provider.chat(model=None, user="hi", response_format="json"))
+
+    assert len(calls) == 2
+    assert "tools" in calls[0]
+    assert "tools" not in calls[1]
+    assert "JSON" in calls[1]["system"]
+    assert result.content == {"sentiment": "正面"}
+
+
 def test_list_models_openai_and_ollama() -> None:
     def openai_handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path.endswith("/models")

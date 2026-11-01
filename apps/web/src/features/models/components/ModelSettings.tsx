@@ -221,7 +221,7 @@ export default function ModelSettings() {
             <Input.Password placeholder="编辑时不修改可留空" />
           </Form.Item>
           <Form.Item name="default_model" label="默认模型">
-            <Input placeholder="如：deepseek-chat" />
+            <Input placeholder="如：deepseek-flash" />
           </Form.Item>
           <Form.Item name="enabled" label="启用" valuePropName="checked" initialValue>
             <Switch />

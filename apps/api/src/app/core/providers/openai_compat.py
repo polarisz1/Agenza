@@ -1,4 +1,4 @@
-"""OpenAI-compatible provider (gpt-4o, gpt-4o-mini, deepseek-chat etc)."""
+"""OpenAI-compatible provider (gpt-4o, deepseek-flash, local gateways etc)."""
 
 from __future__ import annotations
 

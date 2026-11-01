@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 
 import httpx
@@ -75,6 +76,21 @@ class AnthropicCompatProvider(ProviderAdapter):
             transport=self._transport,
         ) as client:
             resp = await client.post(f"{self.base_url}/v1/messages", json=payload, headers=headers)
+            # 部分"Anthropic 兼容"实现不支持 tool_choice（如 DeepSeek 的 thinking 模式），
+            # 这时退化为"提示词要求 JSON + 解析文本"，而不是让整个抽取节点失败。
+            if (
+                response_format == "json"
+                and resp.status_code in (400, 422)
+                and "tool" in resp.text.lower()
+            ):
+                payload.pop("tools", None)
+                payload.pop("tool_choice", None)
+                payload["system"] = (
+                    f"{system}\n\n只输出一个 JSON 对象，不要 markdown 代码块或解释。"
+                ).strip()
+                resp = await client.post(
+                    f"{self.base_url}/v1/messages", json=payload, headers=headers
+                )
             resp.raise_for_status()
             data = resp.json()
 
@@ -89,6 +105,17 @@ class AnthropicCompatProvider(ProviderAdapter):
 
         if response_format == "json" and tool_payload is not None:
             content = tool_payload
+        elif response_format == "json" and isinstance(content, str):
+            # 上面的 tool_choice 降级路径：模型返回的是文本 JSON，尽量解析成对象
+            text = content.strip()
+            if text.startswith("```"):
+                text = text.strip("`")
+                if text.lower().startswith("json"):
+                    text = text[4:].strip()
+                if text.endswith("```"):
+                    text = text[:-3].strip()
+            with contextlib.suppress(Exception):
+                content = json.loads(text)
 
         usage = data.get("usage", {})
         return ChatResult(

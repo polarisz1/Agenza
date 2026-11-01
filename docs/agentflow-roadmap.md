@@ -13,7 +13,7 @@
 | 项 | 状态 |
 |---|---|
 | 已交付版本 | **v0.1.0**（Web + 桌面安装包 + 质量门禁）；**v0.1.1**（B1/B2 热修） |
-| 当前阶段 | **v0.2.0 已交付**（M5.0–M5.4 完成；T5.3.5 真实 Provider 联调挂起） |
+| 当前阶段 | **v0.2.0 已交付**（M5.0–M5.4 完成；DeepSeek 两条协议真实联调，官方/Ollama 待环境） |
 | 下一里程碑 | v0.2.1：F6 定时触发 / F7 深色主题 / F8 设置与数据 / F9 单工作流导入导出 |
 | 依据 | `docs/v0.2-prd.md`、`docs/v0.2-ui-design.md`、`docs/v0.2-plan.md`、`docs/code-review-2026-11-01.md` |
 | 一句话判断 | **v0.1 可交付、可演示、可回归；v0.2 的目标是"跑得明白、改得顺手、可复用"，不铺新赛道。** |
@@ -145,7 +145,7 @@ FastAPI OpenAPI → contracts → TS 类型 / Electron + PyInstaller。
 | T5.0.3 UI 原型 | ✅ | `docs/v0.2-prototype/index.html`（6 视图）+ 截图走查 |
 | T5.1.1–T5.1.6 M5.1 | ✅ | T5.1.1 `d0b87ca`（节点输入）；T5.1.2–T5.1.4 `68fd657`（详情 v2/错误分类/对比）；T5.1.5 `603ad9b`（实时可用性）；T5.1.6 `pnpm check` 0 + E2E 7 passed |
 | T5.2.1–T5.2.11 M5.2 | ✅ | T5.2.1–T5.2.2 `444c4b5`（多选/复制粘贴）；T5.2.3–T5.2.10 `e413856`（命令面板/右键/节点卡 v2/B5–B8）；T5.2.11 `pnpm check` 0 + E2E 12 passed |
-| T5.3.1–T5.3.9 M5.3 | ✅ / ⏸ | T5.3.1–T5.3.4 `925205a`；T5.3.6–T5.3.8 `9fa3e87`；E2E 17 passed。**T5.3.5 真实 Provider 矩阵待联调**（缺 Key/Ollama，见 `docs/v0.2-provider-matrix.md`） |
+| T5.3.1–T5.3.9 M5.3 | ✅ | T5.3.1–T5.3.4 `925205a`；T5.3.6–T5.3.8 `9fa3e87`；E2E 17 passed。T5.3.5：DeepSeek OpenAI/Anthropic 兼容路径真实联调通过，官方端点/Ollama 待环境（`docs/v0.2-provider-matrix.md`） |
 | T5.4.1–T5.4.6 M5.4 | ✅ | T5.4.1–T5.4.4 `5fee2ef`；T5.4.5–T5.4.6 本次收尾（a11y/0.2.0/验收）；`pnpm check` 0、E2E 17 passed |
 | T5.5.x v0.2.1 | ⬜ | — |
 
