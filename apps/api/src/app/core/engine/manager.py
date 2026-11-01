@@ -15,6 +15,8 @@ from app.core.engine.registry import build_default_registry
 from app.core.engine.scheduler import Scheduler
 from app.core.logger import log
 
+# 节点启动回调：node_id, node, input（run_inputs + 直接上游输出）
+NodeStartedHook = Callable[[str, dict, dict], Awaitable[None]]
 # 节点完成回调：node_id, node, result, duration_ms
 NodeFinishedHook = Callable[[str, dict, NodeResult, int], Awaitable[None]]
 # 运行结束回调：run_id, status, error, duration_ms, total_tokens
@@ -43,7 +45,7 @@ class RunManager:
         inputs: dict,
         providers_registry: Any,
         default_timeout: float | None = None,
-        on_node_started: Callable[[str, dict], Awaitable[None]] | None = None,
+        on_node_started: NodeStartedHook | None = None,
         on_node_finished: NodeFinishedHook | None = None,
         on_run_finished: RunFinishedHook | None = None,
     ) -> asyncio.Task:

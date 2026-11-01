@@ -241,6 +241,15 @@ def _to_node_detail(nr: NodeRun) -> NodeRunDetail:
             output = json.loads(nr.output_json)
         except Exception:
             output = nr.output_json
+
+    # 节点输入（F1/B3）：run_inputs + 直接上游输出，供"过程可见"回看
+    input_data: Any = None
+    if nr.input_json:
+        try:
+            input_data = json.loads(nr.input_json)
+        except Exception:
+            input_data = nr.input_json
+
     return NodeRunDetail(
         id=nr.id,
         node_id=nr.node_id,
@@ -250,6 +259,7 @@ def _to_node_detail(nr: NodeRun) -> NodeRunDetail:
         attempt=nr.attempt or 1,
         started_at=nr.started_at,
         finished_at=nr.finished_at,
+        input=input_data,
         output=output,
         error=nr.error,
         model=nr.model,
@@ -263,10 +273,15 @@ def _to_node_detail(nr: NodeRun) -> NodeRunDetail:
 
 
 def _make_node_started(run_id: str):
-    async def _on_node_started(node_id: str, node: dict) -> None:
+    async def _on_node_started(node_id: str, node: dict, node_input: dict | None = None) -> None:
         nr_id = f"nr_{uuid.uuid4().hex[:14]}"
         node_type = node.get("type") or "unknown"
         node_name = node.get("name") or node_id
+        input_json = (
+            clamp_serialized(json.dumps(node_input, ensure_ascii=False, default=str))
+            if node_input
+            else None
+        )
         try:
             with SessionLocal() as db:
                 db.add(
@@ -280,6 +295,7 @@ def _make_node_started(run_id: str):
                         attempt=1,
                         started_at=utcnow(),
                         duration_ms=0,
+                        input_json=input_json,
                     )
                 )
                 db.commit()

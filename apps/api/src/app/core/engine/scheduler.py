@@ -259,7 +259,13 @@ class Scheduler:
         )
 
         if on_node_started:
-            await _safe_call(on_node_started, node_id, node)
+            # 把"节点实际拿到什么"一并交给回调：运行输入 + 直接上游输出（F1/B3）
+            await _safe_call(
+                on_node_started,
+                node_id,
+                node,
+                {"inputs": inputs, "upstream": upstream},
+            )
 
         await self.bus.publish(
             self.run_id,
