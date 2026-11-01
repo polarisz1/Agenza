@@ -41,7 +41,9 @@ def _create(client: TestClient, name: str, nodes: list[dict], edges: list[dict])
 
 def test_create_sets_status_from_graph_validation() -> None:
     with TestClient(app) as client:
-        valid = _create(client, "可用图", [INPUT, OUTPUT], [{"id": "e", "source": "in", "target": "out"}])
+        valid = _create(
+            client, "可用图", [INPUT, OUTPUT], [{"id": "e", "source": "in", "target": "out"}]
+        )
         invalid = _create(client, "缺输出", [INPUT], [])
 
     assert valid["status"] == "ready"
