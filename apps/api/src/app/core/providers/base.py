@@ -2,13 +2,27 @@
 
 from __future__ import annotations
 
+import inspect
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 import httpx
 
 ChatRole = Literal["system", "user", "assistant"]
 ResponseFormat = Literal["text", "json"]
+
+# 增量回调：同步函数或协程都可以（引擎传 async，测试传普通函数）
+DeltaCallback = Callable[[str], Any]
+
+
+async def emit_delta(on_delta: DeltaCallback | None, text: str | None) -> None:
+    """把增量文本交给回调；空片段直接忽略。"""
+    if on_delta is None or not text:
+        return
+    result = on_delta(text)
+    if inspect.isawaitable(result):
+        await result
 
 
 def describe_http_error(exc: httpx.HTTPStatusError) -> str:
@@ -50,6 +64,38 @@ class ProviderAdapter:
         response_format: ResponseFormat = "text",
     ) -> ChatResult:
         raise NotImplementedError
+
+    async def stream(
+        self,
+        *,
+        model: str | None,
+        system: str = "",
+        user: str = "",
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+        response_format: ResponseFormat = "text",
+        on_delta: DeltaCallback | None = None,
+    ) -> ChatResult:
+        """流式对话；默认降级为一次性 chat 并整段回调。
+
+        适配器应尽量覆盖此方法（OpenAI/Ollama/Anthropic 都支持 SSE/NDJSON）；
+        不支持流式的场景（如 Anthropic 的 JSON 模式）保持这个降级实现即可。
+        """
+        result = await self.chat(
+            model=model,
+            system=system,
+            user=user,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            response_format=response_format,
+        )
+        if isinstance(result.content, str):
+            await emit_delta(on_delta, result.content)
+        return result
+
+    async def list_models(self) -> list[str]:
+        """可用模型列表；默认空（前端仍允许手动输入）。"""
+        return []
 
 
 class ProviderError(RuntimeError):

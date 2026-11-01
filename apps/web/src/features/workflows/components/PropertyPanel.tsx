@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { App, Button, Input, Segmented, Switch } from 'antd';
+import { App, AutoComplete, Button, Input, Segmented, Switch } from 'antd';
 
 import { CONDITION_OPS, NODE_META, isVariableSafeLabel } from '../types';
-import { listProviderOptions, type NodeTestResult, type ProviderOption } from '../api';
+import {
+  listProviderModels,
+  listProviderOptions,
+  type NodeTestResult,
+  type ProviderOption,
+} from '../api';
 import { registerDraftFlusher } from '../hooks/draftBridge';
 import type { VariableItem } from '../hooks/useVariables';
 import { useEditorStore } from '../hooks/useEditorStore';
@@ -58,6 +63,9 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
   const [debugging, setDebugging] = useState(false);
   const [debugResult, setDebugResult] = useState<NodeTestResult | null>(null);
   const [providers, setProviders] = useState<ProviderOption[]>([]);
+  // F3：当前服务商的可用模型（失败时为空，仍允许手动输入）
+  const [models, setModels] = useState<string[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
   const refs = useRef<Record<string, FieldElement | null>>({});
 
   // 用 ref 保住"最新草稿 + 它属于哪个节点"，供切换节点/外部 flush 时立刻提交
@@ -133,6 +141,48 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
       .then(setProviders)
       .catch(() => setProviders([]));
   }, []);
+
+  const refreshModels = useCallback(async (providerId?: string) => {
+    if (!providerId) {
+      setModels([]);
+      return;
+    }
+    setModelsLoading(true);
+    try {
+      setModels(await listProviderModels(providerId));
+    } catch {
+      setModels([]);
+    } finally {
+      setModelsLoading(false);
+    }
+  }, []);
+
+  const draftProviderId =
+    selected && (selected.data.type === 'llm' || selected.data.type === 'extract')
+      ? String(selected.data.config?.provider_id || '')
+      : '';
+
+  useEffect(() => {
+    if (!draftProviderId) {
+      setModels([]);
+      return;
+    }
+    let cancelled = false;
+    setModelsLoading(true);
+    listProviderModels(draftProviderId)
+      .then((list) => {
+        if (!cancelled) setModels(list);
+      })
+      .catch(() => {
+        if (!cancelled) setModels([]);
+      })
+      .finally(() => {
+        if (!cancelled) setModelsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [draftProviderId]);
 
   const setField = (key: string, value: unknown) => setDraft((prev) => ({ ...prev, [key]: value }));
 
@@ -410,16 +460,39 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
                     尚未配置服务商，<Link to="/models">前往模型配置</Link>
                   </div>
                 )}
-                <Field label="模型名">
-                  <input
-                    className="afe-input"
-                    placeholder={
-                      providers.find((p) => p.id === draft.provider_id)?.default_model ||
-                      '如 gpt-4o-mini'
-                    }
-                    value={draft.model ?? ''}
-                    onChange={(e) => setField('model', e.target.value)}
-                  />
+                <Field
+                  label="模型"
+                  hint={
+                    models.length
+                      ? `${models.length} 个可用模型；也可以直接输入`
+                      : '可手动输入模型名；选择服务商后会自动拉取'
+                  }
+                >
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <AutoComplete
+                      style={{ flex: 1 }}
+                      value={draft.model ?? ''}
+                      options={models.map((model) => ({ value: model }))}
+                      placeholder={
+                        providers.find((p) => p.id === draft.provider_id)?.default_model ||
+                        '如 gpt-4o-mini'
+                      }
+                      filterOption={(input, option) =>
+                        String(option?.value ?? '')
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                      onChange={(value) => setField('model', value)}
+                    />
+                    <Button
+                      size="small"
+                      loading={modelsLoading}
+                      onClick={() => void refreshModels(String(draft.provider_id || ''))}
+                      title="刷新模型列表"
+                    >
+                      刷新
+                    </Button>
+                  </div>
                 </Field>
 
                 {selected.data.type === 'llm' ? (

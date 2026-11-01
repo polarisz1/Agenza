@@ -43,3 +43,9 @@ class ProviderTestResult(BaseModel):
 
 class ProviderListData(BaseModel):
     items: list[ProviderResponse]
+
+
+class ProviderModels(BaseModel):
+    """服务商可用模型列表（F3）。Anthropic 返回内置候选，其余走远程接口。"""
+
+    items: list[str] = []

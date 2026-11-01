@@ -249,6 +249,19 @@ class Scheduler:
             )
             return
 
+        async def publish_delta(text: str) -> None:
+            await self.bus.publish(
+                self.run_id,
+                {
+                    "event": "node.delta",
+                    "run_id": self.run_id,
+                    "node_id": node_id,
+                    "node_name": node.get("name") or node_id,
+                    "node_type": node_type,
+                    "text": text,
+                },
+            )
+
         ctx = NodeContext(
             node=node,
             run_inputs=inputs,
@@ -256,6 +269,7 @@ class Scheduler:
             available=_collect_ancestor_outputs(node_id, parent_edges, results),
             node_names=node_names,
             providers=providers_registry,
+            on_delta=publish_delta,
         )
 
         if on_node_started:

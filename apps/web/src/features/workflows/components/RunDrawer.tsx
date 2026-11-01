@@ -6,6 +6,8 @@ interface Props {
   runId: string | null;
   status: LiveStatus;
   logs: RunLogEntry[];
+  /** F3 流式：node.delta 累积的文本 */
+  deltas?: Record<string, string>;
   durationMs: number | null;
   totalTokens: number;
   error: string | null;
@@ -107,6 +109,7 @@ export default function RunDrawer({
   runId,
   status,
   logs,
+  deltas = {},
   durationMs,
   totalTokens,
   error,
@@ -116,6 +119,15 @@ export default function RunDrawer({
   onClear,
   onOpenDetail,
 }: Props) {
+  const streamEntries = Object.entries(deltas).filter(([, text]) => text);
+  const latestStream =
+    status === 'running' && streamEntries.length ? streamEntries[streamEntries.length - 1] : null;
+  const streamNodeName = latestStream
+    ? logs.find(
+        (entry) => entry.event === 'node.started' && entry.data?.node_id === latestStream[0],
+      )?.data?.node_name
+    : '';
+
   return (
     <div className={collapsed ? 'afe-runpanel afe-runpanel--collapsed' : 'afe-runpanel'}>
       <div className="afe-runpanel-head">
@@ -162,6 +174,19 @@ export default function RunDrawer({
             </div>
           ) : (
             logs.map(renderLog)
+          )}
+
+          {latestStream && (
+            <div className="afe-stream">
+              <div className="afe-stream-title">
+                <span className="afe-dot afe-dot--running" />
+                {streamNodeName || '实时输出'}
+              </div>
+              <div className="afe-stream-text">
+                {latestStream[1]}
+                <span className="caret" />
+              </div>
+            </div>
           )}
         </div>
       )}

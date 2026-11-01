@@ -2,10 +2,21 @@
 
 from __future__ import annotations
 
+import json
+
 import httpx
 
 from app.core.net import trust_env_for
-from app.core.providers.base import ChatResult, ProviderAdapter, ResponseFormat
+from app.core.providers.base import (
+    ChatResult,
+    DeltaCallback,
+    ProviderAdapter,
+    ResponseFormat,
+    emit_delta,
+)
+
+# Anthropic 没有公开的 /models 列表接口：给一组稳定别名，前端仍允许手动输入
+DEFAULT_MODELS = ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest"]
 
 
 class AnthropicCompatProvider(ProviderAdapter):
@@ -86,3 +97,89 @@ class AnthropicCompatProvider(ProviderAdapter):
             tokens_in=usage.get("input_tokens", 0),
             tokens_out=usage.get("output_tokens", 0),
         )
+
+    async def stream(
+        self,
+        *,
+        model: str | None,
+        system: str = "",
+        user: str = "",
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+        response_format: ResponseFormat = "text",
+        on_delta: DeltaCallback | None = None,
+    ) -> ChatResult:
+        """Anthropic SSE（text_delta）。
+
+        JSON 模式要走 tool_use，流式解析 tool input 的复杂度高且容易半截；
+        这里直接降级为非流式，保证结构化抽取的正确性优先。
+        """
+        if response_format == "json":
+            return await super().stream(
+                model=model,
+                system=system,
+                user=user,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                response_format=response_format,
+                on_delta=on_delta,
+            )
+
+        payload = {
+            "model": model or self.default_model,
+            "system": system,
+            "messages": [{"role": "user", "content": user}],
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "stream": True,
+        }
+        headers = {
+            "x-api-key": self.api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        }
+
+        chunks: list[str] = []
+        resolved_model = payload["model"]
+        tokens_in = 0
+        tokens_out = 0
+        async with (
+            httpx.AsyncClient(
+                timeout=120,
+                trust_env=trust_env_for(self.base_url),
+                transport=self._transport,
+            ) as client,
+            client.stream(
+                "POST", f"{self.base_url}/v1/messages", json=payload, headers=headers
+            ) as resp,
+        ):
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if not line or not line.startswith("data:"):
+                    continue
+                try:
+                    data = json.loads(line[5:].strip())
+                except json.JSONDecodeError:
+                    continue
+                kind = data.get("type")
+                if kind == "message_start":
+                    message = data.get("message", {})
+                    resolved_model = message.get("model", resolved_model)
+                    tokens_in = int(message.get("usage", {}).get("input_tokens") or 0)
+                elif kind == "content_block_delta":
+                    delta = data.get("delta", {})
+                    if delta.get("type") == "text_delta" and delta.get("text"):
+                        chunks.append(delta["text"])
+                        await emit_delta(on_delta, delta["text"])
+                elif kind == "message_delta":
+                    tokens_out = int(data.get("usage", {}).get("output_tokens") or 0)
+
+        return ChatResult(
+            content="".join(chunks),
+            model=resolved_model,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+        )
+
+    async def list_models(self) -> list[str]:
+        return list(DEFAULT_MODELS)

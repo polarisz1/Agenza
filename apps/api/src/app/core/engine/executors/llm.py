@@ -32,13 +32,17 @@ class LLMExecutor(BaseExecutor):
         max_tokens = config.get("max_tokens", 2048)
 
         try:
-            result = await provider.chat(
+            # 有增量回调就走流式；没有（单节点调试等）保持一次性返回
+            use_stream = ctx.on_delta is not None and hasattr(provider, "stream")
+            call = provider.stream if use_stream else provider.chat
+            result = await call(
                 model=config.get("model"),
                 system=system,
                 user=prompt,
                 temperature=temperature,
                 max_tokens=max_tokens,
                 response_format="json" if config.get("format") == "json" else "text",
+                **({"on_delta": ctx.on_delta} if use_stream else {}),
             )
             return NodeResult(
                 status="success",

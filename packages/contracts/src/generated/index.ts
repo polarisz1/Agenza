@@ -361,6 +361,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/providers/{pid}/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Provider Models
+         * @description 服务商可用模型（F3）：OpenAI /models、Ollama /api/tags、Anthropic 内置候选。
+         */
+        get: operations["list_provider_models_api_providers__pid__models_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/providers/{pid}": {
         parameters: {
             query?: never;
@@ -596,6 +616,20 @@ export interface components {
              */
             message: string;
             data: components["schemas"]["ProviderListData"];
+        };
+        /** ApiResponse[ProviderModels] */
+        ApiResponse_ProviderModels_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            /**
+             * Message
+             * @default ok
+             */
+            message: string;
+            data: components["schemas"]["ProviderModels"];
         };
         /** ApiResponse[ProviderResponse] */
         ApiResponse_ProviderResponse_: {
@@ -1362,6 +1396,17 @@ export interface components {
         ProviderListData: {
             /** Items */
             items: components["schemas"]["ProviderResponse"][];
+        };
+        /**
+         * ProviderModels
+         * @description 服务商可用模型列表（F3）。Anthropic 返回内置候选，其余走远程接口。
+         */
+        ProviderModels: {
+            /**
+             * Items
+             * @default []
+             */
+            items: string[];
         };
         /** ProviderResponse */
         ProviderResponse: {
@@ -3414,6 +3459,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_ProviderTestResult_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_provider_models_api_providers__pid__models_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ProviderModels_"];
                 };
             };
             /** @description 业务错误（参数非法 / 状态不允许） */

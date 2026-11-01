@@ -24,7 +24,13 @@ export interface RunLogEntry {
   at: number;
 }
 
-const STREAM_EVENTS = ['run.started', 'node.started', 'node.finished', 'run.finished'];
+const STREAM_EVENTS = [
+  'run.started',
+  'node.started',
+  'node.delta',
+  'node.finished',
+  'run.finished',
+];
 
 const MAX_LOGS = 300;
 
@@ -35,6 +41,8 @@ const MAX_LOGS = 300;
 export function useRunStream(runId: string | null) {
   const [status, setStatus] = useState<LiveStatus>('idle');
   const [nodes, setNodes] = useState<Record<string, RunNodeState>>({});
+  // F3 流式：node.delta 的增量文本（按节点累积，不落库）
+  const [deltas, setDeltas] = useState<Record<string, string>>({});
   const [logs, setLogs] = useState<RunLogEntry[]>([]);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [durationMs, setDurationMs] = useState<number | null>(null);
@@ -63,6 +71,15 @@ export function useRunStream(runId: string | null) {
           nodeType: data.node_type,
           status: 'running',
         },
+      }));
+      return;
+    }
+
+    if (name === 'node.delta') {
+      if (!data?.node_id || !data?.text) return;
+      setDeltas((prev) => ({
+        ...prev,
+        [data.node_id]: `${prev[data.node_id] ?? ''}${data.text}`,
       }));
       return;
     }
@@ -104,6 +121,7 @@ export function useRunStream(runId: string | null) {
   const reset = useCallback(() => {
     setStatus('idle');
     setNodes({});
+    setDeltas({});
     setLogs([]);
     setStartedAt(null);
     setDurationMs(null);
@@ -116,5 +134,15 @@ export function useRunStream(runId: string | null) {
     reset();
   }, [runId, reset]);
 
-  return { status, nodes, logs, startedAt, durationMs, totalTokens, error, reset };
+  return {
+    status,
+    nodes,
+    deltas,
+    logs,
+    startedAt,
+    durationMs,
+    totalTokens,
+    error,
+    reset,
+  };
 }

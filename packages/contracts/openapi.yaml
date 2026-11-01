@@ -1317,6 +1317,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/providers/{pid}/models:
+    get:
+      tags:
+      - providers
+      summary: List Provider Models
+      description: 服务商可用模型（F3）：OpenAI /models、Ollama /api/tags、Anthropic 内置候选。
+      operationId: list_provider_models_api_providers__pid__models_get
+      parameters:
+      - name: pid
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Pid
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ProviderModels_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/providers/{pid}:
     get:
       tags:
@@ -1808,6 +1859,22 @@ components:
       required:
       - data
       title: ApiResponse[ProviderListData]
+    ApiResponse_ProviderModels_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/ProviderModels'
+      type: object
+      required:
+      - data
+      title: ApiResponse[ProviderModels]
     ApiResponse_ProviderResponse_:
       properties:
         code:
@@ -2777,6 +2844,17 @@ components:
       required:
       - items
       title: ProviderListData
+    ProviderModels:
+      properties:
+        items:
+          items:
+            type: string
+          type: array
+          title: Items
+          default: []
+      type: object
+      title: ProviderModels
+      description: 服务商可用模型列表（F3）。Anthropic 返回内置候选，其余走远程接口。
     ProviderResponse:
       properties:
         id:

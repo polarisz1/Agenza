@@ -11,6 +11,7 @@ from app.core.response import ERROR_RESPONSES, ApiResponse, DeleteResult, succes
 from app.modules.providers.schemas import (
     ProviderCreate,
     ProviderListData,
+    ProviderModels,
     ProviderResponse,
     ProviderTestResult,
     ProviderUpdate,
@@ -43,6 +44,15 @@ async def test_saved_provider(pid: str, session: Session = Depends(get_session))
     if result is None:
         raise AppError(404, "Provider not found")
     return success(result)
+
+
+@router.get("/{pid}/models", response_model=ApiResponse[ProviderModels])
+async def list_provider_models(pid: str, session: Session = Depends(get_session)):
+    """服务商可用模型（F3）：OpenAI /models、Ollama /api/tags、Anthropic 内置候选。"""
+    models = await ProviderService.list_models(session, pid)
+    if models is None:
+        raise AppError(404, "Provider not found")
+    return success({"items": models})
 
 
 @router.get("/{pid}", response_model=ApiResponse[ProviderResponse])

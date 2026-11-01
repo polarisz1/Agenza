@@ -7,6 +7,7 @@ import uuid
 import httpx
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import AppError
 from app.core.logger import log
 from app.core.providers.anthropic_compat import AnthropicCompatProvider
 from app.core.providers.base import (
@@ -142,6 +143,26 @@ class ProviderService:
         ok = ProviderRepository.delete(session, pid)
         session.commit()
         return ok
+
+    @staticmethod
+    async def list_models(session: Session, pid: str) -> list[str] | None:
+        """拉取服务商可用模型（F3）；provider 不存在返回 None。"""
+        provider = ProviderRepository.get(session, pid)
+        if provider is None:
+            return None
+        try:
+            api_key = KeyManager.decrypt(provider.api_key_enc)
+        except KeyDecryptError:
+            return []
+        adapter = _adapter(provider.kind, provider.base_url, api_key, provider.default_model)
+        if adapter is None:
+            return []
+        try:
+            return await adapter.list_models()
+        except httpx.HTTPStatusError as exc:
+            raise AppError(502, f"获取模型列表失败：{describe_http_error(exc)}") from exc
+        except httpx.RequestError as exc:
+            raise AppError(502, f"无法连接服务商：{exc}") from exc
 
     @staticmethod
     async def test(body: ProviderCreate) -> ProviderTestResult:

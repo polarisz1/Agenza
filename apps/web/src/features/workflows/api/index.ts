@@ -115,6 +115,12 @@ export async function listProviderOptions(): Promise<ProviderOption[]> {
   return data.items;
 }
 
+/** 服务商可用模型列表（F3）：失败时返回空数组，界面仍允许手动输入 */
+export async function listProviderModels(providerId: string): Promise<string[]> {
+  const data = await http.get<{ items: string[] }>(`/api/providers/${providerId}/models`);
+  return data.items ?? [];
+}
+
 /** 导入工作流：confirm=false 预览重名处理，confirm=true 写入 */
 export async function importWorkflows(
   payload: unknown,

@@ -758,6 +758,7 @@ function EditorInner() {
         runId={runId}
         status={run.status}
         logs={run.logs}
+        deltas={run.deltas}
         durationMs={run.durationMs}
         totalTokens={run.totalTokens}
         error={run.error}

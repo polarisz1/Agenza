@@ -29,6 +29,8 @@ class NodeContext(BaseModel):
     available: dict[str, Any] = Field(default_factory=dict)  # node_id → output（全部已完成祖先）
     node_names: dict[str, str] = Field(default_factory=dict)  # node_id → 节点名称
     providers: Any = None  # ProviderRegistry reference
+    # 增量文本回调（F3 流式）：executor 调用它把 token 片段推给 SSE
+    on_delta: Any = None
 
 
 @runtime_checkable
