@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # B2：依赖漏洞审计按周跑（新披露的 CVE 不该阻塞无关 PR，但必须被看见）
+  schedule:
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -12,7 +16,7 @@ concurrency:
 
 jobs:
   contracts:
-    name: Contract drift check
+    name: Contract drift + compatibility
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -34,6 +38,11 @@ jobs:
         run: uv sync --all-extras --frozen
       - name: contracts:check
         run: pnpm contracts:check
+      # B4：漂移检查只保证"仓库内自洽"，这里再对比上一版基线，拦住破坏性变更
+      - name: contracts:compat self-test
+        run: pnpm contracts:compat:test
+      - name: contracts:compat
+        run: pnpm contracts:compat
 
   api:
     name: Backend lint + test
@@ -80,3 +89,71 @@ jobs:
         run: pnpm --filter @agentflow/web test
       - name: build
         run: pnpm --filter @agentflow/web build
+
+  # B3：E2E 进 PR 级 CI（此前只在本地跑）。构建 dist + 起后端 + Chromium 约 +3 分钟。
+  e2e:
+    name: Browser E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: '0.11.20'
+          enable-cache: true
+      - name: uv sync
+        working-directory: apps/api
+        run: uv sync --all-extras --frozen
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      # e2e 脚本自带 build:web；后端由 playwright.config.ts 的 webServer 拉起
+      - name: Run E2E (含 100 节点性能基线)
+        run: pnpm e2e
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          if-no-files-found: ignore
+
+  # B2：依赖漏洞审计。只在定时/手动触发时跑，避免新披露 CVE 把无关 PR 卡红。
+  security:
+    name: Dependency audit
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: '0.11.20'
+          enable-cache: true
+      - name: uv sync
+        working-directory: apps/api
+        run: uv sync --all-extras --frozen
+      - name: npm production audit (fail on high/critical)
+        run: pnpm audit:js
+      - name: Python audit (pip-audit)
+        run: pnpm audit:py

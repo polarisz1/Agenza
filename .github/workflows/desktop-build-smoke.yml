@@ -1,0 +1,112 @@
+name: Desktop build + smoke
+
+# 可复用的桌面产物链路：构建后端 exe → 前端 dist → electron-builder → 安装包冒烟。
+# 由 release.yml（tag / 手动发布）与 desktop-smoke-pr.yml（PR 打 label）共同调用，
+# 避免两份构建脚本漂移（评审 B5：此前桌面冒烟只存在于发布流水线）。
+on:
+  workflow_call:
+
+jobs:
+  build-desktop:
+    name: Build installer
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Sync backend deps
+        run: uv sync --directory apps/api
+
+      # Python 节点在打包后要用随包解释器（D-5），构建脚本会检查它是否存在
+      - name: Prepare embedded Python
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dest = 'pyinstaller/pyemb'
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          $zip = Join-Path $env:RUNNER_TEMP 'pyemb.zip'
+          Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip' -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $dest -Force
+          if (-not (Test-Path (Join-Path $dest 'python.exe'))) {
+            throw 'embeddable Python 解压失败：pyinstaller/pyemb/python.exe 不存在'
+          }
+
+      - name: Build frontend
+        run: pnpm --filter @agentflow/web build
+
+      # 走 pyinstaller/backend.spec + pyinstaller/build.py：
+      # 单文件 exe 里必须带 alembic/、frontend-dist/、pyemb/，否则装完打不开（M4-T2）
+      - name: Build backend exe
+        run: uv run --project apps/api --with pyinstaller python pyinstaller/build.py
+
+      - name: Build desktop app
+        working-directory: electron
+        run: |
+          npm ci
+          npx electron-builder --win nsis --x64
+
+      - name: Verify artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $backend = 'apps/api/dist_backend/backend.exe'
+          if (-not (Test-Path $backend)) { throw "缺少后端产物：$backend" }
+          $setup = Get-ChildItem electron/dist_electron -Filter '*.exe' | Select-Object -First 1
+          if (-not $setup) { throw '没有产出安装包' }
+          "backend.exe : {0:N1} MB" -f ((Get-Item $backend).Length / 1MB)
+          "installer   : {0} ({1:N1} MB)" -f $setup.Name, ($setup.Length / 1MB)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AgentFlow-Setup
+          path: electron/dist_electron/*.exe
+          retention-days: 14
+
+  # M4-T8：装 → 启动 → /health + 首页 → 关窗 → 卸载，验证的是**产物本身**
+  desktop-smoke:
+    name: Install + smoke
+    needs: build-desktop
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: AgentFlow-Setup
+          path: ./dist
+
+      - name: Run desktop smoke
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem ./dist -Filter '*.exe' | Select-Object -First 1
+          if (-not $installer) { throw '没有下载到安装包' }
+          pwsh -NoProfile -File tools/scripts/smoke-desktop.ps1 -Installer $installer.FullName
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-smoke-logs
+          path: |
+            ~/AppData/Roaming/AgentFlow/logs/backend.log
+          if-no-files-found: ignore

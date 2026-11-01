@@ -1,0 +1,26 @@
+name: Desktop smoke (PR)
+
+# B5：PR 级桌面冒烟。
+#
+# 完整安装包链路（PyInstaller + electron-builder + 安装/启动/卸载）约 40-45 分钟，
+# 每个 PR 都跑不现实。这里做成 **label 触发**：
+#   - 给 PR 打上 `desktop-smoke` 标签 → 触发构建 + 冒烟
+#   - 想重跑：去掉标签再打一次（label 事件只在新增时触发）
+#   - 也可在 Actions 页面手动触发（workflow_dispatch）
+#
+# 之所以按 label 而不是路径过滤：改动 electron/、pyinstaller/、apps/api/src/app/run.py
+# 之外也可能间接影响产物（例如依赖版本），由 reviewer 决定值不值得跑。
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+
+concurrency:
+  group: desktop-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'desktop-smoke'
+    uses: ./.github/workflows/desktop-build-smoke.yml
