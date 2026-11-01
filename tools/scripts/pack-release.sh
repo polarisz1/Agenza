@@ -17,7 +17,8 @@ echo "[pack] Step 2: Backend PyInstaller build"
 uv run --project apps/api --with pyinstaller python pyinstaller/build.py
 
 echo "[pack] Step 3: Electron build"
-(cd electron && npm install && npm run build)
+# 与 .github/workflows 保持一致：用锁文件安装，避免本机 node_modules 里的旧包混进产物
+(cd electron && npm ci && npx electron-builder --win nsis --x64)
 
 echo "[pack] Done. Artifact at: electron/dist_electron/"
 ls -lah electron/dist_electron/ 2>/dev/null || true

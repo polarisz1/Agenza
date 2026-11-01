@@ -8,7 +8,8 @@
 - 随包解释器：把 `python-3.12.x-embed-amd64.zip` 解压到 `pyinstaller/pyemb/`
   （里面要有 `python.exe`；该目录不入库，见 .gitignore）
 
-产物：`electron/resources/backend.exe`
+产物：`apps/api/dist_backend/backend.exe`
+（electron-builder 的 `extraResources` 会把它拷到安装包的 `resources/backend/`）
 """
 
 from __future__ import annotations

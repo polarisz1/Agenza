@@ -52,6 +52,9 @@ const services = [
       `--host 127.0.0.1 --port ${API_PORT} --reload --reload-dir src/app`,
     url: `http://127.0.0.1:${API_PORT}`,
     cwd: ROOT,
+    // Windows 下 Python 的 stdout 默认按 cp936 编码；pnpm 的日志管道按 UTF-8 解读，
+    // 不强制的话中文日志（迁移信息、节点错误）会变成乱码
+    env: { PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' },
   },
   {
     name: 'web',

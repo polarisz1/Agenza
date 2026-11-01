@@ -11,6 +11,9 @@ files:
   - preload.js
   - package.json
   - node_modules/**/*
+  # 托盘图标与安装包图标共用 electron/build/icon.ico（A1）；没有该文件时
+  # electron-builder 会退回默认图标、壳会跳过托盘，不影响启动。
+  - build/icon.ico
 
 asar: true
 
@@ -45,7 +48,7 @@ nsis:
   uninstallDisplayName: AgentFlow
   include: build/installer.nsh
 
-publish:
-  provider: github
-  owner: agentflow
-  repo: releases
+# 自动更新定案不做（D-4 / backlog A3），因此这里**不配置 publish**：
+# 之前写着 `owner: agentflow, repo: releases`（与实际仓库 polarisz1/AgentFlow 不符），
+# 一旦有人执行 `electron-builder --publish` 必定 404。发布由
+# .github/workflows/release.yml 用 softprops/action-gh-release 完成。

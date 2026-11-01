@@ -196,6 +196,13 @@ async function startBackend() {
     cwd: USER_DATA_DIR,
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
+    env: {
+      ...process.env,
+      // 后端日志里有中文：不指定编码时 Python 在 Windows 会按 cp936 写 stdout，
+      // 壳按 UTF-8 解出来就是乱码，日志失去可读性（也影响排障）。
+      PYTHONUTF8: '1',
+      PYTHONIOENCODING: 'utf-8',
+    },
   });
 
   backendProc.stdout?.on('data', (buf) => logToFile(`[backend] ${buf.toString().trimEnd()}`));
@@ -307,7 +314,31 @@ function createWindow() {
   });
 
   const url = DEV ? DEV_URL : backendUrl();
-  mainWin.loadURL(url);
+  mainWin.loadURL(url).catch(async (err) => {
+    // 白屏不能静默：打包态首页由后端托管，加载失败通常意味着后端异常或端口被占
+    logToFile(`[shell] loadURL 失败 ${url}：${err.message}`);
+    if (DEV) return;
+    const { response } = await dialog.showMessageBox(mainWin, {
+      type: 'error',
+      title: 'AgentFlow 页面加载失败',
+      message: '无法加载界面。',
+      detail: `${err.message}\n\n日志：${LOG_FILE}`,
+      buttons: ['重试', '打开日志目录', '退出'],
+      defaultId: 0,
+      cancelId: 2,
+      noLink: true,
+    });
+    if (response === 2) {
+      quitting = true;
+      app.quit();
+      return;
+    }
+    if (response === 1) {
+      shell.openPath(LOG_DIR);
+      return;
+    }
+    mainWin?.loadURL(url).catch((retryError) => logToFile(`[shell] 重试仍失败：${retryError.message}`));
+  });
   mainWin.once('ready-to-show', () => mainWin.show());
 
   mainWin.on('close', (event) => {
@@ -389,10 +420,17 @@ function installContentSecurityPolicy() {
 // ---------------------------------------------------------------- 托盘 / IPC
 
 function setupTray() {
-  const iconPath = path.join(__dirname, 'icon.ico');
-  if (!fs.existsSync(iconPath)) {
+  // 图标只有一个来源：electron/build/icon.ico（electron-builder 的 buildResources 目录）。
+  // 它会被打进 asar 的 build/ 下，所以托盘与安装包用的是同一张图（A1）。
+  const candidates = [
+    path.join(__dirname, 'build', 'icon.ico'),
+    path.join(__dirname, 'icon.ico'),
+    path.join(process.resourcesPath || '', 'build', 'icon.ico'),
+  ];
+  const iconPath = candidates.find((candidate) => candidate && fs.existsSync(candidate));
+  if (!iconPath) {
     // 没有图标就别硬建托盘（建一个空图标托盘比没有更糟）
-    logToFile('[shell] 未找到 icon.ico，跳过托盘');
+    logToFile('[shell] 未找到 icon.ico（期望 electron/build/icon.ico），跳过托盘');
     return;
   }
   tray = new Tray(iconPath);
