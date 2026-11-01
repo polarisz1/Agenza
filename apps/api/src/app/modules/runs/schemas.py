@@ -5,6 +5,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
+# `waiting_input` 是"人工确认"预留态（D 组明确不在 v0.1/v0.2 范围，引擎从不产生）。
+# 契约保留它以免将来加人工节点时改枚举；前端已给中文映射（评审 G23），
+# 因此历史库/外部写入出现过该值时不会显示英文原值。
 RunStatus = Literal["waiting_input", "running", "success", "failed", "cancelled"]
 
 

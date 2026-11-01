@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api_deps import get_session
 from app.core.exceptions import AppError
-from app.core.response import ApiResponse, DeleteResult, success
+from app.core.response import ERROR_RESPONSES, ApiResponse, DeleteResult, success
 from app.modules.providers.schemas import (
     ProviderCreate,
     ProviderListData,
@@ -17,7 +17,7 @@ from app.modules.providers.schemas import (
 )
 from app.modules.providers.service import ProviderService
 
-router = APIRouter()
+router = APIRouter(responses=ERROR_RESPONSES)
 
 
 @router.get("", response_model=ApiResponse[ProviderListData])

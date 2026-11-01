@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
 from app.core.exceptions import AppError
@@ -74,6 +75,19 @@ async def app_exception_handler(request, exc: AppError):
     return JSONResponse(
         status_code=exc.code,
         content={"code": exc.code, "message": exc.message, "data": exc.data},
+    )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc: StarletteHTTPException):
+    """框架级错误（未知路由 404 / 方法不允许 405 等）也走同一个信封。
+
+    否则前端会收到 `{"detail": "Not Found"}`，`http.ts::toError` 取不到 message，
+    只能显示 "HTTP 404"；契约里 `ErrorResponse` 的承诺也就只兑现了一半。
+    """
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"code": exc.status_code, "message": str(exc.detail), "data": None},
     )
 
 

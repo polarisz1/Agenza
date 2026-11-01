@@ -14,6 +14,11 @@ from app.core.defaults import DEFAULT_HOST, DEFAULT_LOG_LEVEL, DEFAULT_PORT
 # （此前写成 parents[4]，数据目录因此落在 apps/data，评审 S13）
 ROOT_DIR = Path(__file__).resolve().parents[5]  # AgentFlow/
 DATA_DIR = ROOT_DIR / "data"
+# `.env` 按**绝对路径**定位到 apps/api/.env（评审 G19）：
+# 相对路径依赖启动时的 cwd，`pnpm dev`、`uv run --directory`、Electron 拉起
+# 三种方式 cwd 各不相同，相对路径会让同一份配置时而生效、时而静默失效。
+APP_DIR = Path(__file__).resolve().parents[3]  # apps/api
+ENV_FILE = APP_DIR / ".env"
 
 
 def relocate_legacy_data_dir(legacy: Path, target: Path) -> bool:
@@ -124,7 +129,9 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = DEFAULT_LOG_LEVEL
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # 先读 cwd 的 .env（兼容"就地写一份配置"的用法），再用 apps/api/.env 覆盖：
+        # 后者是仓库里唯一被文档和 .env.example 承认的位置，优先级更高。
+        env_file=(".env", str(ENV_FILE)),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",

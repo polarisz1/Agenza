@@ -11,14 +11,14 @@ from sqlalchemy.orm import Session
 
 from app.api_deps import get_session
 from app.core.config import settings
-from app.core.response import ApiResponse, ClearResult, success
+from app.core.response import ERROR_RESPONSES, ApiResponse, ClearResult, success
 from app.modules.providers.service import ProviderService
 from app.modules.runs.service import RunService
 from app.modules.settings.schemas import SettingsResponse, SettingsUpdate, SystemInfo
 from app.modules.settings.service import SettingsService
 from app.modules.workflows.service import WorkflowService
 
-router = APIRouter()
+router = APIRouter(responses=ERROR_RESPONSES)
 
 
 @router.get("", response_model=ApiResponse[SettingsResponse])

@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.api_deps import get_session
 from app.core.engine.event_bus import get_event_bus
 from app.core.exceptions import AppError
-from app.core.response import ApiResponse, CancelResult, success
+from app.core.response import ERROR_RESPONSES, ApiResponse, CancelResult, success
 from app.db.database import SessionLocal
 from app.modules.runs.repository import RunRepository
 from app.modules.runs.schemas import (
@@ -26,7 +26,7 @@ from app.modules.runs.schemas import (
 )
 from app.modules.runs.service import RunService
 
-router = APIRouter()
+router = APIRouter(responses=ERROR_RESPONSES)
 
 _HEARTBEAT_SECONDS = 15
 _TERMINAL_RUN_STATUS = ("success", "failed", "cancelled")
@@ -52,7 +52,16 @@ def list_runs(
     return success({"items": items})
 
 
-@router.post("", response_model=ApiResponse[RunResponse])
+@router.post(
+    "",
+    response_model=ApiResponse[RunResponse],
+    deprecated=True,
+    description=(
+        "【已废弃，评审 G5 / D-2】发起运行请用 `POST /api/workflows/{wf_id}/runs`："
+        "它与工作流资源同一条路径，工作流不存在时语义一致。"
+        "此入口仅为兼容旧调用方保留，响应与行为完全等价。"
+    ),
+)
 async def create_run(workflow_id: str, body: RunCreate, session: Session = Depends(get_session)):
     run = await RunService.start_run(session, workflow_id, body.inputs)
     return success(run)

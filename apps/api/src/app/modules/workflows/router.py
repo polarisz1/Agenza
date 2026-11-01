@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api_deps import get_session
 from app.core.exceptions import AppError
-from app.core.response import ApiResponse, DeleteResult, success
+from app.core.response import ERROR_RESPONSES, ApiResponse, DeleteResult, success
 from app.modules.runs.schemas import RunCreate, RunResponse
 from app.modules.runs.service import RunService
 from app.modules.workflows.schemas import (
@@ -25,7 +25,7 @@ from app.modules.workflows.schemas import (
 )
 from app.modules.workflows.service import WorkflowService
 
-router = APIRouter()
+router = APIRouter(responses=ERROR_RESPONSES)
 
 
 @router.get("", response_model=ApiResponse[WorkflowListData])
