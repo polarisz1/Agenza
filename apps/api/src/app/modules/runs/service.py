@@ -23,7 +23,9 @@ from app.modules.providers.service import build_registry
 from app.modules.runs.models import NodeRun, Run
 from app.modules.runs.repository import RunRepository
 from app.modules.runs.schemas import (
+    CompareNode,
     NodeRunDetail,
+    RunCompareResult,
     RunDetail,
     RunListItem,
     RunResponse,
@@ -181,6 +183,14 @@ class RunService:
         if not run:
             return None
         nodes = RunRepository.list_node_runs(session, run_id)
+        inputs: dict = {}
+        if run.inputs_json:
+            try:
+                parsed = json.loads(run.inputs_json)
+                if isinstance(parsed, dict):
+                    inputs = parsed
+            except Exception:
+                inputs = {}
         return RunDetail(
             id=run.id,
             workflow_id=run.workflow_id,
@@ -192,7 +202,42 @@ class RunService:
             duration_ms=run.duration_ms,
             total_tokens=run.total_tokens or 0,
             error=run.error,
+            inputs=inputs,
             nodes=[_to_node_detail(nr) for nr in nodes],
+        )
+
+    @staticmethod
+    def compare(session: Session, a_id: str, b_id: str) -> RunCompareResult:
+        """按 node_id 对齐两次运行的节点结果（F1）。
+
+        只允许同一工作流的两次运行：跨工作流的节点 id 没有可比性，
+        硬对齐会给出误导性的"差异"。
+        """
+        a = RunService.get(session, a_id)
+        b = RunService.get(session, b_id)
+        if a is None or b is None:
+            raise AppError(404, "Run not found")
+        if a.workflow_id != b.workflow_id:
+            raise AppError(422, "只能对比同一工作流的两次运行")
+
+        a_nodes = {node.node_id: node for node in a.nodes}
+        b_nodes = {node.node_id: node for node in b.nodes}
+        ordered = [node.node_id for node in a.nodes]
+        ordered.extend(node_id for node_id in b_nodes if node_id not in a_nodes)
+
+        return RunCompareResult(
+            a=a,
+            b=b,
+            nodes=[
+                CompareNode(
+                    node_id=node_id,
+                    node_name=(a_nodes.get(node_id) or b_nodes[node_id]).node_name,
+                    node_type=(a_nodes.get(node_id) or b_nodes[node_id]).node_type,
+                    a=a_nodes.get(node_id),
+                    b=b_nodes.get(node_id),
+                )
+                for node_id in ordered
+            ],
         )
 
     @staticmethod

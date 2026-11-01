@@ -1,4 +1,5 @@
 import type { RunLogEntry, LiveStatus } from '@/features/runs/hooks/useRunStream';
+import { classifyRunError } from '@/features/runs/errors';
 import './WorkflowEditor.css';
 
 interface Props {
@@ -12,6 +13,8 @@ interface Props {
   onToggle: () => void;
   onCancel: () => void;
   onClear: () => void;
+  /** 打开完整运行详情（F1） */
+  onOpenDetail?: () => void;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -58,6 +61,7 @@ function renderLog(entry: RunLogEntry) {
           : status === 'cancelled'
             ? '⊘ 已取消'
             : '✗';
+    const errorInfo = data.error ? classifyRunError(data.error) : null;
     return (
       <div key={entry.id}>
         {time} ↳ {data.node_name}{' '}
@@ -66,7 +70,12 @@ function renderLog(entry: RunLogEntry) {
         </span>
         {data.model ? ` · ${data.model}` : ''}
         {data.tokens_in || data.tokens_out ? ` · ${data.tokens_in}→${data.tokens_out} tokens` : ''}
-        {data.error ? <span className="afe-log-fail"> · {data.error}</span> : ''}
+        {data.error ? (
+          <span className="afe-log-fail">
+            {' '}
+            · {errorInfo?.label}：{data.error}
+          </span>
+        ) : null}
       </div>
     );
   }
@@ -105,6 +114,7 @@ export default function RunDrawer({
   onToggle,
   onCancel,
   onClear,
+  onOpenDetail,
 }: Props) {
   return (
     <div className={collapsed ? 'afe-runpanel afe-runpanel--collapsed' : 'afe-runpanel'}>
@@ -128,6 +138,11 @@ export default function RunDrawer({
           {status === 'running' && (
             <button className="afe-btn afe-btn--text" onClick={onCancel}>
               取消
+            </button>
+          )}
+          {onOpenDetail && runId && status !== 'running' && (
+            <button className="afe-btn afe-btn--text" onClick={onOpenDetail}>
+              查看详情
             </button>
           )}
           <button className="afe-btn afe-btn--text" onClick={onClear}>

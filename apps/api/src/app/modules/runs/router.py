@@ -19,6 +19,7 @@ from app.db.database import SessionLocal
 from app.modules.runs.repository import RunRepository
 from app.modules.runs.schemas import (
     NodeRunDetail,
+    RunCompareResult,
     RunCreate,
     RunDetail,
     RunListData,
@@ -65,6 +66,18 @@ def list_runs(
 async def create_run(workflow_id: str, body: RunCreate, session: Session = Depends(get_session)):
     run = await RunService.start_run(session, workflow_id, body.inputs)
     return success(run)
+
+
+@router.get("/compare", response_model=ApiResponse[RunCompareResult])
+def compare_runs(
+    ids: str = Query(..., description="两个运行 id，逗号分隔"),
+    session: Session = Depends(get_session),
+):
+    """按 node_id 对齐两次运行，供前端并排对比（F1）。"""
+    parts = [part.strip() for part in ids.split(",") if part.strip()]
+    if len(parts) != 2:
+        raise AppError(400, "ids 需要两个运行 id，用逗号分隔")
+    return success(RunService.compare(session, parts[0], parts[1]))
 
 
 @router.get("/{run_id}", response_model=ApiResponse[RunDetail])

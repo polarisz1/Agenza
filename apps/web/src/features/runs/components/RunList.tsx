@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { listRuns, listWorkflowOptions, rerunRun } from '../api';
 import type { RunListItem, WorkflowOption } from '../api';
+import { triggerLabel } from '../meta';
 import { formatDateTime } from '@/shared/utils/datetime';
 
 const { RangePicker } = DatePicker;
@@ -55,6 +56,8 @@ export default function RunList() {
   const [status, setStatus] = useState('');
   const [workflowId, setWorkflowId] = useState<string | undefined>();
   const [range, setRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  // 对比：最多勾两条（F1）
+  const [selected, setSelected] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -128,6 +131,12 @@ export default function RunList() {
             value={range}
             onChange={(value) => setRange(value as [Dayjs | null, Dayjs | null] | null)}
           />
+          <Button
+            disabled={selected.length !== 2}
+            onClick={() => nav(`/runs/compare?ids=${selected.join(',')}`)}
+          >
+            对比选中{selected.length ? `（${selected.length}）` : ''}
+          </Button>
           <Button onClick={load}>刷新</Button>
         </Space>
       </div>
@@ -136,6 +145,13 @@ export default function RunList() {
         rowKey="id"
         loading={loading}
         dataSource={items}
+        rowSelection={{
+          selectedRowKeys: selected,
+          onChange: (keys) => setSelected(keys as string[]),
+          getCheckboxProps: (record) => ({
+            disabled: selected.length >= 2 && !selected.includes(record.id),
+          }),
+        }}
         columns={[
           {
             title: '运行编号',
@@ -151,7 +167,12 @@ export default function RunList() {
               <Tag color={statusColor[value] || 'default'}>{statusText[value] || value}</Tag>
             ),
           },
-          { title: '触发', dataIndex: 'trigger', width: 90 },
+          {
+            title: '触发',
+            dataIndex: 'trigger',
+            width: 90,
+            render: (value) => triggerLabel(value),
+          },
           {
             title: '开始时间',
             dataIndex: 'started_at',

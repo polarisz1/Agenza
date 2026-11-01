@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { App } from 'antd';
 import {
   Background,
@@ -60,6 +60,7 @@ export default function WorkflowEditor() {
 
 function EditorInner() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const flow = useReactFlow();
   // AntD 静态 message 不继承主题/语言上下文；走 App.useApp() 拿到上下文里的实例（评审 G26）
@@ -310,6 +311,16 @@ function EditorInner() {
     },
     [select, flow],
   );
+
+  // 从运行详情"在编辑器中打开"跳转过来时，定位到出错节点（F1）
+  const focusedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const focus = searchParams.get('focus');
+    if (!focus || loading || focusedRef.current === focus) return;
+    if (!useEditorStore.getState().nodes.some((node) => node.id === focus)) return;
+    focusedRef.current = focus;
+    focusNode(focus);
+  }, [searchParams, loading, focusNode]);
 
   const runValidation = useCallback(async (): Promise<ValidateIssue[]> => {
     const wfId = useEditorStore.getState().workflowId;
@@ -614,6 +625,7 @@ function EditorInner() {
         onToggle={() => setDrawerCollapsed((v) => !v)}
         onCancel={handleCancelRun}
         onClear={handleClearRun}
+        onOpenDetail={runId ? () => navigate(`/runs/${runId}`) : undefined}
       />
 
       <RunInputsModal

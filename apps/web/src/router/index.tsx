@@ -30,6 +30,14 @@ const runsRoutes: RouteObject[] = [
     },
   },
   {
+    // 必须排在 runs/:id 之前，否则 "compare" 会被当成 run id
+    path: 'runs/compare',
+    lazy: async () => {
+      const mod = await import('@/features/runs');
+      return { Component: mod.RunCompare };
+    },
+  },
+  {
     path: 'runs/:id',
     lazy: async () => {
       const mod = await import('@/features/runs');

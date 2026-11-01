@@ -184,6 +184,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare Runs
+         * @description 按 node_id 对齐两次运行，供前端并排对比（F1）。
+         */
+        get: operations["compare_runs_api_runs_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs/{run_id}": {
         parameters: {
             query?: never;
@@ -605,6 +625,20 @@ export interface components {
             message: string;
             data: components["schemas"]["ProviderTestResult"];
         };
+        /** ApiResponse[RunCompareResult] */
+        ApiResponse_RunCompareResult_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            /**
+             * Message
+             * @default ok
+             */
+            message: string;
+            data: components["schemas"]["RunCompareResult"];
+        };
         /** ApiResponse[RunDetail] */
         ApiResponse_RunDetail_: {
             /**
@@ -746,6 +780,20 @@ export interface components {
              * @default 0
              */
             cleared: number;
+        };
+        /**
+         * CompareNode
+         * @description 运行对比里的一行：按 node_id 对齐两次运行。
+         */
+        CompareNode: {
+            /** Node Id */
+            node_id: string;
+            /** Node Name */
+            node_name: string;
+            /** Node Type */
+            node_type: string;
+            a?: components["schemas"]["NodeRunDetail"] | null;
+            b?: components["schemas"]["NodeRunDetail"] | null;
         };
         /** ConditionConfig */
         ConditionConfig: {
@@ -1401,6 +1449,16 @@ export interface components {
             type: "python";
             config?: components["schemas"]["PythonConfig"];
         };
+        /** RunCompareResult */
+        RunCompareResult: {
+            a: components["schemas"]["RunDetail"];
+            b: components["schemas"]["RunDetail"];
+            /**
+             * Nodes
+             * @default []
+             */
+            nodes: components["schemas"]["CompareNode"][];
+        };
         /** RunCreate */
         RunCreate: {
             /**
@@ -1442,6 +1500,13 @@ export interface components {
             total_tokens: number;
             /** Error */
             error?: string | null;
+            /**
+             * Inputs
+             * @default {}
+             */
+            inputs: {
+                [key: string]: unknown;
+            };
             /**
              * Nodes
              * @default []
@@ -2680,6 +2745,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_RunResponse_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    compare_runs_api_runs_compare_get: {
+        parameters: {
+            query: {
+                /** @description 两个运行 id，逗号分隔 */
+                ids: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_RunCompareResult_"];
                 };
             };
             /** @description 业务错误（参数非法 / 状态不允许） */

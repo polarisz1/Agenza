@@ -803,6 +803,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/runs/compare:
+    get:
+      tags:
+      - runs
+      summary: Compare Runs
+      description: 按 node_id 对齐两次运行，供前端并排对比（F1）。
+      operationId: compare_runs_api_runs_compare_get
+      parameters:
+      - name: ids
+        in: query
+        required: true
+        schema:
+          type: string
+          description: 两个运行 id，逗号分隔
+          title: Ids
+        description: 两个运行 id，逗号分隔
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_RunCompareResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/runs/{run_id}:
     get:
       tags:
@@ -1787,6 +1840,22 @@ components:
       required:
       - data
       title: ApiResponse[ProviderTestResult]
+    ApiResponse_RunCompareResult_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/RunCompareResult'
+      type: object
+      required:
+      - data
+      title: ApiResponse[RunCompareResult]
     ApiResponse_RunDetail_:
       properties:
         code:
@@ -1947,6 +2016,32 @@ components:
           default: 0
       type: object
       title: ClearResult
+    CompareNode:
+      properties:
+        node_id:
+          type: string
+          title: Node Id
+        node_name:
+          type: string
+          title: Node Name
+        node_type:
+          type: string
+          title: Node Type
+        a:
+          anyOf:
+          - $ref: '#/components/schemas/NodeRunDetail'
+          - type: 'null'
+        b:
+          anyOf:
+          - $ref: '#/components/schemas/NodeRunDetail'
+          - type: 'null'
+      type: object
+      required:
+      - node_id
+      - node_name
+      - node_type
+      title: CompareNode
+      description: 运行对比里的一行：按 node_id 对齐两次运行。
     ConditionConfig:
       properties:
         enabled:
@@ -2820,6 +2915,23 @@ components:
       - id
       - name
       title: PythonNode
+    RunCompareResult:
+      properties:
+        a:
+          $ref: '#/components/schemas/RunDetail'
+        b:
+          $ref: '#/components/schemas/RunDetail'
+        nodes:
+          items:
+            $ref: '#/components/schemas/CompareNode'
+          type: array
+          title: Nodes
+          default: []
+      type: object
+      required:
+      - a
+      - b
+      title: RunCompareResult
     RunCreate:
       properties:
         inputs:
@@ -2876,6 +2988,11 @@ components:
           - type: string
           - type: 'null'
           title: Error
+        inputs:
+          additionalProperties: true
+          type: object
+          title: Inputs
+          default: {}
         nodes:
           items:
             $ref: '#/components/schemas/NodeRunDetail'

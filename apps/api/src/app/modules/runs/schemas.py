@@ -70,4 +70,22 @@ class NodeRunDetail(BaseModel):
 
 
 class RunDetail(RunResponse):
+    # 这次运行实际使用的输入（F1：运行详情右侧需要回看）
+    inputs: dict = {}
     nodes: list[NodeRunDetail] = []
+
+
+class CompareNode(BaseModel):
+    """运行对比里的一行：按 node_id 对齐两次运行。"""
+
+    node_id: str
+    node_name: str
+    node_type: str
+    a: NodeRunDetail | None = None
+    b: NodeRunDetail | None = None
+
+
+class RunCompareResult(BaseModel):
+    a: RunDetail
+    b: RunDetail
+    nodes: list[CompareNode] = []

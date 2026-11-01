@@ -6,6 +6,8 @@ export type RunDetail = components['schemas']['RunDetail'];
 export type RunNodeDetail = components['schemas']['NodeRunDetail'];
 export type RunResponse = components['schemas']['RunResponse'];
 export type CancelResult = components['schemas']['CancelResult'];
+export type CompareNode = components['schemas']['CompareNode'];
+export type RunCompareResult = components['schemas']['RunCompareResult'];
 
 type RunListData = ApiData<'/api/runs', 'get'>;
 type WorkflowListData = ApiData<'/api/workflows', 'get'>;
@@ -43,6 +45,13 @@ export async function cancelRun(id: string): Promise<CancelResult> {
 
 export async function rerunRun(id: string): Promise<RunResponse> {
   return http.post<RunResponse>(`/api/runs/${id}/rerun`);
+}
+
+/** 对比两次运行：后端按 node_id 对齐（F1） */
+export async function compareRuns(a: string, b: string): Promise<RunCompareResult> {
+  return http.get<RunCompareResult>(
+    `/api/runs/compare?ids=${encodeURIComponent(a)},${encodeURIComponent(b)}`,
+  );
 }
 
 /** 运行列表的“按工作流筛选”下拉选项 */
