@@ -134,6 +134,26 @@ backend.exe --port 8031 --data-dir <tmp> --log-level warning
 `electron-builder --win nsis`，并在上传前断言
 `apps/api/dist_backend/backend.exe` 与安装包都已产出。
 
+**安装包冒烟已脚本化**（`tools/scripts/smoke-desktop.ps1`，M4-T8）：
+装 → 启动 → 等后端就绪日志 → `/health` + 首页含 `<div id="root">` → 关窗（要求应用与
+`backend.exe` 都退出）→ 卸载 → 校验安装目录/快捷方式/注册表都清空。
+`release.yml` 里新增 `desktop-smoke` job（`needs: build-desktop`），`release` 需要它通过才发版；
+同时加了 `workflow_dispatch`，不打 tag 也能手动跑整条链路。
+
+本地实测（`powershell -File tools/scripts/smoke-desktop.ps1 -Installer <setup>`）：
+
+```
+==> 静默安装            开始菜单快捷方式：1
+==> 启动应用            后端端口：56373
+==> 检查 /health 与首页  首页：200，含 <div id="root">
+==> 关闭窗口            应用与后端均已退出
+==> 静默卸载            安装目录已删除
+✓ 冒烟通过
+```
+
+写脚本时踩到的两个坑（都已处理）：`.ps1` 含中文必须存成 **UTF-8 with BOM**
+（PowerShell 5.1 按 ANSI 读会解析失败）；`$home` 是只读自动变量，不能当普通变量名。
+
 ## ④ Electron 装配 + 安装包冒烟（已跑通）
 
 **装配做的事**（`electron/main.js`）：壳负责后端全生命周期——找空闲端口 → spawn

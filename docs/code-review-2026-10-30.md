@@ -344,7 +344,14 @@ Node 22.23.4 / pnpm 9.12.0 / Python 3.12.13（uv 管理），全部安装在 **E
 | G32 | 缺 `.gitattributes` | ✅ 已修 | `a102461`（原表漏记：声明 `eol=lf`） |
 | G8 | 节点输出 / HTTP 响应无上限 | ✅ 已修 | `core/engine/limits.py`：入库前 1MB 截断（**截断结果仍是合法 JSON**）+ HTTP 响应体 2MB 上限；`test_output_and_limits`、`test_http_executor` |
 | G16 | `output.py` 结合律歧义 | ✅ 已修 | 三分支语义：留空取首个上游 / 节点 id 取结构化输出 / 模板取解析值；写了来源却找不到时报错并列出可用节点 |
-| G34 | 壳的 IPC 时序 / 多窗口 / 无导航限制 | ◐ 部分 | `05fdcc3` 已补：IPC 先于 `loadURL` 注册、托盘复用窗口、`setWindowOpenHandler` + `will-navigate` 白名单、加载失败弹对话框；**CSP 仍缺** |
+| G34 | 壳的 IPC 时序 / 多窗口 / 无导航限制 | ✅ 已修 | `05fdcc3` 补 IPC 先注册、托盘复用、导航白名单、失败对话框；`792088a` 补打包态 CSP（dev 不注入，避免破坏 HMR） |
+| G1 | repository 各自 commit | ✅ 已修 | `792088a`：仓储只 `flush()`，事务边界上移到 service；建副本+复制视口、批量导入、运行收尾、清空运行都在同一事务 |
+| G4 | `update_settings(data: dict)` | ✅ 已修 | `792088a`：改为 `SettingsUpdate`（Pydantic，带取值范围），契约重新生成 |
+| G6 | "已有 running 则 409" 非原子 | ✅ 已修 | `792088a` + 迁移 `0002`：`(workflow_id) WHERE status='running'` 部分唯一索引，`IntegrityError` 翻 409；3 条并发用例 |
+| G25 | 搜索无防抖 | ✅ 已修 | `792088a`：`useDebouncedValue`（300ms） |
+| G27 | "打开数据目录"点了没反应 | ✅ 已修 | `792088a`：桌面走 preload 桥，浏览器给出可读提示 |
+| G29 | `axios` 声明但未使用 | ✅ 已修 | `792088a`：从 web/electron 两处移除 |
+| G12 | `apscheduler` 死依赖 | ✅ 已修 | `792088a`：从 pyproject 移除 |
 
 ---
 
