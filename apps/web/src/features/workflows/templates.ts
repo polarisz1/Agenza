@@ -185,7 +185,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
             name: '输出1',
             x: 620,
             y: 80,
-            config: { field: 'result', format: 'json' },
+            // 显式声明来源：留空时 output 执行器取"首个上游"，节点一多就不确定了（评审 G28）
+            config: { field: 'result', source: '{{ 脚本1 }}', format: 'json' },
           },
         ],
         [

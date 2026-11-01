@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { message } from 'antd';
+import { App } from 'antd';
 import {
   Background,
   BackgroundVariant,
@@ -32,7 +32,7 @@ import {
 import {
   NODE_DRAG_MIME,
   NODE_META,
-  canConnect,
+  connectionIssue,
   extractWorkflowInputs,
   type EditorNode,
   type NodeType,
@@ -62,6 +62,8 @@ function EditorInner() {
   const { id } = useParams();
   const navigate = useNavigate();
   const flow = useReactFlow();
+  // AntD 静态 message 不继承主题/语言上下文；走 App.useApp() 拿到上下文里的实例（评审 G26）
+  const { message } = App.useApp();
 
   const workflowId = useEditorStore((s) => s.workflowId);
   const name = useEditorStore((s) => s.name);
@@ -145,6 +147,7 @@ function EditorInner() {
         try {
           const created = await createWorkflow({
             name: '未命名工作流',
+            description: '',
             graph: { version: 1, inputs: [], nodes: [], edges: [] },
           });
           creatingRef.current = false;
@@ -167,6 +170,7 @@ function EditorInner() {
         loadWorkflow({
           id: wf.id,
           name: wf.name,
+          description: wf.description ?? '',
           status: wf.status,
           graph: wf.graph,
           viewport: (wf.viewport ?? null) as Viewport | null,
@@ -253,12 +257,10 @@ function EditorInner() {
 
   const isValidConnection = useCallback(
     (connection: Connection | Edge) => {
-      const source = nodes.find((n) => n.id === connection.source);
-      const target = nodes.find((n) => n.id === connection.target);
-      if (!source || !target || source.id === target.id) return false;
-      return canConnect(source.data.type, target.data.type);
+      // 类型矩阵 / 入度 / 环，统一由 connectionIssue 判断（评审 G21）
+      return connectionIssue(nodes, edges, connection) === null;
     },
-    [nodes],
+    [nodes, edges],
   );
 
   const handleSelectionChange = useCallback(
@@ -330,7 +332,7 @@ function EditorInner() {
     } finally {
       setValidating(false);
     }
-  }, [saveNow]);
+  }, [saveNow, message]);
 
   const handleValidate = async () => {
     const list = await runValidation();
@@ -427,10 +429,15 @@ function EditorInner() {
     // 返回前先把防抖窗口里的编辑提交并保存，否则这 2s 内的改动会丢（F4）
     flushDraft();
     if (useEditorStore.getState().dirty) {
-      await saveNow();
+      const saved = await saveNow();
+      if (!saved) {
+        // 保存失败还跳走 = 直接丢用户改动；留在页面上让他重试/导出
+        message.error('保存失败，已取消返回：请重试保存后再离开');
+        return;
+      }
     }
     navigate('/workflows');
-  }, [navigate, saveNow]);
+  }, [navigate, saveNow, message]);
 
   return (
     <div className="afe-root">

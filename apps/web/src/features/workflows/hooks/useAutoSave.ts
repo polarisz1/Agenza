@@ -32,6 +32,7 @@ export function useAutoSave(workflowId: string | null, delay = AUTO_SAVE_DELAY, 
     try {
       const saved = await updateWorkflow(state.workflowId, {
         name: state.name,
+        description: state.description,
         graph,
         viewport: viewport as Record<string, unknown> | undefined,
       });

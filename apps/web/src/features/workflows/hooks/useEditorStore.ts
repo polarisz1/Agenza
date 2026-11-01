@@ -11,6 +11,7 @@ import {
 } from '@xyflow/react';
 
 import {
+  connectionIssue,
   createNodeData,
   deserializeGraph,
   nextLabel,
@@ -24,6 +25,8 @@ interface Snapshot {
   nodes: EditorNode[];
   edges: Edge[];
   viewport: Viewport | null;
+  /** 撤销/重做要把"当时选中了谁"一起还原（评审 G20）。 */
+  selectedId: string | null;
 }
 
 export type SaveState = 'idle' | 'saving' | 'error';
@@ -31,6 +34,7 @@ export type SaveState = 'idle' | 'saving' | 'error';
 interface LoadPayload {
   id: string;
   name: string;
+  description?: string | null;
   status: WorkflowStatus;
   graph: unknown;
   viewport?: Viewport | null;
@@ -39,6 +43,7 @@ interface LoadPayload {
 interface EditorState {
   workflowId: string | null;
   name: string;
+  description: string;
   status: WorkflowStatus;
   nodes: EditorNode[];
   edges: Edge[];
@@ -48,7 +53,6 @@ interface EditorState {
   saveState: SaveState;
   saveError: string | null;
   lastSavedAt: number | null;
-  loaded: boolean;
   /** 每次内容变更 +1，用于自动保存防抖 */
   rev: number;
   /** 撤销/重做/加载后 +1，用于属性面板同步草稿 */
@@ -63,6 +67,7 @@ interface EditorState {
 
   load(payload: LoadPayload): void;
   setName(name: string): void;
+  setDescription(description: string): void;
   setViewport(viewport: Viewport, markDirty?: boolean): void;
   select(id: string | null): void;
   onNodesChange(changes: NodeChange<EditorNode>[]): void;
@@ -89,6 +94,7 @@ function clone<T>(value: T): T {
 export const useEditorStore = create<EditorState>()((set, get) => ({
   workflowId: null,
   name: '未命名工作流',
+  description: '',
   status: 'draft',
   nodes: [],
   edges: [],
@@ -98,18 +104,18 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   saveState: 'idle',
   saveError: null,
   lastSavedAt: null,
-  loaded: false,
   rev: 0,
   historyVersion: 0,
   historyAnchor: null,
   past: [],
   future: [],
 
-  load: ({ id, name, status, graph, viewport }) => {
+  load: ({ id, name, description, status, graph, viewport }) => {
     const { nodes, edges } = deserializeGraph(graph);
     set({
       workflowId: id,
       name,
+      description: description ?? '',
       status,
       nodes,
       edges,
@@ -119,7 +125,6 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       saveState: 'idle',
       saveError: null,
       lastSavedAt: Date.now(),
-      loaded: true,
       rev: 0,
       historyVersion: get().historyVersion + 1,
       historyAnchor: null,
@@ -131,6 +136,11 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   setName: (name) => {
     if (name === get().name) return;
     set({ name, dirty: true, rev: get().rev + 1 });
+  },
+
+  setDescription: (description) => {
+    if (description === get().description) return;
+    set({ description, dirty: true, rev: get().rev + 1 });
   },
 
   /**
@@ -188,12 +198,18 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   },
 
   onConnect: (connection) => {
-    const { source, target, sourceHandle } = connection;
-    if (!source || !target || source === target) return;
+    const { source, target } = connection;
+    if (!source || !target) return;
 
-    // 条件节点的两个分支端口各自独立成边：同一对节点可以同时连 true 与 false
+    // 类型矩阵 + 入度 + 无环：全部在画布层拦住（评审 G21），不再等后端 422
+    if (connectionIssue(get().nodes, get().edges, connection)) return;
+
     const branch =
-      sourceHandle === 'true' ? 'true' : sourceHandle === 'false' ? 'false' : undefined;
+      connection.sourceHandle === 'true'
+        ? 'true'
+        : connection.sourceHandle === 'false'
+          ? 'false'
+          : undefined;
     const duplicate = get().edges.some(
       (e) => e.source === source && e.target === target && e.sourceHandle === branch,
     );
@@ -277,11 +293,12 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   },
 
   beginHistory: () => {
-    const { nodes, edges, viewport, past } = get();
+    const { nodes, edges, viewport, selectedId, past } = get();
     const snapshot: Snapshot = {
       nodes: clone(nodes),
       edges: clone(edges),
       viewport: viewport ? { ...viewport } : null,
+      selectedId,
     };
     set({
       past: [...past, snapshot].slice(-MAX_HISTORY),
@@ -290,19 +307,26 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   },
 
   undo: () => {
-    const { past, future, nodes, edges, viewport } = get();
+    const { past, future, nodes, edges, viewport, selectedId } = get();
     if (!past.length) return;
     const previous = past[past.length - 1];
     set({
       past: past.slice(0, -1),
       future: [
-        { nodes: clone(nodes), edges: clone(edges), viewport: viewport ? { ...viewport } : null },
+        {
+          nodes: clone(nodes),
+          edges: clone(edges),
+          viewport: viewport ? { ...viewport } : null,
+          selectedId,
+        },
         ...future,
       ].slice(0, MAX_HISTORY),
       nodes: previous.nodes,
       edges: previous.edges,
       viewport: previous.viewport ?? viewport,
-      selectedId: previous.nodes.some((n) => n.id === get().selectedId) ? get().selectedId : null,
+      // 选中态跟着快照走：以前只按 id 是否还存在推断，恢复出来的高亮
+      // 可能指向另一个节点，与右侧面板不一致（评审 G20）
+      selectedId: previous.selectedId,
       dirty: true,
       rev: get().rev + 1,
       historyVersion: get().historyVersion + 1,
@@ -311,19 +335,24 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   },
 
   redo: () => {
-    const { past, future, nodes, edges, viewport } = get();
+    const { past, future, nodes, edges, viewport, selectedId } = get();
     if (!future.length) return;
     const next = future[0];
     set({
       past: [
         ...past,
-        { nodes: clone(nodes), edges: clone(edges), viewport: viewport ? { ...viewport } : null },
+        {
+          nodes: clone(nodes),
+          edges: clone(edges),
+          viewport: viewport ? { ...viewport } : null,
+          selectedId,
+        },
       ].slice(-MAX_HISTORY),
       future: future.slice(1),
       nodes: next.nodes,
       edges: next.edges,
       viewport: next.viewport ?? viewport,
-      selectedId: next.nodes.some((n) => n.id === get().selectedId) ? get().selectedId : null,
+      selectedId: next.selectedId,
       dirty: true,
       rev: get().rev + 1,
       historyVersion: get().historyVersion + 1,

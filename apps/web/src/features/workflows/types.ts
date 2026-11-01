@@ -331,6 +331,103 @@ export function canConnect(source: EditorNodeType, target: EditorNodeType): bool
   return NODE_META[target].accepts.includes(sourceKind);
 }
 
+// ---------------- 连线校验（评审 G21） ----------------
+// 只查类型矩阵时，画布允许造环、也允许把多条线灌进单输入节点，只能等后端 422 兜底。
+// 这里把三条规则前移到画布：类型矩阵 / 入度 / 无环。口径与后端 validators 一致，
+// 但**只拦"新画的线"**——历史图里的既有连线不会被这里改写。
+
+/** 允许汇聚多路输入的类型（其余节点只有一个输入端口）。 */
+const MULTI_INPUT_TYPES: ReadonlySet<EditorNodeType> = new Set(['merge']);
+
+/** 从 `from` 出发沿有向边能否到达 `to`。 */
+export function hasPath(
+  edges: Pick<Edge, 'source' | 'target'>[],
+  from: string,
+  to: string,
+): boolean {
+  if (from === to) return true;
+  const adjacency = new Map<string, string[]>();
+  for (const edge of edges) {
+    const next = adjacency.get(edge.source);
+    if (next) next.push(edge.target);
+    else adjacency.set(edge.source, [edge.target]);
+  }
+
+  const seen = new Set<string>([from]);
+  const stack = [from];
+  while (stack.length) {
+    const current = stack.pop() as string;
+    for (const next of adjacency.get(current) ?? []) {
+      if (next === to) return true;
+      if (seen.has(next)) continue;
+      seen.add(next);
+      stack.push(next);
+    }
+  }
+  return false;
+}
+
+/** 目标节点已有的入边数量（同一条边重复画不算）。 */
+export function countIncoming(
+  edges: Pick<Edge, 'id' | 'source' | 'target' | 'sourceHandle'>[],
+  targetId: string,
+): number {
+  const keys = new Set<string>();
+  for (const edge of edges) {
+    if (edge.target === targetId) keys.add(`${edge.source}:${edge.sourceHandle ?? ''}`);
+  }
+  return keys.size;
+}
+
+interface ConnectionLike {
+  source?: string | null;
+  target?: string | null;
+  sourceHandle?: string | null;
+}
+
+/**
+ * 校验一条待建立的连线，返回**可读的中文原因**；无问题时返回 null。
+ *
+ * `nodes` 只用来查两端节点的类型；连线集合用于环/入度判断。
+ */
+export function connectionIssue(
+  nodes: EditorNode[],
+  edges: Pick<Edge, 'id' | 'source' | 'target' | 'sourceHandle'>[],
+  connection: ConnectionLike,
+): string | null {
+  const { source, target } = connection;
+  if (!source || !target) return '连线缺少端点';
+  if (source === target) return '不能连接到自身';
+
+  const sourceNode = nodes.find((node) => node.id === source);
+  const targetNode = nodes.find((node) => node.id === target);
+  if (!sourceNode || !targetNode) return '节点不存在';
+
+  const sourceType = sourceNode.data.type;
+  const targetType = targetNode.data.type;
+
+  // 条件节点必须从「真 / 假」端口出线，否则两条分支都会执行（PRD §5.3）
+  if (sourceType === 'condition') {
+    const port = connection.sourceHandle;
+    if (port !== 'true' && port !== 'false') {
+      return '请从条件节点的「真」或「假」端口连线';
+    }
+  }
+
+  if (!NODE_META[targetType].hasInput) return '目标节点没有输入端口';
+  if (!canConnect(sourceType, targetType)) return '端口类型不匹配';
+
+  // 入度：除 merge 外每个节点只接受一个上游
+  if (!MULTI_INPUT_TYPES.has(targetType) && countIncoming(edges, target) > 0) {
+    return '该节点只接受一个输入；需要汇聚多路请改用「合并」节点';
+  }
+
+  // 环：target 若已能到达 source，再加 source → target 就成环
+  if (hasPath(edges, target, source)) return '这条连线会形成环路';
+
+  return null;
+}
+
 // ---------------- 图序列化 ----------------
 // 图结构完全复用后端契约（GraphDef），此文件不再手写节点/边的形状。
 

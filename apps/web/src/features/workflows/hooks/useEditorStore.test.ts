@@ -12,6 +12,7 @@ function reset() {
   useEditorStore.setState({
     workflowId: 'wf_test',
     name: '测试',
+    description: '',
     status: 'draft',
     nodes: [
       {
@@ -28,7 +29,6 @@ function reset() {
     saveState: 'idle',
     saveError: null,
     lastSavedAt: null,
-    loaded: true,
     rev: 0,
     historyVersion: 0,
     past: [],
@@ -107,5 +107,24 @@ describe('editor store · 节点编辑', () => {
     useEditorStore.getState().markSaved(1, 'draft');
 
     expect(useEditorStore.getState().dirty).toBe(true);
+  });
+});
+
+describe('editor store · 工作流描述（G28）', () => {
+  beforeEach(reset);
+
+  it('修改描述会置 dirty 并推进 rev（自动保存据此触发）', () => {
+    useEditorStore.getState().setDescription('抓网页并摘要');
+
+    const state = useEditorStore.getState();
+    expect(state.description).toBe('抓网页并摘要');
+    expect(state.dirty).toBe(true);
+    expect(state.rev).toBe(1);
+  });
+
+  it('描述没变时不产生无谓保存', () => {
+    useEditorStore.getState().setDescription('');
+
+    expect(useEditorStore.getState().dirty).toBe(false);
   });
 });
