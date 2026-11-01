@@ -51,20 +51,28 @@ node tools/scripts/dev.mjs --api-port 8010 --web-port 5180
 
 ```bash
 # 质量门禁（提交前跑这一个就够）
-pnpm check            # lint + ruff + format 检查 + 类型检查 + pytest + 契约漂移
+pnpm check            # lint + ruff + format + 类型检查 + pytest + 前端单测 + 契约漂移 + 契约兼容性
 
 # 分开跑
 pnpm test             # 后端 pytest
+pnpm test:web         # 前端 vitest
 pnpm lint             # 前端 ESLint
 pnpm lint:api         # 后端 Ruff
 pnpm typecheck        # 前端 tsc -b
 pnpm format:check     # 前后端格式检查
 pnpm build            # 前端生产构建
+pnpm e2e              # Playwright 浏览器走查（含 100 节点性能基线）
 
 # 契约（改了后端 schemas 或路由 docstring 之后必须跑）
 pnpm contracts:generate   # 启动后端 → 导出 openapi.yaml
 pnpm contracts:build      # yaml → src/generated/index.ts
-pnpm contracts:check      # CI 用的漂移检测
+pnpm contracts:check      # 漂移检测（提交内容 vs 后端当前输出）
+pnpm contracts:compat     # 破坏性变更检测（当前 vs 发版基线）
+pnpm contracts:baseline   # 发版时把当前契约快照为新基线
+
+# 依赖审计（CI 每周也会跑）
+pnpm audit:js             # pnpm audit --prod（high/critical 才失败）
+pnpm audit:py             # uv export → pip-audit
 ```
 
 > 注意：路由 **docstring 也算契约**（会写进 OpenAPI 的 description），改了它同样要重新生成。
@@ -96,10 +104,12 @@ packages/contracts/  # OpenAPI 与生成的 TS 类型（禁止手写 generated/�
 ```bash
 pnpm test                                                       # 全部后端用例
 uv run --directory apps/api pytest tests/test_run_e2e.py -v      # 单文件
+pnpm test:web                                                   # 前端 store/语义单测
+pnpm e2e                                                        # 浏览器走查 + 性能基线
 ```
 
-测试使用临时数据目录，不会写入仓库的 `data/`。少数用例标记 `xfail`，它们编码的是
-**已知缺陷的目标行为**（修复后会 XPASS 报错，提醒删除标记）。
+测试使用临时数据目录，不会写入仓库的 `data/`。性能基线见
+[`docs/v0.1-perf-baseline.md`](docs/v0.1-perf-baseline.md)（100 节点拖拽 ≥30fps 是 CI 闸门）。
 
 ## 文档
 
@@ -107,6 +117,10 @@ uv run --directory apps/api pytest tests/test_run_e2e.py -v      # 单文件
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | 协作硬约束（目录、分层、契约、安全），优先级最高 |
 | [`docs/agentflow-roadmap.md`](docs/agentflow-roadmap.md) | 阶段进度、下一步计划、待决策项 |
-| [`docs/code-review-2026-10-30.md`](docs/code-review-2026-10-30.md) | 代码评审报告与缺陷处置进度 |
+| [`docs/code-review-2026-10-30.md`](docs/code-review-2026-10-30.md) | 首轮代码评审报告与缺陷处置进度 |
+| [`docs/code-review-2026-11-01.md`](docs/code-review-2026-11-01.md) | v0.1 收尾复核：缺口清单、验证矩阵、遗留项判定 |
+| [`docs/backlog.md`](docs/backlog.md) | 已确认延后事项（只剩依赖外部条件的 A 组） |
+| [`docs/v0.1-perf-baseline.md`](docs/v0.1-perf-baseline.md) | 100 节点性能基线与阈值 |
+| [`docs/dependency-audit-2026-11-01.md`](docs/dependency-audit-2026-11-01.md) | 依赖漏洞与许可证审计 |
 | [`docs/dev-environment.md`](docs/dev-environment.md) | 本机环境布局与常见坑 |
 | `docs/agentflow-prd.html`、`docs/agentflow-design.html`、`docs/ui-design/index.html` | 需求 / 技术设计 / 视觉规范 |

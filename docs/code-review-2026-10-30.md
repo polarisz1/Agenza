@@ -1,5 +1,9 @@
 # AgentFlow 代码评审报告 · 2026-10-30
 
+> **后续**：B/C 两组遗留项的收尾修复与验证见
+> [`code-review-2026-11-01.md`](code-review-2026-11-01.md)。本文保留原始评审证据与
+> 当时的处置记录，不再更新。
+
 > **评审对象**：`docs/agentflow-roadmap.md`（v0.1）声称已完成的 M0–M3 全部代码（HEAD = `ea66bfe`），以及已落盘但未启用的壳/打包占位代码（只作为 M4 的前置风险给出结论）。
 >
 > **判据**：`AGENTS.md`（硬约束）→ `docs/agentflow-prd.html`（功能）→ `docs/agentflow-design.html`（技术）→ roadmap 自身声明的验收标准。
