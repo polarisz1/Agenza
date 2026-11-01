@@ -122,6 +122,8 @@ pnpm e2e                                                        # 浏览器走�
 | [`docs/v0.2-prd.md`](docs/v0.2-prd.md) | v0.2 产品需求（功能、验收、里程碑） |
 | [`docs/v0.2-ui-design.md`](docs/v0.2-ui-design.md) | v0.2 UI/UX 规范与设计验收清单 |
 | [`docs/v0.2-plan.md`](docs/v0.2-plan.md) | v0.2 任务清单（T5.x） |
+| [`docs/v0.2-provider-matrix.md`](docs/v0.2-provider-matrix.md) | 真实 Provider 验收矩阵（待联调项与补跑步骤） |
+| [`docs/v0.2-acceptance.md`](docs/v0.2-acceptance.md) | v0.2.0 验收报告（证据、门禁、已知限制） |
 | [`docs/v0.2-prototype/index.html`](docs/v0.2-prototype/index.html) | v0.2 关键页面交互原型（浏览器直接打开） |
 | [`docs/backlog.md`](docs/backlog.md) | 已确认延后事项（只剩依赖外部条件的 A 组） |
 | [`docs/v0.1-perf-baseline.md`](docs/v0.1-perf-baseline.md) | 100 节点性能基线与阈值 |

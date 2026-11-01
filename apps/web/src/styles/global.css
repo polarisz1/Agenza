@@ -57,3 +57,20 @@ a {
   background: #1f4e3d;
   border: 2px solid #fff;
 }
+
+/* 键盘可达性（v0.2 / M5.4）：所有可聚焦元素都有清晰的 focus ring */
+:focus-visible {
+  outline: 2px solid #2f7059;
+  outline-offset: 2px;
+}
+
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* 画布节点键盘聚焦时也给一圈提示（React Flow 默认只有 selected） */
+.react-flow__node:focus-visible {
+  outline: 2px solid #2f7059;
+  outline-offset: 3px;
+}

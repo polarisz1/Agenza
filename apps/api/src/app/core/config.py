@@ -40,7 +40,7 @@ def relocate_legacy_data_dir(legacy: Path, target: Path) -> bool:
 class Settings(BaseSettings):
     # ---- Application ----
     APP_NAME: str = "AgentFlow"
-    APP_VERSION: str = "0.1.0"
+    APP_VERSION: str = "0.2.0"
     DEBUG: bool = True
 
     # ---- Server ----

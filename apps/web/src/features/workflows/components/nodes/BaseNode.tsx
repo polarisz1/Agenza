@@ -56,6 +56,8 @@ function BaseNode({ data, selected }: NodeProps<EditorNode>) {
 
   return (
     <div
+      role="group"
+      aria-label={`${meta.label} ${data.label}${status ? ` · ${STATUS_TEXT[status]}` : ''}`}
       className={[
         'afn',
         selected ? 'afn--selected' : '',

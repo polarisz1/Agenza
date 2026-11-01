@@ -1,6 +1,6 @@
 [project]
 name = "agentflow-api"
-version = "0.1.0"
+version = "0.2.0"
 description = "AgentFlow 后端 API - 单用户本地 AI 工作流编排平台"
 requires-python = ">=3.12"
 dependencies = [
