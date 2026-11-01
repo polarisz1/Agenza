@@ -315,7 +315,9 @@ def _make_node_finished(run_id: str):
                 nr.tokens_in = result.tokens_in
                 nr.tokens_out = result.tokens_out
                 nr.model = result.model
-                nr.error = result.error
+                nr.error = result.error or (
+                    "节点执行失败（未提供错误信息）" if result.status == "failed" else None
+                )
                 nr.output_json = (
                     clamp_serialized(json.dumps(result.output, ensure_ascii=False, default=str))
                     if result.output is not None

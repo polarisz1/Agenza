@@ -180,7 +180,11 @@ def _summarize(scheduler: Scheduler, results: dict[str, NodeResult]) -> tuple[st
 
     failed = [r for r in results.values() if r.status == "failed"]
     if failed:
-        return "failed", next((r.error for r in failed if r.error), "Run failed")
+        detail = next((r.error for r in failed if r.error), "")
+        if not detail:
+            # 不能退回一句 "Run failed"：至少要说清"几个节点失败、没有错误信息"（B2）
+            detail = f"{len(failed)} 个节点失败（未提供错误信息）"
+        return "failed", detail
 
     if results and all(r.status == "cancelled" for r in results.values()):
         return "cancelled", "Run cancelled"

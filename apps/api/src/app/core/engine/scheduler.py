@@ -8,6 +8,7 @@ from collections import defaultdict
 from typing import Any
 
 from app.core.engine.contexts import NodeContext, NodeExecutor, NodeResult
+from app.core.engine.errors import describe_exception
 from app.core.engine.event_bus import get_event_bus
 from app.core.engine.validators import kahn_layers
 from app.core.logger import log
@@ -146,7 +147,9 @@ class Scheduler:
                 await self._finish(
                     node_id=node_id,
                     node=node,
-                    result=NodeResult(status="failed", error=f"节点执行异常：{exc}"),
+                    result=NodeResult(
+                        status="failed", error=f"节点执行异常：{describe_exception(exc)}"
+                    ),
                     duration_ms=0,
                     results=results,
                     on_node_finished=on_node_finished,
@@ -309,7 +312,7 @@ class Scheduler:
                     except asyncio.CancelledError:
                         return NodeResult(status="cancelled", error="Run cancelled")
                     except Exception as exc:
-                        result = NodeResult(status="failed", error=str(exc))
+                        result = NodeResult(status="failed", error=describe_exception(exc))
 
                     if result.status != "failed" or attempt > retry:
                         break

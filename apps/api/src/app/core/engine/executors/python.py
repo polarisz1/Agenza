@@ -11,6 +11,7 @@ import contextlib
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -117,32 +118,19 @@ class PythonExecutor(BaseExecutor):
         (tmp / "runner.py").write_text(_RUNNER, encoding="utf-8")
 
         try:
-            proc = await asyncio.create_subprocess_exec(
-                python_bin,
-                "-I",
-                "-S",
-                str(tmp / "runner.py"),
+            argv = [python_bin, "-I", "-S", str(tmp / "runner.py")]
+            returncode, stdout, stderr = await _communicate(
+                argv,
                 cwd=str(tmp),
                 env=_child_env(tmp),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                timeout=timeout,
             )
-            try:
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-            except TimeoutError:
-                await _terminate(proc)
-                return NodeResult(status="failed", error=f"Script timed out after {timeout}s")
-            except asyncio.CancelledError:
-                # 外层取消（运行被取消 / 调度器超时）时也必须杀掉子进程，
-                # 否则脚本会继续在后台跑，占 CPU 并泄漏管道。
-                await _terminate(proc)
-                raise
 
-            if proc.returncode != 0:
+            if returncode != 0:
                 detail = _decode(stderr)[:500]
                 return NodeResult(
                     status="failed",
-                    error=f"Script exit {proc.returncode}: {detail}",
+                    error=f"Script exit {returncode}: {detail}",
                 )
 
             output_path = tmp / "output.json"
@@ -152,9 +140,122 @@ class PythonExecutor(BaseExecutor):
                 out = _decode(stdout)
 
             return NodeResult(status="success", output=out)
+        except TimeoutError:
+            return NodeResult(status="failed", error=f"Script timed out after {timeout}s")
+        except asyncio.CancelledError:
+            # 外层取消（运行被取消 / 调度器超时）时子进程已在 _communicate 里被杀掉
+            raise
         finally:
             with contextlib.suppress(Exception):
                 shutil.rmtree(str(tmp), ignore_errors=True)
+
+
+async def _communicate(
+    argv: list[str],
+    *,
+    cwd: str,
+    env: dict[str, str],
+    timeout: float | None,
+) -> tuple[int, bytes, bytes]:
+    """跑子进程并返回 (returncode, stdout, stderr)。
+
+    优先用 asyncio 子进程；如果当前事件循环不支持（Windows 的 SelectorEventLoop，
+    uvicorn 在 reload / 多 worker 时就会选它），退化为"线程 + subprocess.Popen"。
+
+    为什么必须有降级（v0.1.1 热修 B1）：Selector loop 上的
+    `asyncio.create_subprocess_exec` 会抛 `NotImplementedError`（消息为空），
+    表现就是"Python 节点必然失败且看不到任何原因"。
+    """
+    proc = await _spawn_subprocess(argv, cwd=cwd, env=env)
+    if proc is None:
+        return await _communicate_threaded(argv, cwd=cwd, env=env, timeout=timeout)
+
+    try:
+        if timeout is None:
+            out, err = await proc.communicate()
+        else:
+            out, err = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+    except TimeoutError:
+        await _terminate(proc)
+        raise
+    except asyncio.CancelledError:
+        await _terminate(proc)
+        raise
+
+    return proc.returncode or 0, out or b"", err or b""
+
+
+async def _spawn_subprocess(
+    argv: list[str],
+    *,
+    cwd: str,
+    env: dict[str, str],
+) -> asyncio.subprocess.Process | None:
+    """创建 asyncio 子进程；当前 loop 不支持时返回 None（由调用方降级）。"""
+    try:
+        return await asyncio.create_subprocess_exec(
+            *argv,
+            cwd=cwd,
+            env=env,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+    except NotImplementedError:
+        # Windows SelectorEventLoop：没有 subprocess transport
+        return None
+
+
+async def _communicate_threaded(
+    argv: list[str],
+    *,
+    cwd: str,
+    env: dict[str, str],
+    timeout: float | None,
+) -> tuple[int, bytes, bytes]:
+    """线程池里跑 Popen 的降级路径（超时/取消都会 kill 掉进程）。"""
+    loop = asyncio.get_running_loop()
+    state: dict[str, object] = {"proc": None, "aborted": False}
+
+    def worker() -> tuple[int, bytes, bytes]:
+        proc = subprocess.Popen(
+            argv,
+            cwd=cwd,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        state["proc"] = proc
+        if state["aborted"]:
+            _kill_subprocess(proc)
+        out, err = proc.communicate()
+        return proc.returncode or 0, out or b"", err or b""
+
+    future = loop.run_in_executor(None, worker)
+    try:
+        if timeout is None:
+            return await future
+        return await asyncio.wait_for(asyncio.shield(future), timeout=timeout)
+    except TimeoutError:
+        _abort_threaded(state)
+        raise
+    except asyncio.CancelledError:
+        _abort_threaded(state)
+        raise
+
+
+def _abort_threaded(state: dict[str, object]) -> None:
+    """标记放弃并杀掉可能已经起来的进程（含"还没来的及赋值"的竞态）。"""
+    state["aborted"] = True
+    proc = state.get("proc")
+    if isinstance(proc, subprocess.Popen):
+        _kill_subprocess(proc)
+
+
+def _kill_subprocess(proc: subprocess.Popen) -> None:
+    if proc.poll() is not None:
+        return
+    with contextlib.suppress(OSError):
+        proc.kill()
 
 
 async def _terminate(proc: asyncio.subprocess.Process) -> None:

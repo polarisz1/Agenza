@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.core.engine.contexts import NodeContext, NodeResult
+from app.core.engine.errors import describe_exception
 from app.core.engine.variable import VariableError, resolve
 
 
@@ -20,7 +21,7 @@ class BaseExecutor:
         except VariableError as exc:
             return NodeResult(status="failed", error=f"Variable resolution error: {exc}")
         except Exception as exc:
-            return NodeResult(status="failed", error=str(exc))
+            return NodeResult(status="failed", error=describe_exception(exc))
 
     async def _run(self, ctx: NodeContext, config: dict) -> NodeResult:
         raise NotImplementedError
