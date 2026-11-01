@@ -177,11 +177,18 @@ export default function WorkflowList() {
             render: (value?: string | null) => value || '—',
           },
           {
-            title: '状态',
-            dataIndex: 'status',
-            width: 100,
-            render: (value) =>
-              value === 'ready' ? <Tag color="green">就绪</Tag> : <Tag>草稿</Tag>,
+            // 不再展示不可控的"草稿/就绪"（D-13）：按当前图实时给出可用性
+            title: '可用性',
+            key: 'availability',
+            width: 120,
+            render: (_, record) =>
+              record.blocking_count > 0 ? (
+                <Tag color="red">{record.blocking_count} 个阻断</Tag>
+              ) : record.issue_count > 0 ? (
+                <Tag color="orange">{record.issue_count} 个提示</Tag>
+              ) : (
+                <Tag color="green">可用</Tag>
+              ),
           },
           { title: '节点数', dataIndex: 'node_count', width: 90 },
           {

@@ -3304,6 +3304,14 @@ components:
           - draft
           - ready
           title: Status
+        issue_count:
+          type: integer
+          title: Issue Count
+          default: 0
+        blocking_count:
+          type: integer
+          title: Blocking Count
+          default: 0
         node_count:
           type: integer
           title: Node Count

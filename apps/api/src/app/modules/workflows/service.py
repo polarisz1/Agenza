@@ -34,12 +34,15 @@ class WorkflowService:
     @staticmethod
     def create(session: Session, body: WorkflowCreate) -> WorkflowResponse:
         wf_id = f"wf_{uuid.uuid4().hex[:10]}"
+        # 创建时就按图算一次状态：API/模板创建的工作流不再是"永远草稿"（D-13 的兼容处理）
+        validation = WorkflowService._validate_dict(body.graph.model_dump())
         obj = WorkflowRepository.create(
             session,
             wf_id=wf_id,
             name=body.name,
             description=body.description,
             graph_json=body.graph.model_dump_json(),
+            status="draft" if validation["blocking"] else "ready",
         )
         session.commit()
         return _to_response(obj)
@@ -65,13 +68,26 @@ class WorkflowService:
                 graph = json.loads(obj.graph_json)
                 node_count = len(graph.get("nodes", []))
             except Exception:
+                graph = {}
                 node_count = 0
+
+            # 可用性按**当前图**实时计算（D-13）：不再依赖最后一次保存时的 status
+            try:
+                validation = WorkflowService._validate_dict(graph)
+                issue_count = len(validation["issues"])
+                blocking_count = sum(1 for issue in validation["issues"] if issue["blocking"])
+            except Exception:
+                issue_count = 0
+                blocking_count = 0
+
             out.append(
                 WorkflowListItem(
                     id=obj.id,
                     name=obj.name,
                     description=obj.description,
                     status=obj.status,
+                    issue_count=issue_count,
+                    blocking_count=blocking_count,
                     node_count=node_count,
                     last_run_at=obj.last_run_at,
                     updated_at=obj.updated_at,

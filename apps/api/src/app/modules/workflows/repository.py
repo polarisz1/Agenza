@@ -15,9 +15,20 @@ from app.modules.workflows.models import Workflow
 class WorkflowRepository:
     @staticmethod
     def create(
-        session: Session, wf_id: str, name: str, description: str | None, graph_json: str
+        session: Session,
+        wf_id: str,
+        name: str,
+        description: str | None,
+        graph_json: str,
+        status: str = "draft",
     ) -> Workflow:
-        obj = Workflow(id=wf_id, name=name, description=description, graph_json=graph_json)
+        obj = Workflow(
+            id=wf_id,
+            name=name,
+            description=description,
+            graph_json=graph_json,
+            status=status,
+        )
         session.add(obj)
         session.flush()
         session.refresh(obj)

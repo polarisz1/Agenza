@@ -211,7 +211,11 @@ class WorkflowListItem(BaseModel):
     id: str
     name: str
     description: str | None = None
+    # status 保留给旧调用方（兼容）；界面不再用它表达"草稿/就绪"（D-13），
+    # 改为按当前图实时计算的可用性：issue_count=全部问题，blocking_count=阻断问题。
     status: WorkflowStatus
+    issue_count: int = 0
+    blocking_count: int = 0
     node_count: int
     last_run_at: datetime | None = None
     updated_at: datetime

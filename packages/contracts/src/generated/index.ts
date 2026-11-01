@@ -1682,6 +1682,16 @@ export interface components {
              * @enum {string}
              */
             status: "draft" | "ready";
+            /**
+             * Issue Count
+             * @default 0
+             */
+            issue_count: number;
+            /**
+             * Blocking Count
+             * @default 0
+             */
+            blocking_count: number;
             /** Node Count */
             node_count: number;
             /** Last Run At */
