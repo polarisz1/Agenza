@@ -253,7 +253,6 @@ class Scheduler:
             available=_collect_ancestor_outputs(node_id, parent_edges, results),
             node_names=node_names,
             providers=providers_registry,
-            emit=self.bus.publish,
         )
 
         if on_node_started:
