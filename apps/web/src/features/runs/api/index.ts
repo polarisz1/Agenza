@@ -1,5 +1,5 @@
 import { http } from '@/shared/lib/http';
-import type { ApiData, components } from '@agentflow/contracts';
+import type { ApiData, ApiQuery, components } from '@agentflow/contracts';
 
 export type RunListItem = components['schemas']['RunListItem'];
 export type RunDetail = components['schemas']['RunDetail'];
@@ -10,18 +10,11 @@ export type CancelResult = components['schemas']['CancelResult'];
 type RunListData = ApiData<'/api/runs', 'get'>;
 type WorkflowListData = ApiData<'/api/workflows', 'get'>;
 
-export interface WorkflowOption {
-  id: string;
-  name: string;
-}
+/** 运行列表的"按工作流筛选"选项：从契约里的列表项派生，不再手写（评审 G24） */
+export type WorkflowOption = Pick<components['schemas']['WorkflowListItem'], 'id' | 'name'>;
 
-export interface RunListQuery {
-  workflow_id?: string;
-  status?: string;
-  limit?: number;
-  started_after?: string;
-  started_before?: string;
-}
+/** 运行列表查询参数：直接取后端 `/api/runs` 的 query 契约（评审 G24） */
+export type RunListQuery = ApiQuery<'/api/runs', 'get'>;
 
 export async function listRuns(query: RunListQuery = {}): Promise<RunListItem[]> {
   const params = new URLSearchParams();
@@ -54,6 +47,7 @@ export async function rerunRun(id: string): Promise<RunResponse> {
 
 /** 运行列表的“按工作流筛选”下拉选项 */
 export async function listWorkflowOptions(): Promise<WorkflowOption[]> {
-  const data = await http.get<WorkflowListData>('/api/workflows?limit=200');
+  // 后端 /api/workflows 没有 limit 参数（此前带 ?limit=200 会被静默忽略，评审 G24）
+  const data = await http.get<WorkflowListData>('/api/workflows');
   return data.items.map((item) => ({ id: item.id, name: item.name }));
 }

@@ -22,3 +22,12 @@ export type ResponseBody<
 /** 取某个接口 200 响应里的 data 负载类型 */
 export type ApiData<P extends keyof paths, M extends keyof paths[P]> =
   ResponseBody<P, M> extends { data: infer Data } ? Data : never;
+
+/**
+ * 取某个接口的 query 参数类型（与后端 `Query(default=...)` 声明一一对应）。
+ *
+ * 手写查询参数类型是契约漂移的常见来源：后端加一个筛选参数，前端永远不知道。
+ * 这里直接从生成产物取，`listRuns({ limit: 200 })` 这类调用会被编译器检查。
+ */
+export type ApiQuery<P extends keyof paths, M extends keyof paths[P]> =
+  paths[P][M] extends { parameters: { query?: infer Query } } ? NonNullable<Query> : never;

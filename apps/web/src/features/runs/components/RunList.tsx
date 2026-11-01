@@ -1,4 +1,4 @@
-import { Table, Tag, Button, Space, Select, DatePicker, message } from 'antd';
+import { App, Table, Tag, Button, Space, Select, DatePicker } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -11,6 +11,7 @@ const { RangePicker } = DatePicker;
 
 const STATUS_OPTIONS = [
   { value: '', label: '全部状态' },
+  { value: 'waiting_input', label: '等待输入' },
   { value: 'running', label: '运行中' },
   { value: 'success', label: '成功' },
   { value: 'failed', label: '失败' },
@@ -25,6 +26,15 @@ const statusColor: Record<string, string> = {
   cancelled: 'default',
 };
 
+/** 后端枚举的中文映射（评审 G23：此前 waiting_input 会直接显示英文原值） */
+const statusText: Record<string, string> = {
+  waiting_input: '等待输入',
+  running: '运行中',
+  success: '成功',
+  failed: '失败',
+  cancelled: '已取消',
+};
+
 function formatTime(value?: string | null): string {
   return formatDateTime(value);
 }
@@ -36,6 +46,7 @@ function toNaiveUtc(value?: Dayjs | null): string | undefined {
 }
 
 export default function RunList() {
+  const { message } = App.useApp();
   const nav = useNavigate();
   const [items, setItems] = useState<RunListItem[]>([]);
   const [workflows, setWorkflows] = useState<WorkflowOption[]>([]);
@@ -60,7 +71,7 @@ export default function RunList() {
     } finally {
       setLoading(false);
     }
-  }, [status, workflowId, range]);
+  }, [status, workflowId, range, message]);
 
   useEffect(() => {
     load();
@@ -114,7 +125,7 @@ export default function RunList() {
             onChange={(value) => setWorkflowId(value)}
           />
           <RangePicker
-            value={range as any}
+            value={range}
             onChange={(value) => setRange(value as [Dayjs | null, Dayjs | null] | null)}
           />
           <Button onClick={load}>刷新</Button>
@@ -136,7 +147,9 @@ export default function RunList() {
             title: '状态',
             dataIndex: 'status',
             width: 110,
-            render: (value) => <Tag color={statusColor[value] || 'default'}>{value}</Tag>,
+            render: (value) => (
+              <Tag color={statusColor[value] || 'default'}>{statusText[value] || value}</Tag>
+            ),
           },
           { title: '触发', dataIndex: 'trigger', width: 90 },
           {

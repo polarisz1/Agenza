@@ -1,4 +1,4 @@
-import { Alert, Button, Descriptions, Empty, Spin, Tag, message } from 'antd';
+import { Alert, App, Button, Descriptions, Empty, Spin, Tag } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -7,6 +7,7 @@ import type { RunDetail as RunDetailType } from '../api';
 import { formatClock, formatDateTime } from '@/shared/utils/datetime';
 
 const statusColor: Record<string, string> = {
+  waiting_input: 'blue',
   running: 'processing',
   success: 'green',
   failed: 'red',
@@ -15,6 +16,7 @@ const statusColor: Record<string, string> = {
 };
 
 const statusText: Record<string, string> = {
+  waiting_input: '等待输入',
   running: '运行中',
   success: '成功',
   failed: '失败',
@@ -40,6 +42,7 @@ function pretty(value: unknown): string {
 }
 
 export default function RunDetail() {
+  const { message } = App.useApp();
   const { id } = useParams();
   const nav = useNavigate();
   const [run, setRun] = useState<RunDetailType | null>(null);
@@ -57,7 +60,7 @@ export default function RunDetail() {
     load()
       .catch((err: any) => message.error(err?.message || '加载运行详情失败'))
       .finally(() => setLoading(false));
-  }, [load]);
+  }, [load, message]);
 
   // 运行中每 2s 刷新一次，结束后停止
   useEffect(() => {
