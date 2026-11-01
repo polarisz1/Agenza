@@ -277,3 +277,20 @@ class WorkflowImportItem(BaseModel):
 class WorkflowImportResult(BaseModel):
     items: list[WorkflowImportItem]
     created_ids: list[str]
+
+
+class WorkflowVersionItem(BaseModel):
+    id: str
+    seq: int
+    summary: str = ""
+    node_count: int = 0
+    created_at: datetime
+
+
+class WorkflowVersionDetail(WorkflowVersionItem):
+    graph: GraphDef
+    viewport: dict | None = None
+
+
+class WorkflowVersionListData(BaseModel):
+    items: list[WorkflowVersionItem]

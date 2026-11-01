@@ -437,9 +437,19 @@ export default function RunDetail() {
           <div className="rv-panel">
             <div className="rv-panel-head">图版本</div>
             <div className="rv-panel-body">
-              <div className="rv-hint">
-                版本历史将在 v0.2 M5.4 接入；现在可打开工作流查看最新图。
-              </div>
+              {run.version_seq ? (
+                <>
+                  <div className="rv-kv">
+                    <span className="k">运行版本</span>
+                    <span className="v">v{run.version_seq}</span>
+                  </div>
+                  <div className="rv-hint">
+                    本次运行使用该版本的图快照；可在编辑器的「版本」里预览或恢复。
+                  </div>
+                </>
+              ) : (
+                <div className="rv-hint">这次运行早于版本历史功能，未记录版本。</div>
+              )}
               <Button size="small" onClick={() => nav(`/workflows/${run.workflow_id}`)}>
                 打开工作流
               </Button>

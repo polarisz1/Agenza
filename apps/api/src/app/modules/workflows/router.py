@@ -22,6 +22,8 @@ from app.modules.workflows.schemas import (
     WorkflowListData,
     WorkflowResponse,
     WorkflowUpdate,
+    WorkflowVersionDetail,
+    WorkflowVersionListData,
 )
 from app.modules.workflows.service import WorkflowService
 
@@ -116,6 +118,34 @@ def validate_workflow_saved(wf_id: str, session: Session = Depends(get_session))
     if not wf:
         raise AppError(404, "Workflow not found")
     return success(WorkflowService.validate(session, wf.graph))
+
+
+@router.get("/{wf_id}/versions", response_model=ApiResponse[WorkflowVersionListData])
+def list_workflow_versions(wf_id: str, session: Session = Depends(get_session)):
+    """版本历史（F5）：按 seq 倒序。"""
+    if not WorkflowService.get(session, wf_id):
+        raise AppError(404, "Workflow not found")
+    return success({"items": WorkflowService.list_versions(session, wf_id)})
+
+
+@router.get("/{wf_id}/versions/{version_id}", response_model=ApiResponse[WorkflowVersionDetail])
+def get_workflow_version(wf_id: str, version_id: str, session: Session = Depends(get_session)):
+    version = WorkflowService.get_version(session, wf_id, version_id)
+    if version is None:
+        raise AppError(404, "Version not found")
+    return success(version)
+
+
+@router.post(
+    "/{wf_id}/versions/{version_id}/restore",
+    response_model=ApiResponse[WorkflowResponse],
+)
+def restore_workflow_version(wf_id: str, version_id: str, session: Session = Depends(get_session)):
+    """恢复到某个版本；恢复本身会生成一个新的版本记录（F5）。"""
+    updated = WorkflowService.restore_version(session, wf_id, version_id)
+    if updated is None:
+        raise AppError(404, "Workflow or version not found")
+    return success(updated)
 
 
 @router.post("/{wf_id}/runs", response_model=ApiResponse[RunResponse])

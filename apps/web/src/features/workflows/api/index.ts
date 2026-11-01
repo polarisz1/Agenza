@@ -13,6 +13,8 @@ export type RunResponse = components['schemas']['RunResponse'];
 export type CancelResult = components['schemas']['CancelResult'];
 export type WorkflowImportItem = components['schemas']['WorkflowImportItem'];
 export type WorkflowImportResult = components['schemas']['WorkflowImportResult'];
+export type WorkflowVersionItem = components['schemas']['WorkflowVersionItem'];
+export type WorkflowVersionDetail = components['schemas']['WorkflowVersionDetail'];
 
 type WorkflowListData = ApiData<'/api/workflows', 'get'>;
 type RunListData = ApiData<'/api/runs', 'get'>;
@@ -137,6 +139,27 @@ export async function testProviderForOnboarding(body: ProviderCreate): Promise<P
 /** 轮询运行状态（引导里的示例运行用） */
 export async function getRunStatus(runId: string): Promise<components['schemas']['RunDetail']> {
   return http.get<components['schemas']['RunDetail']>(`/api/runs/${runId}`);
+}
+
+// ---- 版本历史（F5） ----
+
+export async function listWorkflowVersions(id: string): Promise<WorkflowVersionItem[]> {
+  const data = await http.get<{ items: WorkflowVersionItem[] }>(`/api/workflows/${id}/versions`);
+  return data.items ?? [];
+}
+
+export async function getWorkflowVersion(
+  id: string,
+  versionId: string,
+): Promise<WorkflowVersionDetail> {
+  return http.get<WorkflowVersionDetail>(`/api/workflows/${id}/versions/${versionId}`);
+}
+
+export async function restoreWorkflowVersion(
+  id: string,
+  versionId: string,
+): Promise<WorkflowResponse> {
+  return http.post<WorkflowResponse>(`/api/workflows/${id}/versions/${versionId}/restore`);
 }
 
 /** 导入工作流：confirm=false 预览重名处理，confirm=true 写入 */

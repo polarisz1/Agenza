@@ -1,0 +1,60 @@
+/* ---------- 版本历史（F5） ---------- */
+.afe-ver-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.afe-ver-item {
+  padding: 10px 12px;
+  border: 1px solid var(--afe-line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.afe-ver-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.afe-ver-seq {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.afe-ver-head .ant-tag {
+  margin-inline-end: 0;
+}
+
+.afe-ver-time {
+  margin-left: auto;
+  color: var(--afe-ink-500);
+  font-size: 11.5px;
+}
+
+.afe-ver-summary {
+  margin-top: 4px;
+  color: var(--afe-ink-700);
+  font-size: 12px;
+}
+
+.afe-ver-meta {
+  margin-top: 2px;
+  color: var(--afe-ink-500);
+  font-size: 11px;
+}
+
+.afe-ver-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.afe-ver-canvas {
+  height: 420px;
+  border: 1px solid var(--afe-line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #eef0ea;
+}

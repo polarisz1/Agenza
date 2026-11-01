@@ -30,6 +30,9 @@ class RunResponse(BaseModel):
     duration_ms: int | None = None
     total_tokens: int = 0
     error: str | None = None
+    # 本次运行使用的图版本（F5）；老运行没有记录
+    version_id: str | None = None
+    version_seq: int | None = None
 
 
 class RunListItem(BaseModel):

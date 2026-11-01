@@ -122,6 +122,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workflows/{wf_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Workflow Versions
+         * @description 版本历史（F5）：按 seq 倒序。
+         */
+        get: operations["list_workflow_versions_api_workflows__wf_id__versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workflows/{wf_id}/versions/{version_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Workflow Version */
+        get: operations["get_workflow_version_api_workflows__wf_id__versions__version_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workflows/{wf_id}/versions/{version_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore Workflow Version
+         * @description 恢复到某个版本；恢复本身会生成一个新的版本记录（F5）。
+         */
+        post: operations["restore_workflow_version_api_workflows__wf_id__versions__version_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workflows/{wf_id}/runs": {
         parameters: {
             query?: never;
@@ -798,6 +855,34 @@ export interface components {
              */
             message: string;
             data: components["schemas"]["WorkflowResponse"];
+        };
+        /** ApiResponse[WorkflowVersionDetail] */
+        ApiResponse_WorkflowVersionDetail_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            /**
+             * Message
+             * @default ok
+             */
+            message: string;
+            data: components["schemas"]["WorkflowVersionDetail"];
+        };
+        /** ApiResponse[WorkflowVersionListData] */
+        ApiResponse_WorkflowVersionListData_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            /**
+             * Message
+             * @default ok
+             */
+            message: string;
+            data: components["schemas"]["WorkflowVersionListData"];
         };
         /** CancelResult */
         CancelResult: {
@@ -1545,6 +1630,10 @@ export interface components {
             total_tokens: number;
             /** Error */
             error?: string | null;
+            /** Version Id */
+            version_id?: string | null;
+            /** Version Seq */
+            version_seq?: number | null;
             /**
              * Inputs
              * @default {}
@@ -1619,6 +1708,10 @@ export interface components {
             total_tokens: number;
             /** Error */
             error?: string | null;
+            /** Version Id */
+            version_id?: string | null;
+            /** Version Seq */
+            version_seq?: number | null;
         };
         /** SettingsResponse */
         SettingsResponse: {
@@ -1856,6 +1949,60 @@ export interface components {
             } | null;
             /** Status */
             status?: ("draft" | "ready") | null;
+        };
+        /** WorkflowVersionDetail */
+        WorkflowVersionDetail: {
+            /** Id */
+            id: string;
+            /** Seq */
+            seq: number;
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
+            /**
+             * Node Count
+             * @default 0
+             */
+            node_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            graph: components["schemas"]["GraphDef"];
+            /** Viewport */
+            viewport?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** WorkflowVersionItem */
+        WorkflowVersionItem: {
+            /** Id */
+            id: string;
+            /** Seq */
+            seq: number;
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
+            /**
+             * Node Count
+             * @default 0
+             */
+            node_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** WorkflowVersionListData */
+        WorkflowVersionListData: {
+            /** Items */
+            items: components["schemas"]["WorkflowVersionItem"][];
         };
     };
     responses: never;
@@ -2505,6 +2652,209 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_ValidateResult_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_workflow_versions_api_workflows__wf_id__versions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wf_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_WorkflowVersionListData_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_workflow_version_api_workflows__wf_id__versions__version_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wf_id: string;
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_WorkflowVersionDetail_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    restore_workflow_version_api_workflows__wf_id__versions__version_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wf_id: string;
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_WorkflowResponse_"];
                 };
             };
             /** @description 业务错误（参数非法 / 状态不允许） */

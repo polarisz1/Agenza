@@ -539,6 +539,170 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/workflows/{wf_id}/versions:
+    get:
+      tags:
+      - workflows
+      summary: List Workflow Versions
+      description: 版本历史（F5）：按 seq 倒序。
+      operationId: list_workflow_versions_api_workflows__wf_id__versions_get
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowVersionListData_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/workflows/{wf_id}/versions/{version_id}:
+    get:
+      tags:
+      - workflows
+      summary: Get Workflow Version
+      operationId: get_workflow_version_api_workflows__wf_id__versions__version_id__get
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowVersionDetail_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/workflows/{wf_id}/versions/{version_id}/restore:
+    post:
+      tags:
+      - workflows
+      summary: Restore Workflow Version
+      description: 恢复到某个版本；恢复本身会生成一个新的版本记录（F5）。
+      operationId: restore_workflow_version_api_workflows__wf_id__versions__version_id__restore_post
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/workflows/{wf_id}/runs:
     post:
       tags:
@@ -2067,6 +2231,38 @@ components:
       required:
       - data
       title: ApiResponse[WorkflowResponse]
+    ApiResponse_WorkflowVersionDetail_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/WorkflowVersionDetail'
+      type: object
+      required:
+      - data
+      title: ApiResponse[WorkflowVersionDetail]
+    ApiResponse_WorkflowVersionListData_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/WorkflowVersionListData'
+      type: object
+      required:
+      - data
+      title: ApiResponse[WorkflowVersionListData]
     CancelResult:
       properties:
         cancelled:
@@ -3066,6 +3262,16 @@ components:
           - type: string
           - type: 'null'
           title: Error
+        version_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Version Id
+        version_seq:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Version Seq
         inputs:
           additionalProperties: true
           type: object
@@ -3191,6 +3397,16 @@ components:
           - type: string
           - type: 'null'
           title: Error
+        version_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Version Id
+        version_seq:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Version Seq
       type: object
       required:
       - id
@@ -3612,3 +3828,75 @@ components:
           title: Status
       type: object
       title: WorkflowUpdate
+    WorkflowVersionDetail:
+      properties:
+        id:
+          type: string
+          title: Id
+        seq:
+          type: integer
+          title: Seq
+        summary:
+          type: string
+          title: Summary
+          default: ''
+        node_count:
+          type: integer
+          title: Node Count
+          default: 0
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        graph:
+          $ref: '#/components/schemas/GraphDef'
+        viewport:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Viewport
+      type: object
+      required:
+      - id
+      - seq
+      - created_at
+      - graph
+      title: WorkflowVersionDetail
+    WorkflowVersionItem:
+      properties:
+        id:
+          type: string
+          title: Id
+        seq:
+          type: integer
+          title: Seq
+        summary:
+          type: string
+          title: Summary
+          default: ''
+        node_count:
+          type: integer
+          title: Node Count
+          default: 0
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - seq
+      - created_at
+      title: WorkflowVersionItem
+    WorkflowVersionListData:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/WorkflowVersionItem'
+          type: array
+          title: Items
+      type: object
+      required:
+      - items
+      title: WorkflowVersionListData

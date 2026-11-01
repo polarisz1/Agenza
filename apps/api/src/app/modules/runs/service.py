@@ -99,6 +99,7 @@ class RunService:
             raise AppError(400, f"Missing required inputs: {', '.join(missing)}")
 
         run_id = f"r_{uuid.uuid4().hex[:10]}"
+        version = WorkflowService.latest_version(session, wf.id)
         run = Run(
             id=run_id,
             workflow_id=wf.id,
@@ -108,6 +109,8 @@ class RunService:
             status="running",
             trigger=trigger,
             started_at=utcnow(),
+            version_id=version[0] if version else None,
+            version_seq=version[1] if version else None,
         )
         RunRepository.create(session, run)
         # 先把 run 落库：引擎回调走独立的 SessionLocal，看不到未提交的数据。
@@ -203,6 +206,8 @@ class RunService:
             total_tokens=run.total_tokens or 0,
             error=run.error,
             inputs=inputs,
+            version_id=run.version_id,
+            version_seq=run.version_seq,
             nodes=[_to_node_detail(nr) for nr in nodes],
         )
 

@@ -14,6 +14,7 @@ from app.core.engine.registry import build_default_registry
 from app.core.engine.validators import validate_graph
 from app.core.exceptions import AppError
 from app.modules.providers.service import build_registry
+from app.modules.workflows.models import WorkflowVersion
 from app.modules.workflows.repository import WorkflowRepository
 from app.modules.workflows.schemas import (
     DuplicateResult,
@@ -27,6 +28,8 @@ from app.modules.workflows.schemas import (
     WorkflowListItem,
     WorkflowResponse,
     WorkflowUpdate,
+    WorkflowVersionDetail,
+    WorkflowVersionItem,
 )
 
 
@@ -43,6 +46,9 @@ class WorkflowService:
             description=body.description,
             graph_json=body.graph.model_dump_json(),
             status="draft" if validation["blocking"] else "ready",
+        )
+        WorkflowService._create_version(
+            session, wf_id, body.graph.model_dump_json(), None, "初始版本"
         )
         session.commit()
         return _to_response(obj)
@@ -110,6 +116,17 @@ class WorkflowService:
             result = WorkflowService._validate_dict(body.graph.model_dump())
             new_status = "draft" if result["blocking"] else "ready"
 
+        # F5：图内容真的变了才生成版本快照
+        version_summary: str | None = None
+        if body.graph is not None:
+            try:
+                old_graph = json.loads(obj.graph_json) if obj.graph_json else {}
+            except Exception:
+                old_graph = {}
+            new_graph = body.graph.model_dump()
+            if old_graph != new_graph:
+                version_summary = _diff_summary(old_graph, new_graph)
+
         updated = WorkflowRepository.update(
             session,
             wf_id,
@@ -119,8 +136,99 @@ class WorkflowService:
             viewport_json=viewport_json,
             status=body.status or new_status,
         )
+        if version_summary is not None and updated is not None:
+            WorkflowService._create_version(
+                session,
+                wf_id,
+                updated.graph_json,
+                updated.viewport_json,
+                version_summary,
+            )
         session.commit()
         return _to_response(updated) if updated else None
+
+    # ---- 版本历史（F5） ----
+
+    @staticmethod
+    def _create_version(
+        session: Session,
+        wf_id: str,
+        graph_json: str,
+        viewport_json: str | None,
+        summary: str,
+    ) -> WorkflowVersion:
+        latest = WorkflowRepository.latest_version(session, wf_id)
+        seq = (latest.seq + 1) if latest else 1
+        version = WorkflowRepository.create_version(
+            session,
+            WorkflowVersion(
+                id=f"wv_{uuid.uuid4().hex[:10]}",
+                workflow_id=wf_id,
+                seq=seq,
+                summary=summary[:200],
+                graph_json=graph_json,
+                viewport_json=viewport_json,
+            ),
+        )
+        WorkflowRepository.prune_versions(session, wf_id, keep=50)
+        return version
+
+    @staticmethod
+    def list_versions(session: Session, wf_id: str) -> list[WorkflowVersionItem]:
+        return [
+            _to_version_item(version)
+            for version in WorkflowRepository.list_versions(session, wf_id)
+        ]
+
+    @staticmethod
+    def get_version(session: Session, wf_id: str, version_id: str) -> WorkflowVersionDetail | None:
+        version = WorkflowRepository.get_version(session, wf_id, version_id)
+        if version is None:
+            return None
+        graph = json.loads(version.graph_json)
+        viewport = json.loads(version.viewport_json) if version.viewport_json else None
+        item = _to_version_item(version)
+        return WorkflowVersionDetail(
+            **item.model_dump(),
+            graph=graph,
+            viewport=viewport,
+        )
+
+    @staticmethod
+    def restore_version(session: Session, wf_id: str, version_id: str) -> WorkflowResponse | None:
+        obj = WorkflowRepository.get(session, wf_id)
+        if obj is None:
+            return None
+        version = WorkflowRepository.get_version(session, wf_id, version_id)
+        if version is None:
+            return None
+
+        graph = json.loads(version.graph_json)
+        validation = WorkflowService._validate_dict(graph)
+        updated = WorkflowRepository.update(
+            session,
+            wf_id,
+            graph_json=version.graph_json,
+            viewport_json=version.viewport_json,
+            status="draft" if validation["blocking"] else "ready",
+        )
+        if updated is None:
+            return None
+        WorkflowService._create_version(
+            session,
+            wf_id,
+            version.graph_json,
+            version.viewport_json,
+            f"恢复到 v{version.seq}",
+        )
+        session.commit()
+        return _to_response(updated)
+
+    @staticmethod
+    def latest_version(session: Session, wf_id: str) -> tuple[str, int] | None:
+        """给运行记录关联版本用（F5）。"""
+        version = WorkflowRepository.latest_version(session, wf_id)
+        return (version.id, version.seq) if version else None
 
     @staticmethod
     def count(session: Session) -> int:
@@ -335,3 +443,40 @@ def _to_response(obj: Any) -> WorkflowResponse:
         updated_at=obj.updated_at,
         last_run_at=obj.last_run_at,
     )
+
+
+def _to_version_item(version: WorkflowVersion) -> WorkflowVersionItem:
+    try:
+        graph = json.loads(version.graph_json)
+        node_count = len(graph.get("nodes", []))
+    except Exception:
+        node_count = 0
+    return WorkflowVersionItem(
+        id=version.id,
+        seq=version.seq,
+        summary=version.summary or "",
+        node_count=node_count,
+        created_at=version.created_at,
+    )
+
+
+def _diff_summary(old_graph: dict, new_graph: dict) -> str:
+    """给版本列表生成一句可读的变更摘要（节点/连线增删数量）。"""
+    old_nodes = {node.get("id") for node in old_graph.get("nodes", [])}
+    new_nodes = {node.get("id") for node in new_graph.get("nodes", [])}
+    old_edges = {edge.get("id") for edge in old_graph.get("edges", [])}
+    new_edges = {edge.get("id") for edge in new_graph.get("edges", [])}
+
+    parts: list[str] = []
+    added, removed = len(new_nodes - old_nodes), len(old_nodes - new_nodes)
+    if added:
+        parts.append(f"+{added} 节点")
+    if removed:
+        parts.append(f"-{removed} 节点")
+    edge_added, edge_removed = len(new_edges - old_edges), len(old_edges - new_edges)
+    if edge_added:
+        parts.append(f"+{edge_added} 连线")
+    if edge_removed:
+        parts.append(f"-{edge_removed} 连线")
+
+    return " / ".join(parts) if parts else "配置更新"

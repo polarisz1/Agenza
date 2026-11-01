@@ -21,6 +21,9 @@ class Run(Base):
     finished_at = Column(DateTime, nullable=True)
     duration_ms = Column(Integer, nullable=True)
     total_tokens = Column(Integer, default=0)
+    # 本次运行使用的图版本（F5）；老运行没有记录时为 NULL
+    version_id = Column(String(24), nullable=True)
+    version_seq = Column(Integer, nullable=True)
 
     # 同一工作流同时只允许一个 running 的运行（评审 G6）：
     # 只靠"先查后插"挡不住双击并发，这里用部分唯一索引让数据库兜底。

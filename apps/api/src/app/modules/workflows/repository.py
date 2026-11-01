@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from sqlalchemy.orm import Session
 
 from app.core.time import utcnow
-from app.modules.workflows.models import Workflow
+from app.modules.workflows.models import Workflow, WorkflowVersion
 
 # utcnow 用于 last_run_at
 
@@ -101,3 +101,57 @@ class WorkflowRepository:
             return
         obj.last_run_at = utcnow()
         session.flush()
+
+    # ---- 版本快照（F5） ----
+
+    @staticmethod
+    def create_version(session: Session, version: WorkflowVersion) -> WorkflowVersion:
+        session.add(version)
+        session.flush()
+        session.refresh(version)
+        return version
+
+    @staticmethod
+    def list_versions(session: Session, workflow_id: str) -> list[WorkflowVersion]:
+        return (
+            session.query(WorkflowVersion)
+            .filter(WorkflowVersion.workflow_id == workflow_id)
+            .order_by(WorkflowVersion.seq.desc())
+            .all()
+        )
+
+    @staticmethod
+    def latest_version(session: Session, workflow_id: str) -> WorkflowVersion | None:
+        return (
+            session.query(WorkflowVersion)
+            .filter(WorkflowVersion.workflow_id == workflow_id)
+            .order_by(WorkflowVersion.seq.desc())
+            .first()
+        )
+
+    @staticmethod
+    def get_version(session: Session, workflow_id: str, version_id: str) -> WorkflowVersion | None:
+        return (
+            session.query(WorkflowVersion)
+            .filter(
+                WorkflowVersion.workflow_id == workflow_id,
+                WorkflowVersion.id == version_id,
+            )
+            .first()
+        )
+
+    @staticmethod
+    def prune_versions(session: Session, workflow_id: str, keep: int = 50) -> None:
+        olds = (
+            session.query(WorkflowVersion.id)
+            .filter(WorkflowVersion.workflow_id == workflow_id)
+            .order_by(WorkflowVersion.seq.desc())
+            .offset(max(1, keep))
+            .all()
+        )
+        ids = [row[0] for row in olds]
+        if ids:
+            session.query(WorkflowVersion).filter(WorkflowVersion.id.in_(ids)).delete(
+                synchronize_session=False
+            )
+            session.flush()

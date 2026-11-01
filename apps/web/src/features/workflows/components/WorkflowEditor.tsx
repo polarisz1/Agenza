@@ -46,6 +46,7 @@ import { useVariables } from '../hooks/useVariables';
 import { nodeTypes } from './nodes';
 import CommandPalette from './CommandPalette';
 import NodeLibrary from './NodeLibrary';
+import VersionDrawer from './VersionDrawer';
 import PropertyPanel from './PropertyPanel';
 import RunDrawer from './RunDrawer';
 import RunInputsModal from './RunInputsModal';
@@ -126,6 +127,7 @@ function EditorInner() {
   const [drawerCollapsed, setDrawerCollapsed] = useState(false);
   // F2：命令面板 / 节点搜索 / 右键菜单
   const [palette, setPalette] = useState<'command' | 'node' | null>(null);
+  const [versionsOpen, setVersionsOpen] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{
     x: number;
     y: number;
@@ -549,6 +551,22 @@ function EditorInner() {
     };
   }, [ctxMenu]);
 
+  const handleVersionRestored = useCallback(
+    (workflow: WorkflowResponse) => {
+      loadWorkflow({
+        id: workflow.id,
+        name: workflow.name,
+        description: workflow.description ?? '',
+        status: workflow.status,
+        graph: workflow.graph,
+        viewport: (workflow.viewport ?? null) as Viewport | null,
+      });
+      setVersionsOpen(false);
+      setIssues([]);
+    },
+    [loadWorkflow],
+  );
+
   // 命令面板的条目随当前工作流状态变化，直接构造（只在面板打开时使用）
   const commands = [
     { id: 'run', label: '运行工作流', hint: '▶ 运行', run: () => void handleRun() },
@@ -613,6 +631,9 @@ function EditorInner() {
           </button>
           <button className="afe-btn" onClick={() => void saveNow()} disabled={!workflowId}>
             保存
+          </button>
+          <button className="afe-btn" onClick={() => setVersionsOpen(true)} disabled={!workflowId}>
+            版本
           </button>
           <button
             className="afe-btn afe-btn--primary"
@@ -913,6 +934,13 @@ function EditorInner() {
           setPalette(null);
           focusNode(nodeId);
         }}
+      />
+
+      <VersionDrawer
+        open={versionsOpen}
+        workflowId={workflowId}
+        onClose={() => setVersionsOpen(false)}
+        onRestored={handleVersionRestored}
       />
     </div>
   );
