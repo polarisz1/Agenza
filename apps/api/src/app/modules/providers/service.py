@@ -67,6 +67,7 @@ class ProviderService:
             created_at=utcnow(),
         )
         created = ProviderRepository.create(session, obj)
+        session.commit()
         return _to_response(created)
 
     @staticmethod
@@ -99,11 +100,14 @@ class ProviderService:
         if body.enabled is not None:
             fields["enabled"] = body.enabled
         updated = ProviderRepository.update(session, pid, **fields)
+        session.commit()
         return _to_response(updated) if updated else None
 
     @staticmethod
     def delete(session: Session, pid: str) -> bool:
-        return ProviderRepository.delete(session, pid)
+        ok = ProviderRepository.delete(session, pid)
+        session.commit()
+        return ok
 
     @staticmethod
     async def test(body: ProviderCreate) -> ProviderTestResult:

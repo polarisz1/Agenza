@@ -34,6 +34,10 @@ class FakeSession:
     def add(self, obj):
         self.rows[obj.id] = obj
 
+    def flush(self):
+        # 仓储层只 flush，事务边界在 service 层（评审 G1）
+        return None
+
     def commit(self):
         return None
 

@@ -46,6 +46,7 @@ class SettingsService:
         for key, value in data.items():
             if key in DEFAULTS:
                 SettingsRepository.upsert(session, key, json.dumps(value, ensure_ascii=False))
+        session.commit()
         return SettingsService.get_all(session)
 
     @staticmethod

@@ -365,7 +365,10 @@ export interface paths {
         };
         /** Get Settings */
         get: operations["get_settings_api_settings_get"];
-        /** Update Settings */
+        /**
+         * Update Settings
+         * @description 更新本机设置（只校验并接受已声明的字段）。
+         */
         put: operations["update_settings_api_settings_put"];
         post?: never;
         delete?: never;
@@ -1496,6 +1499,23 @@ export interface components {
             /** App Version */
             app_version: string;
         };
+        /**
+         * SettingsUpdate
+         * @description 设置更新请求体（评审 G4）。
+         *
+         *     以前是 `data: dict`，OpenAPI 里变成无类型 object，前端只能猜字段名。
+         *     现在每个字段都显式声明并带取值约束；未传的字段保持原值。
+         */
+        SettingsUpdate: {
+            /** Auto Save */
+            auto_save?: boolean | null;
+            /** Retention Per Workflow */
+            retention_per_workflow?: number | null;
+            /** Default Timeout */
+            default_timeout?: number | null;
+            /** Language */
+            language?: string | null;
+        };
         /** SystemInfo */
         SystemInfo: {
             /** App Name */
@@ -2572,9 +2592,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
+                "application/json": components["schemas"]["SettingsUpdate"];
             };
         };
         responses: {

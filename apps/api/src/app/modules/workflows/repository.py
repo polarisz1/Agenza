@@ -19,7 +19,7 @@ class WorkflowRepository:
     ) -> Workflow:
         obj = Workflow(id=wf_id, name=name, description=description, graph_json=graph_json)
         session.add(obj)
-        session.commit()
+        session.flush()
         session.refresh(obj)
         return obj
 
@@ -70,7 +70,7 @@ class WorkflowRepository:
             obj.viewport_json = viewport_json
         if status is not None:
             obj.status = status
-        session.commit()
+        session.flush()
         session.refresh(obj)
         return obj
 
@@ -80,7 +80,7 @@ class WorkflowRepository:
         if obj is None:
             return False
         session.delete(obj)
-        session.commit()
+        session.flush()
         return True
 
     @staticmethod
@@ -89,4 +89,4 @@ class WorkflowRepository:
         if obj is None:
             return
         obj.last_run_at = utcnow()
-        session.commit()
+        session.flush()

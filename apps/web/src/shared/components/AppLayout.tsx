@@ -1,4 +1,4 @@
-import { Layout, Menu, theme, Avatar, Dropdown } from 'antd';
+import { Layout, Menu, theme, Avatar, Dropdown, message } from 'antd';
 import {
   AppstoreOutlined,
   ThunderboltOutlined,
@@ -69,6 +69,20 @@ export default function AppLayout() {
                 { key: 'open-data', icon: <SettingOutlined />, label: '打开数据目录' },
                 { key: 'about', label: '关于 AgentFlow v0.1' },
               ],
+              onClick: ({ key }) => {
+                // 桌面壳注入了 window.electronAPI；浏览器里没有这个能力，
+                // 给出可理解的提示而不是"点了没反应"（评审 G27）
+                const bridge = (window as { electronAPI?: { openDataDir?: () => void } })
+                  .electronAPI;
+                if (key === 'open-data') {
+                  if (bridge?.openDataDir) bridge.openDataDir();
+                  else message.info('仅桌面版支持打开数据目录；路径见「本机设置」页');
+                  return;
+                }
+                if (key === 'about') {
+                  message.info('AgentFlow v0.1 · 本地单用户 AI 工作流编排');
+                }
+              },
             }}
           >
             <span style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>

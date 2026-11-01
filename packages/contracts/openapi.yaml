@@ -809,14 +809,13 @@ paths:
       tags:
       - settings
       summary: Update Settings
+      description: 更新本机设置（只校验并接受已声明的字段）。
       operationId: update_settings_api_settings_put
       requestBody:
         content:
           application/json:
             schema:
-              additionalProperties: true
-              type: object
-              title: Data
+              $ref: '#/components/schemas/SettingsUpdate'
         required: true
       responses:
         '200':
@@ -2264,6 +2263,41 @@ components:
       - data_dir
       - app_version
       title: SettingsResponse
+    SettingsUpdate:
+      properties:
+        auto_save:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Auto Save
+        retention_per_workflow:
+          anyOf:
+          - type: integer
+            maximum: 5000
+            minimum: 1
+          - type: 'null'
+          title: Retention Per Workflow
+        default_timeout:
+          anyOf:
+          - type: integer
+            maximum: 3600
+            minimum: 1
+          - type: 'null'
+          title: Default Timeout
+        language:
+          anyOf:
+          - type: string
+            maxLength: 20
+          - type: 'null'
+          title: Language
+      type: object
+      title: SettingsUpdate
+      description: '设置更新请求体（评审 G4）。
+
+
+        以前是 `data: dict`，OpenAPI 里变成无类型 object，前端只能猜字段名。
+
+        现在每个字段都显式声明并带取值约束；未传的字段保持原值。'
     SystemInfo:
       properties:
         app_name:

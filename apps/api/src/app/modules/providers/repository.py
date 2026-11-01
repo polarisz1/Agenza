@@ -11,7 +11,7 @@ class ProviderRepository:
     @staticmethod
     def create(session: Session, p: Provider) -> Provider:
         session.add(p)
-        session.commit()
+        session.flush()
         session.refresh(p)
         return p
 
@@ -34,7 +34,7 @@ class ProviderRepository:
             return None
         for k, v in fields.items():
             setattr(obj, k, v)
-        session.commit()
+        session.flush()
         session.refresh(obj)
         return obj
 
@@ -44,5 +44,5 @@ class ProviderRepository:
         if not obj:
             return False
         session.delete(obj)
-        session.commit()
+        session.flush()
         return True

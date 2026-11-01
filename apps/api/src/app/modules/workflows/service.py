@@ -41,6 +41,7 @@ class WorkflowService:
             description=body.description,
             graph_json=body.graph.model_dump_json(),
         )
+        session.commit()
         return _to_response(obj)
 
     @staticmethod
@@ -102,6 +103,7 @@ class WorkflowService:
             viewport_json=viewport_json,
             status=body.status or new_status,
         )
+        session.commit()
         return _to_response(updated) if updated else None
 
     @staticmethod
@@ -110,7 +112,9 @@ class WorkflowService:
 
     @staticmethod
     def delete(session: Session, wf_id: str) -> bool:
-        return WorkflowRepository.delete(session, wf_id)
+        ok = WorkflowRepository.delete(session, wf_id)
+        session.commit()
+        return ok
 
     @staticmethod
     def duplicate(session: Session, wf_id: str) -> DuplicateResult | None:
@@ -127,6 +131,8 @@ class WorkflowService:
         )
         if obj.viewport_json:
             WorkflowRepository.update(session, new_id, viewport_json=obj.viewport_json)
+        # 建副本 + 复制视口是两步写，必须在同一事务里提交
+        session.commit()
         return DuplicateResult(id=dup_obj.id, name=dup_obj.name)
 
     @staticmethod
@@ -201,6 +207,9 @@ class WorkflowService:
             existing.add(target)
             created_ids.append(wf_id)
 
+        # 导入可能是多条记录：一次性提交，避免中途失败留下半套数据
+        if created_ids:
+            session.commit()
         return WorkflowImportResult(items=items, created_ids=created_ids)
 
     @staticmethod

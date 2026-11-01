@@ -350,6 +350,42 @@ function showWindow() {
   mainWin.focus();
 }
 
+// ---------------------------------------------------------------- 安全策略
+
+/**
+ * 给打包后的页面加 CSP（评审 G34 剩余项）。
+ *
+ * 只在生产态注入：dev 走 Vite，需要内联脚本与 HMR 的 ws 连接，加 CSP 会直接白屏。
+ */
+function installContentSecurityPolicy() {
+  if (DEV) return;
+
+  const { session } = require('electron');
+  const policy = [
+    "default-src 'self'",
+    "script-src 'self'",
+    // Ant Design 会在运行时注入内联样式，style 的内联必须放开
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    // 页面与 API 同源（后端托管 dist），SSE 也是同源
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "frame-ancestors 'none'",
+  ].join('; ');
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [policy],
+      },
+    });
+  });
+  logToFile('[shell] 已启用 CSP');
+}
+
 // ---------------------------------------------------------------- 托盘 / IPC
 
 function setupTray() {
@@ -406,6 +442,7 @@ if (!gotLock) {
 
   app.whenReady().then(async () => {
     setupIPC();
+    installContentSecurityPolicy();
 
     if (DEV) {
       // 开发态：后端由 `pnpm dev` 起（Vite 代理到 127.0.0.1:8000）

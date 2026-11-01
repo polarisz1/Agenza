@@ -24,6 +24,7 @@ import { listWorkflows, deleteWorkflow, duplicateWorkflow, createWorkflow } from
 import type { WorkflowListItem } from '../api';
 import { WORKFLOW_TEMPLATES } from '../templates';
 import { formatDateTime } from '@/shared/utils/datetime';
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 
 export default function WorkflowList() {
   const nav = useNavigate();
@@ -35,11 +36,14 @@ export default function WorkflowList() {
   const [status, setStatus] = useState<string>('');
   const [sort, setSort] = useState<string>('updated_desc');
 
+  // 搜索防抖：每敲一个字就发一次请求既浪费也容易乱序（评审 G25）
+  const debouncedQ = useDebouncedValue(q, 300);
+
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const data = await listWorkflows(q || undefined, status || undefined, sort);
+      const data = await listWorkflows(debouncedQ || undefined, status || undefined, sort);
       setItems(data);
     } catch (err: any) {
       // 以前只有 try/finally：接口失败会变成空表 + unhandled rejection（G22）
@@ -48,7 +52,7 @@ export default function WorkflowList() {
     } finally {
       setLoading(false);
     }
-  }, [q, status, sort]);
+  }, [debouncedQ, status, sort]);
 
   useEffect(() => {
     load();

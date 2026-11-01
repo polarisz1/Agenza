@@ -1,6 +1,6 @@
 """Run module."""
 
-from sqlalchemy import Column, DateTime, Integer, String, Text
+from sqlalchemy import Column, DateTime, Index, Integer, String, Text, text
 
 from app.core.time import utcnow
 from app.db.database import Base
@@ -21,6 +21,17 @@ class Run(Base):
     finished_at = Column(DateTime, nullable=True)
     duration_ms = Column(Integer, nullable=True)
     total_tokens = Column(Integer, default=0)
+
+    # 同一工作流同时只允许一个 running 的运行（评审 G6）：
+    # 只靠"先查后插"挡不住双击并发，这里用部分唯一索引让数据库兜底。
+    __table_args__ = (
+        Index(
+            "uq_run_running_per_workflow",
+            "workflow_id",
+            unique=True,
+            sqlite_where=text("status = 'running'"),
+        ),
+    )
 
 
 class NodeRun(Base):

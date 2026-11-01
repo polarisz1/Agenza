@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -14,7 +14,7 @@ from app.core.config import settings
 from app.core.response import ApiResponse, ClearResult, success
 from app.modules.providers.service import ProviderService
 from app.modules.runs.service import RunService
-from app.modules.settings.schemas import SettingsResponse, SystemInfo
+from app.modules.settings.schemas import SettingsResponse, SettingsUpdate, SystemInfo
 from app.modules.settings.service import SettingsService
 from app.modules.workflows.service import WorkflowService
 
@@ -27,8 +27,9 @@ def get_settings(session: Session = Depends(get_session)):
 
 
 @router.put("", response_model=ApiResponse[SettingsResponse])
-def update_settings(data: dict = Body(...), session: Session = Depends(get_session)):
-    return success(SettingsService.update(session, data))
+def update_settings(body: SettingsUpdate, session: Session = Depends(get_session)):
+    """更新本机设置（只校验并接受已声明的字段）。"""
+    return success(SettingsService.update(session, body.model_dump(exclude_none=True)))
 
 
 @router.post("/system/clear-runs", response_model=ApiResponse[ClearResult])

@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -107,6 +108,13 @@ class RunService:
             started_at=utcnow(),
         )
         RunRepository.create(session, run)
+        # 先把 run 落库：引擎回调走独立的 SessionLocal，看不到未提交的数据。
+        # 部分唯一索引（0002）会在并发双击时抛 IntegrityError，这里翻成 409。
+        try:
+            session.commit()
+        except IntegrityError:
+            session.rollback()
+            raise AppError(409, "Workflow already has a running run") from None
 
         providers_registry = get_providers_registry(session)
         manager: RunManager = get_run_manager()
@@ -215,8 +223,10 @@ class RunService:
 
     @staticmethod
     def clear_all(session: Session) -> int:
-        """清空全部运行记录（含节点级记录）。"""
-        return RunRepository.clear_all(session)
+        """清空全部运行记录（含节点级记录）。两张表的删除必须在同一事务里提交。"""
+        deleted = RunRepository.clear_all(session)
+        session.commit()
+        return deleted
 
     @staticmethod
     async def cancel(run_id: str) -> bool:
@@ -348,6 +358,9 @@ def _make_run_finished(run_id: str, workflow_id: str):
                 old_ids = RunRepository.list_older_run_ids(db, workflow_id, keep)
                 if old_ids:
                     RunRepository.delete_runs(db, old_ids)
+                # 收尾 = 更新 run + 标记工作流最近运行 + 按保留策略删除旧记录，
+                # 三件事必须一次性提交，否则中途失败会留下"运行结束但工作流没更新"的脏状态
+                db.commit()
         except Exception:
             log.exception(f"Failed to finalize run {run_id}")
 

@@ -21,6 +21,17 @@ from app.modules.workflows import models as _workflow_models  # noqa: F401
 EXPECTED_TABLES = {"workflow", "run", "node_run", "provider", "app_setting", "alembic_version"}
 
 
+def _expected_head() -> str:
+    """从迁移脚本目录推当前 head，避免每加一版就要改测试里的硬编码。"""
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    from app.core.config import settings
+
+    script = ScriptDirectory.from_config(Config(str(settings.alembic_ini)))
+    return script.get_current_head()
+
+
 def _engine(tmp_path):
     return create_engine(f"sqlite:///{tmp_path / 'test.db'}")
 
@@ -45,7 +56,7 @@ def test_empty_db_gets_schema_from_baseline(monkeypatch, tmp_path) -> None:
     with eng.connect() as conn:
         tables = set(inspect(conn).get_table_names())
     assert tables >= EXPECTED_TABLES
-    assert _version(eng) == "0001"
+    assert _version(eng) == _expected_head()
 
 
 def test_legacy_db_is_stamped_and_keeps_data(monkeypatch, tmp_path) -> None:
@@ -63,7 +74,7 @@ def test_legacy_db_is_stamped_and_keeps_data(monkeypatch, tmp_path) -> None:
     _use(monkeypatch, eng)
     database.init_db()
 
-    assert _version(eng) == "0001"
+    assert _version(eng) == _expected_head()
     with eng.connect() as conn:
         name = conn.execute(text("select name from workflow")).scalar()
     assert name == "旧工作流", "打标不能动数据"
@@ -76,4 +87,4 @@ def test_init_db_is_idempotent(monkeypatch, tmp_path) -> None:
     database.init_db()
     database.init_db()
 
-    assert _version(eng) == "0001"
+    assert _version(eng) == _expected_head()

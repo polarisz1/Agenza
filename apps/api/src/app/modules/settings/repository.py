@@ -27,4 +27,4 @@ class SettingsRepository:
             session.add(AppSetting(key=key, value_json=value_json))
         else:
             row.value_json = value_json
-        session.commit()
+        session.flush()

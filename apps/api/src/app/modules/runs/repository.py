@@ -13,7 +13,7 @@ class RunRepository:
     @staticmethod
     def create(session: Session, obj: Run) -> Run:
         session.add(obj)
-        session.commit()
+        session.flush()
         session.refresh(obj)
         return obj
 
@@ -48,14 +48,14 @@ class RunRepository:
             return None
         for k, v in fields.items():
             setattr(obj, k, v)
-        session.commit()
+        session.flush()
         session.refresh(obj)
         return obj
 
     @staticmethod
     def add_node_run(session: Session, obj: NodeRun) -> NodeRun:
         session.add(obj)
-        session.commit()
+        session.flush()
         return obj
 
     @staticmethod
@@ -83,7 +83,7 @@ class RunRepository:
             )
         ).delete(synchronize_session=False)
         session.query(Run).filter(Run.workflow_id == workflow_id).delete()
-        session.commit()
+        session.flush()
 
     # ---- 运行保留策略 ----
 
@@ -109,7 +109,7 @@ class RunRepository:
         count = session.query(Run).count()
         session.query(NodeRun).delete(synchronize_session=False)
         session.query(Run).delete(synchronize_session=False)
-        session.commit()
+        session.flush()
         return count
 
     @staticmethod
@@ -118,4 +118,4 @@ class RunRepository:
             return
         session.query(NodeRun).filter(NodeRun.run_id.in_(run_ids)).delete(synchronize_session=False)
         session.query(Run).filter(Run.id.in_(run_ids)).delete(synchronize_session=False)
-        session.commit()
+        session.flush()
