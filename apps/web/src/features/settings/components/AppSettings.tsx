@@ -1,5 +1,6 @@
 import {
   Alert,
+  App,
   Button,
   Card,
   Descriptions,
@@ -10,7 +11,6 @@ import {
   Switch,
   Table,
   Tag,
-  message,
   Popconfirm,
 } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -26,6 +26,7 @@ import {
 import type { SettingsResponse, SystemInfo, WorkflowImportResult } from '../api';
 
 export default function AppSettings() {
+  const { message } = App.useApp();
   const [, setSettings] = useState<SettingsResponse | null>(null);
   const [info, setInfo] = useState<SystemInfo | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -116,9 +117,13 @@ export default function AppSettings() {
           form={form}
           layout="inline"
           onFinish={async (values) => {
-            const updated = await updateSettings(values);
-            setSettings(updated);
-            message.success('已保存');
+            try {
+              const updated = await updateSettings(values);
+              setSettings(updated);
+              message.success('已保存');
+            } catch (err: any) {
+              message.error(err?.message || '保存设置失败');
+            }
           }}
         >
           <Form.Item name="auto_save" label="自动保存" valuePropName="checked">
@@ -187,9 +192,13 @@ export default function AppSettings() {
             okText="清空"
             okButtonProps={{ danger: true }}
             onConfirm={async () => {
-              const res = await clearRuns();
-              message.success(`已清空 ${res.cleared} 条`);
-              load();
+              try {
+                const res = await clearRuns();
+                message.success(`已清空 ${res.cleared} 条`);
+                load();
+              } catch (err: any) {
+                message.error(err?.message || '清空失败');
+              }
             }}
           >
             <Button danger>清空运行记录</Button>

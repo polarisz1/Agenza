@@ -1,4 +1,4 @@
-import { Layout, Menu, theme, Avatar, Dropdown, message } from 'antd';
+import { App, Layout, Menu, theme, Avatar, Dropdown } from 'antd';
 import {
   AppstoreOutlined,
   ThunderboltOutlined,
@@ -19,6 +19,7 @@ const menu = [
 ];
 
 export default function AppLayout() {
+  const { message } = App.useApp();
   const { token } = theme.useToken();
   const loc = useLocation();
 

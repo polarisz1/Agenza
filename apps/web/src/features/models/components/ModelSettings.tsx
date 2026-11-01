@@ -1,4 +1,6 @@
 import {
+  Alert,
+  App,
   Button,
   Table,
   Tag,
@@ -8,7 +10,6 @@ import {
   Input,
   Select,
   Switch,
-  message,
   Popconfirm,
 } from 'antd';
 import { PlusOutlined, LinkOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
@@ -30,8 +31,10 @@ const KINDS: { value: string; label: string }[] = [
 ];
 
 export default function ModelSettings() {
+  const { message } = App.useApp();
   const [items, setItems] = useState<ProviderResponse[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,9 +42,14 @@ export default function ModelSettings() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await listProviders();
-      setItems(data as any);
+      setItems(data);
+    } catch (err: any) {
+      // 与工作流列表/设置页同样的错误态：接口失败不能只留一张空表（G22 同类问题）
+      setLoadError(err?.message || '加载服务商失败');
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -67,6 +75,22 @@ export default function ModelSettings() {
           添加服务商
         </Button>
       </div>
+
+      {loadError && (
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginBottom: 12 }}
+          message="加载服务商失败"
+          description={loadError}
+          action={
+            <Button size="small" onClick={() => void load()}>
+              重试
+            </Button>
+          }
+        />
+      )}
+
       <Table
         rowKey="id"
         loading={loading}
@@ -127,9 +151,13 @@ export default function ModelSettings() {
                 <Popconfirm
                   title="确定删除该服务商？"
                   onConfirm={async () => {
-                    await deleteProvider(r.id);
-                    message.success('已删除');
-                    load();
+                    try {
+                      await deleteProvider(r.id);
+                      message.success('已删除');
+                      load();
+                    } catch (err: any) {
+                      message.error(err?.message || '删除失败');
+                    }
                   }}
                 >
                   <Button type="link" size="small" danger icon={<DeleteOutlined />}>
@@ -147,15 +175,21 @@ export default function ModelSettings() {
         title={editingId ? '编辑服务商' : '添加服务商'}
         onCancel={() => setOpen(false)}
         onOk={async () => {
-          const values = await form.validateFields();
-          if (editingId) {
-            await updateProvider(editingId, values);
-          } else {
-            await createProvider(values);
+          try {
+            const values = await form.validateFields();
+            if (editingId) {
+              await updateProvider(editingId, values);
+            } else {
+              await createProvider(values);
+            }
+            message.success(editingId ? '已更新' : '已添加');
+            setOpen(false);
+            load();
+          } catch (err: any) {
+            // 表单校验失败（errorFields）由 AntD 自行提示；接口失败要给出可读信息
+            if (err?.errorFields) return;
+            message.error(err?.message || '保存服务商失败');
           }
-          message.success(editingId ? '已更新' : '已添加');
-          setOpen(false);
-          load();
         }}
       >
         <Form form={form} layout="vertical">

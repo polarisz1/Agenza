@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, message } from 'antd';
+import { App, Modal } from 'antd';
 
 import type { WorkflowInputField } from '../types';
 
@@ -13,6 +13,7 @@ interface Props {
 
 /** 运行前的必填输入表单（PRD §5.5：必填输入未填写先弹表单） */
 export default function RunInputsModal({ open, fields, loading, onCancel, onSubmit }: Props) {
+  const { message } = App.useApp();
   const [values, setValues] = useState<Record<string, any>>({});
 
   useEffect(() => {

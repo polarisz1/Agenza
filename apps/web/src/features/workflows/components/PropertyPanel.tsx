@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { message } from 'antd';
+import { App, Button, Input, Segmented, Switch } from 'antd';
 
 import { CONDITION_OPS, NODE_META, isVariableSafeLabel } from '../types';
 import { listProviderOptions, type NodeTestResult, type ProviderOption } from '../api';
@@ -39,8 +39,11 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 /** 右侧属性面板：按节点类型渲染表单 + 变量选择器 + 最近输出 + 单节点调试 */
 export default function PropertyPanel({ variables, latestOutputs, onDebug }: Props) {
+  const { message } = App.useApp();
   const nodes = useEditorStore((s) => s.nodes);
   const selectedId = useEditorStore((s) => s.selectedId);
+  const description = useEditorStore((s) => s.description);
+  const setDescription = useEditorStore((s) => s.setDescription);
   const historyVersion = useEditorStore((s) => s.historyVersion);
   const beginHistory = useEditorStore((s) => s.beginHistory);
 
@@ -161,15 +164,16 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
       <div className="afe-hint">
         可用变量：
         {variables.map((v) => (
-          <button
-            type="button"
+          <Button
             key={v.token}
+            type="link"
+            size="small"
             className="afe-var-chip"
             title={`插入到「${field}」光标处`}
             onClick={() => insertToken(field, v.token)}
           >
             {v.token}
-          </button>
+          </Button>
         ))}
       </div>
     );
@@ -200,6 +204,19 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
         <div className="afe-props-empty">
           <p>单击画布中的节点查看并编辑参数。</p>
           <p className="afe-dim">从左侧拖入节点开始编排。</p>
+
+          {/* 工作流级信息：没选中节点时编辑，列表页的「描述」列才有内容（评审 G28） */}
+          <div className="afe-props-group" style={{ marginTop: 18 }}>
+            <div className="afe-props-group-title">工作流信息</div>
+            <Field label="描述" hint="保存后显示在工作流列表的「描述」列">
+              <Input.TextArea
+                rows={3}
+                value={description}
+                placeholder="例如：抓取网页并用 LLM 摘要"
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </Field>
+          </div>
         </div>
       </aside>
     );
@@ -219,9 +236,9 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
           onChange={(e) => setLabelDraft(e.target.value)}
           title="节点名称（变量引用使用该名称）"
         />
-        <button className="afe-btn afe-btn--text" onClick={handleDebug} disabled={debugging}>
-          {debugging ? '调试中…' : '调试此节点'}
-        </button>
+        <Button size="small" onClick={handleDebug} loading={debugging}>
+          调试此节点
+        </Button>
       </div>
 
       {labelInvalid && (
@@ -229,20 +246,15 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
       )}
 
       <div className="afe-props-tabs">
-        <button
-          type="button"
-          className={tab === 'params' ? 'afe-tab afe-tab--on' : 'afe-tab'}
-          onClick={() => setTab('params')}
-        >
-          参数
-        </button>
-        <button
-          type="button"
-          className={tab === 'output' ? 'afe-tab afe-tab--on' : 'afe-tab'}
-          onClick={() => setTab('output')}
-        >
-          输出
-        </button>
+        <Segmented
+          size="small"
+          value={tab}
+          onChange={(value) => setTab(value as 'params' | 'output')}
+          options={[
+            { label: '参数', value: 'params' },
+            { label: '输出', value: 'output' },
+          ]}
+        />
         <span className="afe-dim" style={{ marginLeft: 'auto' }}>
           {meta.label}
         </span>
@@ -255,13 +267,12 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
             <div className="afe-props-group">
               <div className="afe-props-group-title">基本</div>
               <Field label="启用">
-                <button
-                  type="button"
-                  aria-pressed={draft.enabled !== false}
-                  className={draft.enabled === false ? 'afe-switch' : 'afe-switch afe-switch--on'}
-                  onClick={() => {
+                <Switch
+                  size="small"
+                  checked={draft.enabled !== false}
+                  onChange={(checked) => {
                     beginHistory();
-                    setField('enabled', draft.enabled === false);
+                    setField('enabled', checked);
                   }}
                 />
               </Field>
@@ -320,13 +331,12 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
                   </select>
                 </Field>
                 <Field label="必填">
-                  <button
-                    type="button"
-                    aria-pressed={Boolean(draft.required)}
-                    className={draft.required ? 'afe-switch afe-switch--on' : 'afe-switch'}
-                    onClick={() => {
+                  <Switch
+                    size="small"
+                    checked={Boolean(draft.required)}
+                    onChange={(checked) => {
                       beginHistory();
-                      setField('required', !draft.required);
+                      setField('required', checked);
                     }}
                   />
                 </Field>

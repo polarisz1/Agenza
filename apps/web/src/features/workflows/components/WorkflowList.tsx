@@ -1,15 +1,4 @@
-import {
-  Alert,
-  Button,
-  Dropdown,
-  Input,
-  Select,
-  Table,
-  Tag,
-  Space,
-  Popconfirm,
-  message,
-} from 'antd';
+import { Alert, App, Button, Dropdown, Input, Select, Table, Tag, Space, Popconfirm } from 'antd';
 import {
   PlusOutlined,
   SearchOutlined,
@@ -27,6 +16,7 @@ import { formatDateTime } from '@/shared/utils/datetime';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 
 export default function WorkflowList() {
+  const { message } = App.useApp();
   const nav = useNavigate();
   const [items, setItems] = useState<WorkflowListItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,6 +54,7 @@ export default function WorkflowList() {
       if (key === 'blank') {
         const wf = await createWorkflow({
           name: '未命名工作流',
+          description: '',
           graph: { version: 1, inputs: [], nodes: [], edges: [] },
         });
         nav(`/workflows/${wf.id}`);
@@ -72,7 +63,12 @@ export default function WorkflowList() {
 
       const template = WORKFLOW_TEMPLATES.find((item) => item.key === key);
       if (!template) return;
-      const wf = await createWorkflow({ name: template.name, graph: template.build() });
+      // 模板自带描述，创建时一并落库，列表的「描述」列才有内容（评审 G28）
+      const wf = await createWorkflow({
+        name: template.name,
+        description: template.description,
+        graph: template.build(),
+      });
       nav(`/workflows/${wf.id}`);
     } catch (err: any) {
       message.error(err?.message || '创建工作流失败');
@@ -174,7 +170,12 @@ export default function WorkflowList() {
             dataIndex: 'name',
             render: (text, record) => <a onClick={() => nav(`/workflows/${record.id}`)}>{text}</a>,
           },
-          { title: '描述', dataIndex: 'description', ellipsis: true },
+          {
+            title: '描述',
+            dataIndex: 'description',
+            ellipsis: true,
+            render: (value?: string | null) => value || '—',
+          },
           {
             title: '状态',
             dataIndex: 'status',
@@ -214,9 +215,13 @@ export default function WorkflowList() {
                   size="small"
                   icon={<CopyOutlined />}
                   onClick={async () => {
-                    await duplicateWorkflow(record.id);
-                    message.success('已复制');
-                    load();
+                    try {
+                      await duplicateWorkflow(record.id);
+                      message.success('已复制');
+                      load();
+                    } catch (err: any) {
+                      message.error(err?.message || '复制失败');
+                    }
                   }}
                 >
                   复制
@@ -227,9 +232,13 @@ export default function WorkflowList() {
                   okText="删除"
                   okButtonProps={{ danger: true }}
                   onConfirm={async () => {
-                    await deleteWorkflow(record.id);
-                    message.success('已删除');
-                    load();
+                    try {
+                      await deleteWorkflow(record.id);
+                      message.success('已删除');
+                      load();
+                    } catch (err: any) {
+                      message.error(err?.message || '删除失败');
+                    }
                   }}
                 >
                   <Button type="link" size="small" danger icon={<DeleteOutlined />}>

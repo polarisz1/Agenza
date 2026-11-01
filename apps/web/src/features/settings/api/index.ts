@@ -2,6 +2,7 @@ import { apiUrl, http } from '@/shared/lib/http';
 import type { components } from '@agentflow/contracts';
 
 export type SettingsResponse = components['schemas']['SettingsResponse'];
+export type SettingsUpdate = components['schemas']['SettingsUpdate'];
 export type SystemInfo = components['schemas']['SystemInfo'];
 export type ClearResult = components['schemas']['ClearResult'];
 export type WorkflowImportResult = components['schemas']['WorkflowImportResult'];
@@ -10,7 +11,7 @@ export async function getSettings(): Promise<SettingsResponse> {
   return http.get<SettingsResponse>('/api/settings');
 }
 
-export async function updateSettings(data: Partial<SettingsResponse>): Promise<SettingsResponse> {
+export async function updateSettings(data: SettingsUpdate): Promise<SettingsResponse> {
   return http.put<SettingsResponse>('/api/settings', data);
 }
 
