@@ -143,7 +143,7 @@ FastAPI OpenAPI → contracts → TS 类型 / Electron + PyInstaller。
 | T5.0.1 B1/B2 热修 | ✅ | `8ee4375`；177 passed；`DEBUG=true` 实跑成功 |
 | T5.0.2 文档（PRD/UI/plan/roadmap） | ✅ | `docs/v0.2-*.md` |
 | T5.0.3 UI 原型 | ✅ | `docs/v0.2-prototype/index.html`（6 视图）+ 截图走查 |
-| T5.1.1–T5.1.6 M5.1 | ⬜ | — |
+| T5.1.1–T5.1.6 M5.1 | 🔄 | T5.1.1 ✅ `d0b87ca`（节点输入）；T5.1.5 ✅ `603ad9b`（实时可用性）；其余待做 |
 | T5.2.1–T5.2.11 M5.2 | ⬜ | — |
 | T5.3.1–T5.3.9 M5.3 | ⬜ | — |
 | T5.4.1–T5.4.6 M5.4 | ⬜ | — |
