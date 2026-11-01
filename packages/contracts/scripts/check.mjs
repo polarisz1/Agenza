@@ -29,12 +29,17 @@ try {
   console.log('[contracts:check] 重新导出 OpenAPI...');
   execFileSync(process.execPath, [join(SCRIPT_DIR, 'generate.mjs'), '--out', freshYaml], {
     stdio: 'inherit',
+    // generate.mjs 自身有 45s 的 fetch 预算；这里再兜一层，防止整条链路被挂死（G30）
+    timeout: 120_000,
   });
   compare('openapi.yaml', COMMITTED_YAML, freshYaml);
 
   const freshTs = join(tmp, 'index.ts');
   console.log('[contracts:check] 重新生成 TS 类型...');
-  execFileSync(process.execPath, [CLI, freshYaml, '-o', freshTs], { stdio: 'inherit' });
+  execFileSync(process.execPath, [CLI, freshYaml, '-o', freshTs], {
+    stdio: 'inherit',
+    timeout: 120_000,
+  });
   compare('src/generated/index.ts', COMMITTED_TS, freshTs);
 
   console.log('[contracts:check] OK - 契约与生成类型都与后端一致');
