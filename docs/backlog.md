@@ -55,6 +55,7 @@
 
 | 项 | 原因 | 证据 |
 |---|---|---|
+| v0.1.1 热修：reload 下 Python 节点失败 + 空错误 | uvicorn reload 在 Windows 用 SelectorEventLoop，`create_subprocess_exec` 抛空消息 NotImplementedError，开发态脚本节点必失败 | `core/engine/errors.py`、`executors/python.py` 线程降级；9 条新用例；177 passed |
 | 契约生成中文乱码 | Windows 下 Python 从 stdin 按 cp936 解码 UTF-8 JSON，导致 openapi.yaml/generated TS 里的中文描述变乱码 | `generate.mjs`（临时文件 + `PYTHONUTF8`），重生成后 `contracts:check` 通过 |
 | `core/providers` 反向依赖 `modules` | 评审 §4 A2：横切层不得依赖 feature 层 | 装载逻辑下沉到 `modules/providers/service.py::build_registry`，`core/providers/__init__.py` 只留适配器 |
 | 后端日志在壳里乱码 | 壳按 UTF-8 解 stdout，而 Python 在 Windows 默认 cp936 | `electron/main.js` spawn 注入 `PYTHONUTF8`/`PYTHONIOENCODING`；`dev.mjs` 同步 |

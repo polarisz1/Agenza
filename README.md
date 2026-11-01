@@ -119,6 +119,10 @@ pnpm e2e                                                        # 浏览器走�
 | [`docs/agentflow-roadmap.md`](docs/agentflow-roadmap.md) | 阶段进度、下一步计划、待决策项 |
 | [`docs/code-review-2026-10-30.md`](docs/code-review-2026-10-30.md) | 首轮代码评审报告与缺陷处置进度 |
 | [`docs/code-review-2026-11-01.md`](docs/code-review-2026-11-01.md) | v0.1 收尾复核：缺口清单、验证矩阵、遗留项判定 |
+| [`docs/v0.2-prd.md`](docs/v0.2-prd.md) | v0.2 产品需求（功能、验收、里程碑） |
+| [`docs/v0.2-ui-design.md`](docs/v0.2-ui-design.md) | v0.2 UI/UX 规范与设计验收清单 |
+| [`docs/v0.2-plan.md`](docs/v0.2-plan.md) | v0.2 任务清单（T5.x） |
+| [`docs/v0.2-prototype/index.html`](docs/v0.2-prototype/index.html) | v0.2 关键页面交互原型（浏览器直接打开） |
 | [`docs/backlog.md`](docs/backlog.md) | 已确认延后事项（只剩依赖外部条件的 A 组） |
 | [`docs/v0.1-perf-baseline.md`](docs/v0.1-perf-baseline.md) | 100 节点性能基线与阈值 |
 | [`docs/dependency-audit-2026-11-01.md`](docs/dependency-audit-2026-11-01.md) | 依赖漏洞与许可证审计 |
