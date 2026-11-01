@@ -5,54 +5,98 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build-desktop:
     runs-on: windows-latest
+    timeout-minutes: 45
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-      - uses: actions/setup-python@v5
-        with: { python-version: '3.12' }
+
       - uses: pnpm/action-setup@v4
-        with: { version: 9.12.0 }
+        with:
+          version: 9.12.0
 
-      - name: pnpm install
-        run: pnpm install --frozen-lockfile || pnpm install
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
 
-      - name: uv install
-        run: pip install uv pyinstaller && cd apps/api && uv sync
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Sync backend deps
+        run: uv sync --directory apps/api
+
+      # Python 节点在打包后要用随包解释器（D-5），构建脚本会检查它是否存在
+      - name: Prepare embedded Python
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dest = 'pyinstaller/pyemb'
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          $zip = Join-Path $env:RUNNER_TEMP 'pyemb.zip'
+          Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip' -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $dest -Force
+          if (-not (Test-Path (Join-Path $dest 'python.exe'))) {
+            throw 'embeddable Python 解压失败：pyinstaller/pyemb/python.exe 不存在'
+          }
 
       - name: Build frontend
         run: pnpm --filter @agentflow/web build
 
+      # 走 pyinstaller/backend.spec + pyinstaller/build.py：
+      # 单文件 exe 里必须带 alembic/、frontend-dist/、pyemb/，否则装完打不开（M4-T2）
       - name: Build backend exe
-        run: |
-          cd apps/api
-          uv run pyinstaller --onefile --name backend.exe src/app/run.py --distpath ../../electron/resources --workpath ../../.build/pyinstaller --noconfirm
+        run: uv run --project apps/api --with pyinstaller python pyinstaller/build.py
 
-      - name: Build Electron app
+      - name: Build desktop app
         working-directory: electron
         run: |
-          npm install
-          npm run build
+          npm ci
+          npx electron-builder --win nsis --x64
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Verify artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $backend = 'apps/api/dist_backend/backend.exe'
+          if (-not (Test-Path $backend)) { throw "缺少后端产物：$backend" }
+          $setup = Get-ChildItem electron/dist_electron -Filter '*.exe' | Select-Object -First 1
+          if (-not $setup) { throw '没有产出安装包' }
+          "backend.exe : {0:N1} MB" -f ((Get-Item $backend).Length / 1MB)
+          "installer   : {0} ({1:N1} MB)" -f $setup.Name, ($setup.Length / 1MB)
+
+      - uses: actions/upload-artifact@v4
         with:
           name: AgentFlow-Setup
           path: electron/dist_electron/*.exe
+          retention-days: 14
 
   release:
     needs: build-desktop
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
-        with: { name: AgentFlow-Setup, path: ./dist }
+        with:
+          name: AgentFlow-Setup
+          path: ./dist
+
       - uses: softprops/action-gh-release@v2
         with:
           files: ./dist/*
+          generate_release_notes: true

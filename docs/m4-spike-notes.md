@@ -127,6 +127,13 @@ backend.exe --port 8031 --data-dir <tmp> --log-level warning
 （`WinError 5` / `DENY(DC)`），因此 `build.py` 的最后一步"装机到 dist_backend"在本机失败；
 在普通环境上该步骤正常。构建产物本身已跑通验证。
 
+**发布链路已同步**（`release.yml`）：原来 CI 里是一条裸 PyInstaller 命令
+（`--onefile src/app/run.py --distpath electron/resources`），打不出带资源的包。
+现在 CI 与本地同一条链路：准备 `pyinstaller/pyemb` → `pnpm build:web` →
+`uv run --project apps/api --with pyinstaller python pyinstaller/build.py` →
+`electron-builder --win nsis`，并在上传前断言
+`apps/api/dist_backend/backend.exe` 与安装包都已产出。
+
 ## ④ Electron 装配 + 安装包冒烟（已跑通）
 
 **装配做的事**（`electron/main.js`）：壳负责后端全生命周期——找空闲端口 → spawn

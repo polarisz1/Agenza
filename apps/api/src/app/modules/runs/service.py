@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.engine.contexts import NodeResult
+from app.core.engine.limits import clamp_serialized
 from app.core.engine.manager import RunManager, get_run_manager
 from app.core.engine.validators import BLOCKING_CODES, validate_graph
 from app.core.exceptions import AppError
@@ -306,7 +307,7 @@ def _make_node_finished(run_id: str):
                 nr.model = result.model
                 nr.error = result.error
                 nr.output_json = (
-                    json.dumps(result.output, ensure_ascii=False, default=str)
+                    clamp_serialized(json.dumps(result.output, ensure_ascii=False, default=str))
                     if result.output is not None
                     else None
                 )

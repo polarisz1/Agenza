@@ -313,7 +313,7 @@ Node 22.23.4 / pnpm 9.12.0 / Python 3.12.13（uv 管理），全部安装在 **E
 | B2 | 抽取不读 `fields_text` | ✅ 已修 | `fe9aeaf`；`test_extract` 7 条 |
 | B3 | 零测试 / 无 lint / CI 假作业 | ✅ 已修 | `2439e09`；用例 0 → 61，ESLint+Prettier 配置，CI 三 job 真跑 |
 | B4 | 无 alembic 迁移 | ✅ 已修 | `b835868`：`0001_baseline` + 启动 `upgrade head`，老库自动 stamp；`alembic check` 无漂移 |
-| B5 | Python 节点冻结后不可用 | ⬜ M4 前置验证 | — |
+| B5 | Python 节点冻结后不可用 | ✅ 已修 | `9de0dec`：`resolve_python_bin()`（`PYTHON_BIN` > 随包 `pyemb` > 开发态解释器），打包态找不到时给可读错误；打包后实测脚本跑在 `_MEIPASS/pyemb/python.exe`（3.12.10） |
 | S1 | `ok` 只等于"无环" | ✅ 已修 | `284995f`：`ok = 无任何问题`、`blocking` 单独给出；前端删掉自建码表 |
 | S2 | 变量只校验源 | ✅ 已修 | `284995f`：字段级校验（`UNKNOWN_FIELD`，错误信息列出可用字段） |
 | S3 | merge 输入顺序不确定 | ✅ 已修 | `parent_edges` 按边声明顺序（T3a）；`all` 定义为"激活分支全部到达"，未激活分支按设计不参与 |
@@ -340,6 +340,11 @@ Node 22.23.4 / pnpm 9.12.0 / Python 3.12.13（uv 管理），全部安装在 **E
 | G18 | 密钥解密失败静默空串 | ✅ 已修 | `2fd0515`：抛 `KeyDecryptError` + `UnusableProvider` + 掩码提示 |
 | G22 | 列表/设置页无错误态 | ✅ 已修 | `c0b1d1e`：补 catch + Alert + 重试 |
 | G35 | `vite-env.d.ts` 悬空类型引用 | ✅ 已修 | `2439e09` |
+| G2 | `modules/settings/` 缺 repository | ✅ 已修 | `93f7de6`（原表漏记：补 `repository.py`，路由只调 service） |
+| G32 | 缺 `.gitattributes` | ✅ 已修 | `a102461`（原表漏记：声明 `eol=lf`） |
+| G8 | 节点输出 / HTTP 响应无上限 | ✅ 已修 | `core/engine/limits.py`：入库前 1MB 截断（**截断结果仍是合法 JSON**）+ HTTP 响应体 2MB 上限；`test_output_and_limits`、`test_http_executor` |
+| G16 | `output.py` 结合律歧义 | ✅ 已修 | 三分支语义：留空取首个上游 / 节点 id 取结构化输出 / 模板取解析值；写了来源却找不到时报错并列出可用节点 |
+| G34 | 壳的 IPC 时序 / 多窗口 / 无导航限制 | ◐ 部分 | `05fdcc3` 已补：IPC 先于 `loadURL` 注册、托盘复用窗口、`setWindowOpenHandler` + `will-navigate` 白名单、加载失败弹对话框；**CSP 仍缺** |
 
 ---
 

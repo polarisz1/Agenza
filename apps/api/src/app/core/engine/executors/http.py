@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import json
+from typing import Any
+
 import httpx
 
 from app.core.engine.contexts import NodeContext, NodeResult
 from app.core.engine.executors.base import BaseExecutor
+from app.core.engine.limits import MAX_HTTP_BODY_BYTES
 from app.core.net import trust_env_for
 
 
@@ -38,20 +42,36 @@ class HttpExecutor(BaseExecutor):
         except httpx.RequestError as exc:
             return NodeResult(status="failed", error=f"请求失败：{exc}")
 
-        text = resp.text
-        try:
-            import json
+        # 响应体上限（评审 G8）：超大响应不再整个读进内存，超限即截断并标记
+        raw = resp.content
+        truncated = False
+        if len(raw) > MAX_HTTP_BODY_BYTES:
+            raw = raw[:MAX_HTTP_BODY_BYTES]
+            truncated = True
 
-            body_out = json.loads(text)
-        except Exception:
-            body_out = text
+        text = raw.decode(resp.encoding or "utf-8", errors="replace")
+        if truncated:
+            body_out: Any = {
+                "truncated": True,
+                "bytes_read": len(raw),
+                "preview": text[:2000],
+            }
+        else:
+            try:
+                body_out = json.loads(text)
+            except Exception:
+                body_out = text
+
+        output: dict[str, Any] = {
+            "status": resp.status_code,
+            "headers": dict(resp.headers),
+            "body": body_out,
+        }
+        if truncated:
+            output["truncated"] = True
 
         return NodeResult(
             status="success" if resp.is_success else "failed",
-            output={
-                "status": resp.status_code,
-                "headers": dict(resp.headers),
-                "body": body_out,
-            },
+            output=output,
             error=None if resp.is_success else f"HTTP {resp.status_code}: {resp.reason_phrase}",
         )
