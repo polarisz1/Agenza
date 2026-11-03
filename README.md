@@ -1,12 +1,13 @@
 # AgentFlow
 
-本地单用户的 AI 工作流编排平台：在画布上拖拽节点、连线、逐节点调试，运行过程与每一步的输入/输出/耗时/token 都可见。
+多租户 AI 工作流编排 SaaS：在画布上拖拽节点、连线、逐节点调试，运行过程与每一步的输入/输出/耗时/token 都可见；支持团队协作、工作空间隔离，可选私有化部署。
 
 - 前端：React 18 + Vite 5 + TypeScript + Ant Design 5 + @xyflow/react
-- 后端：FastAPI + Pydantic v2 + SQLAlchemy 2.0 + SQLite（WAL），执行引擎是自研 DAG
+- 后端：FastAPI + Pydantic v2 + SQLAlchemy 2.0 + PostgreSQL（本地开发可切 SQLite），执行引擎是自研 DAG
+- 鉴权与租户：JWT + bcrypt + `TenantMiddleware`（`TENANCY_ENABLED` 开关，桌面单用户模式自动降级）
 - 契约：后端 Pydantic → OpenAPI → 前端 TypeScript 类型（单一事实源）
 
-> 目录结构、分层禁令与安全基线见 [`AGENTS.md`](AGENTS.md)；开发阶段与下一步计划见 [`docs/agentflow-roadmap.md`](docs/agentflow-roadmap.md)。
+> 目录结构、分层禁令、多租户与安全基线见 [`AGENTS.md`](AGENTS.md)；SaaS 战略、产品设计与执行计划见下方文档表。
 
 ## 环境要求
 
@@ -79,24 +80,25 @@ pnpm audit:py             # uv export → pip-audit
 
 ## 数据与配置
 
-- 默认数据目录 `<repo>/data/`：SQLite 库 `agentflow.db` 与 Fernet 主密钥 `.secret.key` 都在这里
-- 可用环境变量 `DATA_DIR` 覆盖（打包时由 Electron 指定用户数据目录）
-- 后端配置项见 [`apps/api/.env.example`](apps/api/.env.example)；前端 API 地址可用 `VITE_API_BASE_URL` 覆盖
-- 数据库结构由 alembic 管理：从 `alembic/versions/0001_baseline.py` 起，启动时自动 `upgrade head`；
-  历史库（无 `alembic_version`）会被自动打标，不重建、不动数据
+- 数据库由 `DATABASE_URL` 决定：SaaS / 私有化用 PostgreSQL，本地开发默认 `<repo>/data/agentflow.db`（SQLite WAL）
+- 多租户模式开关 `TENANCY_ENABLED`（默认 false，即桌面单用户模式）
+- Fernet 主密钥 `.secret.key` 在数据目录；JWT 密钥由 `JWT_SECRET` 注入，桌面模式自动生成
+- 可用环境变量 `DATA_DIR` 覆盖数据目录；后端配置见 [`apps/api/.env.example`](apps/api/.env.example)，前端 API 地址可用 `VITE_API_BASE_URL` 覆盖
+- 数据库结构由 alembic 管理：所有变更走迁移脚本，启动时自动 `upgrade head`
 
 ## 目录速览
 
 ```
 apps/api/src/app/
-├── core/          # 横切：config / security / logger / engine / providers
+├── core/          # 横切：config / tenancy / security / logger / engine / providers
 ├── db/            # engine + session + 迁移入口
-└── modules/       # 按 feature 组织：workflows / runs / providers / settings
+└── modules/       # 按 feature 组织：auth / workspaces / workflows / runs / providers / settings
 apps/web/src/
 ├── features/      # 每个功能自己的 components / hooks / api / types / index.tsx
 ├── shared/        # 跨 feature 的 UI、hooks、http 封装
 └── router/        # 路由表
 packages/contracts/  # OpenAPI 与生成的 TS 类型（禁止手写 generated/）
+deploy/              # Docker / compose / nginx（Sprint 5）
 ```
 
 ## 测试
@@ -115,18 +117,13 @@ pnpm e2e                                                        # 浏览器走�
 
 | 文件 | 内容 |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) | 协作硬约束（目录、分层、契约、安全），优先级最高 |
-| [`docs/agentflow-roadmap.md`](docs/agentflow-roadmap.md) | 阶段进度、下一步计划、待决策项 |
-| [`docs/code-review-2026-10-30.md`](docs/code-review-2026-10-30.md) | 首轮代码评审报告与缺陷处置进度 |
-| [`docs/code-review-2026-11-01.md`](docs/code-review-2026-11-01.md) | v0.1 收尾复核：缺口清单、验证矩阵、遗留项判定 |
-| [`docs/v0.2-prd.md`](docs/v0.2-prd.md) | v0.2 产品需求（功能、验收、里程碑） |
-| [`docs/v0.2-ui-design.md`](docs/v0.2-ui-design.md) | v0.2 UI/UX 规范与设计验收清单 |
-| [`docs/v0.2-plan.md`](docs/v0.2-plan.md) | v0.2 任务清单（T5.x） |
-| [`docs/v0.2-provider-matrix.md`](docs/v0.2-provider-matrix.md) | 真实 Provider 验收矩阵（待联调项与补跑步骤） |
-| [`docs/v0.2-acceptance.md`](docs/v0.2-acceptance.md) | v0.2.0 验收报告（证据、门禁、已知限制） |
-| [`docs/v0.2-prototype/index.html`](docs/v0.2-prototype/index.html) | v0.2 关键页面交互原型（浏览器直接打开） |
-| [`docs/backlog.md`](docs/backlog.md) | 已确认延后事项（只剩依赖外部条件的 A 组） |
-| [`docs/v0.1-perf-baseline.md`](docs/v0.1-perf-baseline.md) | 100 节点性能基线与阈值 |
-| [`docs/dependency-audit-2026-11-01.md`](docs/dependency-audit-2026-11-01.md) | 依赖漏洞与许可证审计 |
+| [`AGENTS.md`](AGENTS.md) | 协作硬约束（目录、分层、多租户、契约、安全），优先级最高 |
+| [`docs/saas-strategy-2026-11-03.md`](docs/saas-strategy-2026-11-03.md) | SaaS 商业化战略：市场、JTBD、定位、RICE、路线图 |
+| [`docs/saas-product-design-2026-11-03.md`](docs/saas-product-design-2026-11-03.md) | SaaS 产品与功能设计：多租户、AI Gateway、信息架构 |
+| [`docs/saas-backlog-2026-11-03.md`](docs/saas-backlog-2026-11-03.md) | Sprint 1–5 执行清单与关键路径 |
 | [`docs/dev-environment.md`](docs/dev-environment.md) | 本机环境布局与常见坑 |
-| `docs/agentflow-prd.html`、`docs/agentflow-design.html`、`docs/ui-design/index.html` | 需求 / 技术设计 / 视觉规范 |
+| [`docs/v0.1-perf-baseline.md`](docs/v0.1-perf-baseline.md) | 100 节点性能基线与阈值（CI 闸门） |
+| [`docs/dependency-audit-2026-11-01.md`](docs/dependency-audit-2026-11-01.md) | 依赖漏洞与许可证审计 |
+| [`docs/v0.2-provider-matrix.md`](docs/v0.2-provider-matrix.md) | 真实 Provider 验收矩阵（AI Gateway 联调用） |
+| [`docs/code-review-2026-10-30.md`](docs/code-review-2026-10-30.md) | 首轮代码评审与缺陷处置进度（历史证据） |
+| [`docs/code-review-2026-11-01.md`](docs/code-review-2026-11-01.md) | v0.1 收尾复核与验证矩阵（历史证据） |

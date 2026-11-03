@@ -1,7 +1,7 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 
 /**
- * M3.5 浏览器走查：把 docs/m3.5-acceptance.md 里最关键的四组自动化跑一遍。
+ * 编辑器浏览器走查：覆盖主链路最关键的四组自动化。
  *
  * 覆盖点：
  * 1. 模板创建 → 填输入 → 运行 → 成功（主链路）

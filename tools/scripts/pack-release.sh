@@ -4,7 +4,8 @@
 #   2) 后端 PyInstaller（单文件 exe，含 alembic / frontend-dist / 随包解释器）
 #   3) Electron 壳打包（electron-builder）
 #
-# 前置：pyinstaller/pyemb/ 里要有 embeddable CPython（见 docs/m4-spike-notes.md ①）
+# 前置：pyinstaller/pyemb/ 里要有 embeddable CPython（python-build-standalone 解压后的 embed 目录）
+# 说明：桌面打包仅为 Community 版保留，SaaS 交付走 deploy/ 下的 Docker 链路。
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
