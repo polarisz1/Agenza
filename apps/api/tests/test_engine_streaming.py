@@ -24,21 +24,23 @@ def _graph() -> dict:
 
 def test_scheduler_publishes_node_delta_events() -> None:
     bus = get_event_bus()
-    queue, _ = bus.subscribe("run_stream_test")
-    scheduler = Scheduler(run_id="run_stream_test", concurrency=1)
 
-    results = asyncio.run(
-        scheduler.run(
+    async def _run() -> tuple[dict, list]:
+        queue, _ = await bus.subscribe("run_stream_test")
+        scheduler = Scheduler(run_id="run_stream_test", concurrency=1)
+        results = await scheduler.run(
             graph=_graph(),
             inputs={},
             registry={"llm": DeltaExecutor()},
             providers_registry=None,
         )
-    )
+        events = []
+        while not queue.empty():
+            events.append(queue.get_nowait())
+        bus.unsubscribe("run_stream_test", queue)
+        return results, events
 
-    events = []
-    while not queue.empty():
-        events.append(queue.get_nowait())
+    results, events = asyncio.run(_run())
 
     deltas = [event for event in events if event.get("event") == "node.delta"]
     assert [event["text"] for event in deltas] == ["你", "好"]

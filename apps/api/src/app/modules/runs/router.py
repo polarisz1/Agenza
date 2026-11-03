@@ -7,10 +7,6 @@ import json
 from collections.abc import AsyncIterator
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Header, Query
-from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
-
 from app.api_deps import get_session
 from app.core.engine.event_bus import get_event_bus
 from app.core.exceptions import AppError
@@ -26,6 +22,9 @@ from app.modules.runs.schemas import (
     RunResponse,
 )
 from app.modules.runs.service import RunService
+from fastapi import APIRouter, Depends, Header, Query
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
 
 router = APIRouter(responses=ERROR_RESPONSES)
 
@@ -139,7 +138,7 @@ async def run_events(
     bus = get_event_bus()
 
     async def stream() -> AsyncIterator[str]:
-        queue, backlog = bus.subscribe(run_id, parsed_last)
+        queue, backlog = await bus.subscribe(run_id, parsed_last)
         try:
             if backlog:
                 for event in backlog:
