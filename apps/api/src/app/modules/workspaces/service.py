@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from sqlalchemy.orm import Session
-
 from app.core.exceptions import AppError
-from app.modules.auth.models import User, Workspace, WorkspaceMember
+from app.modules.auth.models import WorkspaceMember
 from app.modules.auth.repository import (
     UserRepository,
     WorkspaceMemberRepository,
@@ -20,6 +18,7 @@ from app.modules.workspaces.schemas import (
     WorkspaceResponse,
     WorkspaceUpdate,
 )
+from sqlalchemy.orm import Session
 
 
 class WorkspaceService:
@@ -185,6 +184,18 @@ class WorkspaceService:
             user_id=user.id,
             role=body.role,
             invited_by=inviter_id,
+        )
+
+        # 审计日志：邀请成员
+        from app.modules.audit.service import log_action
+
+        log_action(
+            session,
+            "workspace.member_invite",
+            resource_type="workspace",
+            resource_id=workspace_id,
+            workspace_id=workspace_id,
+            detail=f"邀请 {user.email} 加入工作空间（角色：{body.role}）",
         )
         session.commit()
 

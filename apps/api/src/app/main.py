@@ -11,15 +11,14 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-
 from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.logger import log
 from app.core.tenancy import TenantMiddleware
 from app.db.database import init_db
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 # 前端产物位置统一由 settings.frontend_dist 决定（开发态回退仓库布局，打包态取注入的资源目录）
 
@@ -118,6 +117,7 @@ async def global_exception_handler(request, exc: Exception):
 
 
 # ============ Router Registration ============
+from app.modules.audit.router import router as audit_router
 from app.modules.auth.router import router as auth_router
 from app.modules.providers.router import router as providers_router
 from app.modules.runs.router import router as runs_router
@@ -125,9 +125,10 @@ from app.modules.settings.router import router as settings_router
 from app.modules.workflows.router import router as workflows_router
 from app.modules.workspaces.router import router as workspaces_router
 
-# SaaS v1 路由（认证 + 工作空间）
+# SaaS v1 路由（认证 + 工作空间 + 审计）
 app.include_router(auth_router, prefix="/api/v1", tags=["v1-auth"])
 app.include_router(workspaces_router, prefix="/api/v1", tags=["v1-workspaces"])
+app.include_router(audit_router, prefix="/api/v1", tags=["v1-audit-logs"])
 
 # 原有路由（保持向后兼容；未来逐步切到 v1）
 app.include_router(workflows_router, prefix="/api/workflows", tags=["workflows"])

@@ -3,20 +3,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Any
-from uuid import uuid4
-
-from fastapi import HTTPException
-from passlib.context import CryptContext
-from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.exceptions import AppError
-from app.core.logger import log
-from app.core.time import utcnow
 from app.modules.auth.models import User
 from app.modules.auth.repository import (
-    ApiKeyRepository,
     UserRepository,
     WorkspaceMemberRepository,
     WorkspaceRepository,
@@ -24,11 +15,12 @@ from app.modules.auth.repository import (
 from app.modules.auth.schemas import (
     CurrentUserResponse,
     RegisterRequest,
-    RefreshRequest,
     TokenResponse,
     UserProfile,
     WorkspaceSummary,
 )
+from passlib.context import CryptContext
+from sqlalchemy.orm import Session
 
 # ── Password Hashing ─────────────────────────────────────────────
 
@@ -132,6 +124,18 @@ class AuthService:
             raise AppError(403, "无法访问该工作空间")
 
         UserRepository.update_login(session, user.id)
+
+        # 审计日志：登录
+        from app.modules.audit.service import log_action
+
+        log_action(
+            session,
+            "user.login",
+            user_id=user.id,
+            user_email=user.email,
+            workspace_id=default_ws.id,
+            detail=f"登录工作空间 {default_ws.name}",
+        )
         session.commit()
 
         token = create_access_token(
@@ -159,7 +163,7 @@ class AuthService:
                 refresh_token, settings.effective_jwt_secret, algorithms=[settings.JWT_ALGORITHM]
             )
         except Exception:
-            raise AppError(401, "刷新令牌无效或已过期")
+            raise AppError(401, "刷新令牌无效或已过期") from None
 
         if payload.get("type") != "refresh":
             raise AppError(401, "令牌类型错误")

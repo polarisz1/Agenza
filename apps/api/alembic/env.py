@@ -13,6 +13,7 @@ from app.core.config import settings  # noqa: E402
 from app.db.database import Base  # noqa: E402
 
 # Import all models so metadata.collect() picks them up
+from app.modules.audit import models as audit_models  # noqa: F401  SaaS
 from app.modules.auth import models as auth_models  # noqa: F401  SaaS
 from app.modules.workflows import models  # noqa: F401
 from app.modules.runs import models  # noqa: F401
