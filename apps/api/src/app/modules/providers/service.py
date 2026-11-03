@@ -5,8 +5,6 @@ from __future__ import annotations
 import uuid
 
 import httpx
-from sqlalchemy.orm import Session
-
 from app.core.exceptions import AppError
 from app.core.logger import log
 from app.core.providers.anthropic_compat import AnthropicCompatProvider
@@ -28,6 +26,7 @@ from app.modules.providers.schemas import (
     ProviderTestResult,
     ProviderUpdate,
 )
+from sqlalchemy.orm import Session
 
 
 def build_registry(session: Session) -> ProviderRegistry:

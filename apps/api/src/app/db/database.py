@@ -5,14 +5,14 @@ from __future__ import annotations
 from collections.abc import Iterator
 from pathlib import Path
 
-from alembic.config import Config as AlembicConfig
+from app.core.config import settings
+from app.core.logger import log
+from app.core.time import utcnow
 from sqlalchemy import create_engine, event, inspect
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from alembic import command
-from app.core.config import settings
-from app.core.logger import log
-from app.core.time import utcnow
+from alembic.config import Config as AlembicConfig
 
 connect_args = {}
 if settings.effective_database_url.startswith("sqlite"):
@@ -183,9 +183,8 @@ def _backfill_delta_schema(conn) -> None:
 def _mark_interrupted_runs() -> None:
     """后端重启后，之前处于 running 的运行不可能还在跑，统一标记失败。"""
 
-    from sqlalchemy import update
-
     from app.modules.runs.models import NodeRun, Run
+    from sqlalchemy import update
 
     now = utcnow()
     with SessionLocal() as session:

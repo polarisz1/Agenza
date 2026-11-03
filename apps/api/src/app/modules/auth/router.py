@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-
 from app.api_deps import get_session
 from app.core.response import ERROR_RESPONSES, ApiResponse, success
-from app.modules.auth.dependencies import get_current_user, get_current_workspace
-from app.modules.auth.models import User, Workspace
+from app.modules.auth.dependencies import get_current_user
+from app.modules.auth.models import User
 from app.modules.auth.schemas import (
     CurrentUserResponse,
     LoginRequest,
@@ -17,6 +14,8 @@ from app.modules.auth.schemas import (
     TokenResponse,
 )
 from app.modules.auth.service import AuthService
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/auth", responses=ERROR_RESPONSES, tags=["auth"])
 

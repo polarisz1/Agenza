@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from sqlalchemy import or_
-from sqlalchemy.orm import Session
-
 from app.modules.auth.models import ApiKey, User, Workspace, WorkspaceMember
+from sqlalchemy.orm import Session
 
 
 class UserRepository:
@@ -158,7 +156,7 @@ class ApiKeyRepository:
 
     @staticmethod
     def get_by_hash(session: Session, key_hash: str) -> ApiKey | None:
-        return session.query(ApiKey).filter(ApiKey.key_hash == key_hash, ApiKey.enabled == True).first()
+        return session.query(ApiKey).filter(ApiKey.key_hash == key_hash, ApiKey.enabled.is_(True)).first()
 
     @staticmethod
     def delete(session: Session, key_id: str, workspace_id: str) -> bool:

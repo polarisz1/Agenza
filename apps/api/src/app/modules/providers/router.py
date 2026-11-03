@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-
 from app.api_deps import get_session
 from app.core.exceptions import AppError
 from app.core.response import ERROR_RESPONSES, ApiResponse, DeleteResult, success
@@ -17,6 +14,8 @@ from app.modules.providers.schemas import (
     ProviderUpdate,
 )
 from app.modules.providers.service import ProviderService
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
 router = APIRouter(responses=ERROR_RESPONSES)
 

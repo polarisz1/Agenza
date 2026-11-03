@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
-
 from app.core.time import utcnow
 from app.db.database import Base
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 
 
 class Workflow(Base):

@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-
 from app.api_deps import get_session
 from app.core.response import ERROR_RESPONSES, ApiResponse, DeleteResult, success
-from app.modules.auth.dependencies import get_current_user, require_role
+from app.modules.auth.dependencies import get_current_user
 from app.modules.auth.models import User
 from app.modules.workspaces.schemas import (
     MemberInviteRequest,
@@ -19,6 +16,8 @@ from app.modules.workspaces.schemas import (
     WorkspaceUpdate,
 )
 from app.modules.workspaces.service import WorkspaceService
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/workspaces", responses=ERROR_RESPONSES, tags=["workspaces"])
 

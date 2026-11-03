@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
+from app.api_deps import get_session
+from app.core.config import settings
+from app.modules.auth.models import User, Workspace
+from app.modules.auth.repository import UserRepository
 from fastapi import Depends, HTTPException, Request
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-
-from app.api_deps import get_session
-from app.core.config import settings
-from app.core.tenancy import TenantContext, get_tenant, is_saas_mode
-from app.modules.auth.models import User, Workspace
-from app.modules.auth.repository import UserRepository, WorkspaceMemberRepository
 
 
 def _decode_access_token(token: str) -> dict:
@@ -21,7 +19,7 @@ def _decode_access_token(token: str) -> dict:
             algorithms=[settings.JWT_ALGORITHM],
         )
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise HTTPException(status_code=401, detail="Invalid or expired token") from None
 
 
 async def _extract_bearer(request: Request) -> str | None:

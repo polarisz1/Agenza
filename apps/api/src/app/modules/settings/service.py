@@ -5,11 +5,10 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
-from sqlalchemy.orm import Session
-
 from app.core.config import settings
 from app.modules.settings.repository import SettingsRepository
 from app.modules.workflows.service import WorkflowService
+from sqlalchemy.orm import Session
 
 DEFAULTS = {
     "auto_save": True,

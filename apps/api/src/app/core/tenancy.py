@@ -12,15 +12,13 @@ from __future__ import annotations
 
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Optional
 from uuid import UUID
 
+from app.core.logger import log
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.types import ASGIApp, Receive, Scope, Send
-
-from app.core.logger import log
+from starlette.types import ASGIApp
 
 # ── TenantContext ──────────────────────────────────────────────────
 
@@ -38,15 +36,15 @@ class TenantContext:
     role: str  # owner / editor / viewer / operator
 
 
-_tenant_var: ContextVar[Optional[TenantContext]] = ContextVar("tenant", default=None)
+_tenant_var: ContextVar[TenantContext | None] = ContextVar("tenant", default=None)
 
 
-def get_tenant() -> Optional[TenantContext]:
+def get_tenant() -> TenantContext | None:
     """获取当前请求的租户上下文；单用户模式下返回 None。"""
     return _tenant_var.get()
 
 
-def get_workspace_id() -> Optional[UUID]:
+def get_workspace_id() -> UUID | None:
     """便捷函数：只取 workspace_id。"""
     t = _tenant_var.get()
     return t.workspace_id if t else None
@@ -131,9 +129,8 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
 def _decode_jwt_tenant(token: str) -> TenantContext:
     """从 JWT 解码租户信息（避免 Tenancy ↔ Auth 循环依赖，延迟 import）。"""
-    from jose import jwt
-
     from app.core.config import settings
+    from jose import jwt
 
     payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
     return TenantContext(

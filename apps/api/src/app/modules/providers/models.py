@@ -1,8 +1,7 @@
 """Provider module."""
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
-
 from app.db.database import Base
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
 
 
 class Provider(Base):

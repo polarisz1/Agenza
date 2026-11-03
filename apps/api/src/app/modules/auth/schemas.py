@@ -30,7 +30,7 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int  # seconds
-    user: "UserProfile"
+    user: UserProfile
     workspace_id: str | None = None
 
 

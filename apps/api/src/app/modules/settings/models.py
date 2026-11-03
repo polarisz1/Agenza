@@ -1,9 +1,8 @@
 """App setting model."""
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, Text
-
 from app.core.time import utcnow
 from app.db.database import Base
+from sqlalchemy import Column, DateTime, ForeignKey, String, Text
 
 
 class AppSetting(Base):

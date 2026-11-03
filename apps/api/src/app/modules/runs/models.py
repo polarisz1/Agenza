@@ -1,9 +1,8 @@
 """Run module."""
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text, text
-
 from app.core.time import utcnow
 from app.db.database import Base
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text, text
 
 
 class Run(Base):

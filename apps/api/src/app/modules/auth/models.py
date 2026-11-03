@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String, Text
-from sqlalchemy.dialects.postgresql import UUID as PgUUID
-from sqlalchemy.types import TypeDecorator
-
 from app.core.time import utcnow
 from app.db.database import Base
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String, Text
+from sqlalchemy.dialects.postgresql import UUID as PgUUID  # noqa: N811
+from sqlalchemy.types import TypeDecorator
 
 
 class UUIDType(TypeDecorator):
