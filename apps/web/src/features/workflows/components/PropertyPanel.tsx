@@ -212,22 +212,22 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
 
   const renderVariables = (field: string) => {
     if (!variables.length) {
-      return <div className="afe-hint">暂无可用变量：先连接上游节点</div>;
+      return <div className="afe-hint">暂无可用变量 · 先连上游节点</div>;
     }
     return (
-      <div className="afe-hint">
-        可用变量：
+      <div className="afe-vars-line">
+        <span className="afe-vars-line-label">可用变量：</span>
         {variables.map((v) => (
-          <Button
+          <button
+            type="button"
             key={v.token}
-            type="link"
-            size="small"
             className="afe-var-chip"
-            title={`插入到「${field}」光标处`}
+            title={`插入「${v.token}」到「${field}」`}
             onClick={() => insertToken(field, v.token)}
           >
-            {v.token}
-          </Button>
+            <span className="afe-var-chip-label">{v.nodeLabel}</span>
+            {v.field && <span className="afe-var-chip-field">.{v.field}</span>}
+          </button>
         ))}
       </div>
     );
@@ -376,10 +376,11 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
                   />
                 </Field>
               </div>
-              <Field label="备注">
+              <Field label="备注" hint="仅用于自己记录，不参与运行逻辑">
                 <textarea
                   className="afe-textarea"
                   rows={2}
+                  placeholder="例如：给 LLM 的提示词要包含角色设定……"
                   value={draft.notes ?? ''}
                   onChange={(e) => setField('notes', e.target.value)}
                 />
@@ -497,21 +498,26 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
 
                 {selected.data.type === 'llm' ? (
                   <>
-                    <Field label="系统提示">
+                    <Field label="系统提示" hint="定义 LLM 的角色和行为，对所有用户请求生效">
                       <textarea
                         ref={register('system')}
                         className="afe-textarea"
                         rows={3}
+                        placeholder="你是一位专业的文案编辑，擅长把技术文档转成通俗易懂的说明。"
                         value={draft.system ?? ''}
                         onChange={(e) => setField('system', e.target.value)}
                       />
                       {renderVariables('system')}
                     </Field>
-                    <Field label="用户提示">
+                    <Field label="用户提示" hint="每次运行时实际发送给 LLM 的内容；可以用 {{ 变量 }} 引用上游节点输出">
                       <textarea
                         ref={register('prompt')}
                         className="afe-textarea"
                         rows={4}
+                        placeholder={
+                          '请帮我把下面这段内容写成社交媒体文案：\n\n' +
+                          '{{ 上游节点名称.字段名 }}'
+                        }
                         value={draft.prompt ?? ''}
                         onChange={(e) => setField('prompt', e.target.value)}
                       />
@@ -552,11 +558,14 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
                   </>
                 ) : (
                   <>
-                    <Field label="待抽取内容">
+                    <Field label="待抽取内容" hint="可以直接输入文本，也可以用 {{ 上游节点 }} 引用上游输出">
                       <textarea
                         ref={register('prompt')}
                         className="afe-textarea"
                         rows={4}
+                        placeholder={
+                          '{{ 上游节点名称 }}\n\n或者直接粘贴需要抽取的原始文本……'
+                        }
                         value={draft.prompt ?? ''}
                         onChange={(e) => setField('prompt', e.target.value)}
                       />
@@ -622,11 +631,14 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
                     onChange={(e) => setField('headers', e.target.value)}
                   />
                 </Field>
-                <Field label="请求体">
+                <Field label="请求体" hint="JSON / 纯文本均可；可以用 {{ 变量 }} 嵌入上游数据">
                   <textarea
                     ref={register('body')}
                     className="afe-textarea"
                     rows={4}
+                    placeholder={
+                      '{\n  "content": "{{ 上游节点名称.字段名 }}",\n  "timestamp": "{{ 另一个节点 }}"\n}'
+                    }
                     value={draft.body ?? ''}
                     onChange={(e) => setField('body', e.target.value)}
                   />
@@ -667,7 +679,7 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
             {selected.data.type === 'condition' && (
               <div className="afe-props-group">
                 <div className="afe-props-group-title">比较</div>
-                <Field label="左值">
+                <Field label="左值" hint="可以用 {{ 上游节点 }} 引用，也可以直接写固定值（如 true、5）">
                   <input
                     ref={register('left')}
                     className="afe-input"
@@ -737,12 +749,19 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
                     onChange={(e) => setField('field', e.target.value)}
                   />
                 </Field>
-                <Field label="来源变量">
+                <Field
+                  label="引用上游节点的结果"
+                  hint={
+                    '这里决定"本节点要把哪个上游结果展示给最终用户"。\n' +
+                    '点下方的变量标签即可插入完整引用；也可以手写 {{ 节点名.字段名 }}。\n' +
+                    '示例：{{ llm_summary }} 表示直接引用上游 LLM 节点的全部输出。'
+                  }
+                >
                   <textarea
                     ref={register('source')}
                     className="afe-textarea"
                     rows={3}
-                    placeholder="{{ 上游节点.字段 }}"
+                    placeholder="{{ 点下方的变量标签快速插入，或手写 {{ 上游节点.字段 }} }}"
                     value={draft.source ?? ''}
                     onChange={(e) => setField('source', e.target.value)}
                   />

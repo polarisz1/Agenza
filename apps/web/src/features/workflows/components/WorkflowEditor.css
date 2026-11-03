@@ -534,23 +534,45 @@
   line-height: 1.8;
 }
 
-.afe-var-chip.ant-btn {
-  display: inline-block;
-  height: auto;
-  margin: 2px 4px 0 0;
-  padding: 0 5px;
-  border: 1px solid #cfe0d6;
-  border-radius: 4px;
-  background: var(--afe-brand-50);
-  color: var(--afe-brand-700);
-  font-family: var(--afe-mono);
-  font-size: 10.5px;
-  line-height: 1.7;
+/* 胶囊：紧凑行内变量 */
+.afe-vars-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
 }
-.afe-var-chip.ant-btn:hover {
-  border-color: var(--afe-brand-400);
-  background: #e2ece6;
+.afe-vars-line-label {
+  color: var(--afe-ink-500);
+  font-size: 11px;
+}
+button.afe-var-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  margin: 0;
+  padding: 3px 8px;
+  border: 1px solid #cfe0d6;
+  border-radius: 12px;
+  background: #fff;
   color: var(--afe-brand-700);
+  cursor: pointer;
+  font-family: var(--afe-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+button.afe-var-chip:hover {
+  border-color: var(--afe-brand-400);
+  background: var(--afe-brand-50);
+}
+button.afe-var-chip .afe-var-chip-label {
+  font-weight: 600;
+}
+button.afe-var-chip .afe-var-chip-field {
+  color: var(--afe-ink-500);
 }
 
 .afe-nbar {

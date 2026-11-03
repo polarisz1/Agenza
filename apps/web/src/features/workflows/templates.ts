@@ -20,6 +20,23 @@ export interface WorkflowTemplate {
   build: () => GraphDef;
 }
 
+function parseHeaders(raw: unknown): Record<string, unknown> {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    return raw as Record<string, unknown>;
+  }
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      // 非法 JSON：退化为空对象，避免把字符串发往后端触发 422
+    }
+  }
+  return {};
+}
+
 function buildGraph(specs: NodeSpec[], edges: EdgeSpec[]): GraphDef {
   const inputs = specs
     .filter((spec) => spec.type === 'input')
@@ -37,13 +54,24 @@ function buildGraph(specs: NodeSpec[], edges: EdgeSpec[]): GraphDef {
   const graph = {
     version: 1,
     inputs,
-    nodes: specs.map((spec) => ({
-      id: spec.id,
-      type: spec.type,
-      name: spec.name,
-      position: { x: spec.x, y: spec.y },
-      config: { ...DEFAULT_CONFIG[spec.type], ...(spec.config ?? {}) },
-    })),
+    nodes: specs.map((spec) => {
+      const config: Record<string, unknown> = {
+        ...DEFAULT_CONFIG[spec.type],
+        ...(spec.config ?? {}),
+      };
+      // 编辑器里 headers 是 JSON 文本，后端契约要求是对象；模板直接落库，
+      // 必须在这里归一化，否则创建 HTTP 模板时会被 422 拒绝。
+      if (spec.type === 'http') {
+        config.headers = parseHeaders(config.headers);
+      }
+      return {
+        id: spec.id,
+        type: spec.type,
+        name: spec.name,
+        position: { x: spec.x, y: spec.y },
+        config,
+      };
+    }),
     edges: edges.map(([source, target, fromPort]) => ({
       id: `e_${source}_${target}${fromPort ? `_${fromPort}` : ''}`,
       source,

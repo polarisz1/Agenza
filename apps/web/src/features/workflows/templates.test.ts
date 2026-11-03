@@ -37,4 +37,16 @@ describe('内置模板（F4）', () => {
       expect(ports).toContain('false');
     }
   });
+
+  it('HTTP 模板的 headers 是对象（后端契约要求 dict，不能是 JSON 文本）', () => {
+    for (const template of WORKFLOW_TEMPLATES) {
+      for (const node of template.build().nodes ?? []) {
+        if (node.type === 'http') {
+          const headers = node.config?.headers;
+          expect(typeof headers).toBe('object');
+          expect(Array.isArray(headers)).toBe(false);
+        }
+      }
+    }
+  });
 });
