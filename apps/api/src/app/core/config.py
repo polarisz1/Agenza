@@ -125,6 +125,25 @@ class Settings(BaseSettings):
     # ---- Frontend ----
     MOUNT_FRONTEND: bool = False
 
+    # ---- SaaS: Multi-tenant ----
+    TENANCY_ENABLED: bool = False  # set "true" for cloud SaaS mode
+    JWT_SECRET: str = ""  # set via env in SaaS; auto-generated for desktop
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    JWT_REFRESH_EXPIRE_DAYS: int = 30
+
+    @property
+    def effective_jwt_secret(self) -> str:
+        if self.JWT_SECRET:
+            return self.JWT_SECRET
+        # Desktop fallback: derive from existing secret key file
+        from pathlib import Path
+
+        secret_path = Path(self.secret_file)
+        if secret_path.exists():
+            return secret_path.read_text(encoding="utf-8").strip() or "agentflow-local-dev-key"
+        return "agentflow-local-dev-key"
+
     # ---- Logging ----
     LOG_LEVEL: str = DEFAULT_LOG_LEVEL
 

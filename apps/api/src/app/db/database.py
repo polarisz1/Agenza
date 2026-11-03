@@ -107,10 +107,77 @@ def _upgrade_schema() -> None:
         cfg.attributes["connection"] = conn
         existing = set(inspect(conn).get_table_names())
         if existing and "alembic_version" not in existing:
-            # 历史版本是 create_all 建的库：标记为 baseline，不重建、不动数据
-            log.info("检测到历史库（无 alembic_version），标记为 baseline")
+            # 历史版本是 create_all 建的库：stamp head 后不会重跑 upgrade，
+            # 但早期 create_all 只建了 baseline (0001) 的表/列，后续迁移
+            # (0002 索引、0003 workflow_version 表 + run.version 列) 会被跳过。
+            # 这里在 stamp 之前手动补齐这些"增量 schema 变更"。
+            log.info("检测到历史库（无 alembic_version），补全增量 schema 后标记 head")
+            _backfill_delta_schema(conn)
             command.stamp(cfg, "head")
         command.upgrade(cfg, "head")
+
+
+def _backfill_delta_schema(conn) -> None:
+    """给 create_all 建的老库补上 0002/0003 迁移里新增的结构。
+
+    为什么不用 stamp 0001 再 upgrade？因为 0001 的 upgrade() 会 create_table，
+    遇到已存在的表会抛异常。这里用纯 SQL + SQLAlchemy inspect 按需补齐，
+    不依赖 Alembic op（它需要 MigrationContext 绑定到我们的 conn）。
+    """
+    from sqlalchemy import text
+
+    insp = inspect(conn)
+
+    # ---- 0002: run 表的部分唯一索引 ----
+    existing_indexes = {idx["name"] for idx in insp.get_indexes("run")}
+    if "uq_run_running_per_workflow" not in existing_indexes:
+        conn.execute(
+            text(
+                "CREATE UNIQUE INDEX uq_run_running_per_workflow "
+                "ON run (workflow_id) WHERE status = 'running'"
+            )
+        )
+        log.info("补上 0002 迁移: run.uq_run_running_per_workflow 索引")
+
+    # ---- 0003: workflow_version 表 + run.version 列 ----
+    tables = set(insp.get_table_names())
+    if "workflow_version" not in tables:
+        conn.execute(
+            text(
+                """
+                CREATE TABLE workflow_version (
+                    id VARCHAR(24) PRIMARY KEY NOT NULL,
+                    workflow_id VARCHAR(12) NOT NULL,
+                    seq INTEGER NOT NULL,
+                    summary VARCHAR(200),
+                    graph_json TEXT NOT NULL,
+                    viewport_json TEXT,
+                    created_at DATETIME
+                )
+                """
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE INDEX ix_workflow_version_workflow_id "
+                "ON workflow_version (workflow_id)"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE UNIQUE INDEX uq_workflow_version_seq "
+                "ON workflow_version (workflow_id, seq)"
+            )
+        )
+        log.info("补上 0003 迁移: workflow_version 表")
+
+    run_cols = {c["name"] for c in insp.get_columns("run")}
+    if "version_id" not in run_cols:
+        conn.execute(text("ALTER TABLE run ADD COLUMN version_id VARCHAR(24)"))
+        log.info("补上 0003 迁移: run.version_id 列")
+    if "version_seq" not in run_cols:
+        conn.execute(text("ALTER TABLE run ADD COLUMN version_seq INTEGER"))
+        log.info("补上 0003 迁移: run.version_seq 列")
 
 
 def _mark_interrupted_runs() -> None:

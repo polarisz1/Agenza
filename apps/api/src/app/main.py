@@ -1,4 +1,11 @@
-"""AgentFlow - FastAPI Application Entry Point"""
+"""AgentFlow - FastAPI Application Entry Point
+
+SaaS 转型说明：
+- tenant_middleware 在 TENANCY_ENABLED=True 时注入租户上下文
+- /api/v1/auth 和 /api/v1/workspaces 是 SaaS 新增路由
+- 原有路由保留 /api/* 前缀（向后兼容桌面版），未来逐步切到 /api/v1/*
+- 单用户桌面模式（TENANCY_ENABLED=False）下 tenant_middleware 为 no-op
+"""
 
 from __future__ import annotations
 
@@ -7,11 +14,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.logger import log
+from app.core.tenancy import TenantMiddleware
 from app.db.database import init_db
 
 # 前端产物位置统一由 settings.frontend_dist 决定（开发态回退仓库布局，打包态取注入的资源目录）
@@ -20,11 +27,11 @@ from app.db.database import init_db
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifecycle."""
-    log.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    mode = "SaaS" if settings.TENANCY_ENABLED else "desktop (single-user)"
+    log.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION} [{mode}]")
     init_db()
     log.info("Database initialized")
 
-    # Start background engines here when ready
     yield
 
     log.info("Shutting down AgentFlow")
@@ -33,7 +40,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="AgentFlow - Single-user local AI workflow orchestration",
+    description=(
+        "AgentFlow - "
+        + (
+            "Enterprise AI workflow orchestration"
+            if settings.TENANCY_ENABLED
+            else "Single-user local AI workflow orchestration"
+        )
+    ),
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url=None,
@@ -48,6 +62,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# TenantMiddleware 必须在 CORSMiddleware 之后、路由处理之前
+app.add_middleware(TenantMiddleware)
 
 
 @app.middleware("http")
@@ -78,13 +95,12 @@ async def app_exception_handler(request, exc: AppError):
     )
 
 
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request, exc: StarletteHTTPException):
-    """框架级错误（未知路由 404 / 方法不允许 405 等）也走同一个信封。
-
-    否则前端会收到 `{"detail": "Not Found"}`，`http.ts::toError` 取不到 message，
-    只能显示 "HTTP 404"；契约里 `ErrorResponse` 的承诺也就只兑现了一半。
-    """
+    """框架级错误也走同一个信封。"""
     return JSONResponse(
         status_code=exc.status_code,
         content={"code": exc.status_code, "message": str(exc.detail), "data": None},
@@ -102,11 +118,18 @@ async def global_exception_handler(request, exc: Exception):
 
 
 # ============ Router Registration ============
+from app.modules.auth.router import router as auth_router
 from app.modules.providers.router import router as providers_router
 from app.modules.runs.router import router as runs_router
 from app.modules.settings.router import router as settings_router
 from app.modules.workflows.router import router as workflows_router
+from app.modules.workspaces.router import router as workspaces_router
 
+# SaaS v1 路由（认证 + 工作空间）
+app.include_router(auth_router, prefix="/api/v1", tags=["v1-auth"])
+app.include_router(workspaces_router, prefix="/api/v1", tags=["v1-workspaces"])
+
+# 原有路由（保持向后兼容；未来逐步切到 v1）
 app.include_router(workflows_router, prefix="/api/workflows", tags=["workflows"])
 app.include_router(runs_router, prefix="/api/runs", tags=["runs"])
 app.include_router(providers_router, prefix="/api/providers", tags=["providers"])
@@ -126,6 +149,7 @@ def root():
         "version": settings.APP_VERSION,
         "docs": "/docs",
         "status": "ok",
+        "tenancy_enabled": settings.TENANCY_ENABLED,
     }
 
 
@@ -139,7 +163,6 @@ if settings.MOUNT_FRONTEND:
     from fastapi.responses import FileResponse, JSONResponse
     from fastapi.staticfiles import StaticFiles
 
-    # 前端产物的位置由 settings 决定：打包态取注入的资源目录，开发态回退仓库布局
     frontend_dist = settings.frontend_dist
     if (frontend_dist / "index.html").exists():
         app.mount(

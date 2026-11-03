@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import Column, DateTime, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 
 from app.core.time import utcnow
 from app.db.database import Base
@@ -12,6 +12,9 @@ class Workflow(Base):
     __tablename__ = "workflow"
 
     id = Column(String(12), primary_key=True, index=True)
+    # SaaS: 多租户隔离字段（桌面版此字段可为空字符串）
+    workspace_id = Column(String(36), ForeignKey("workspace.id"), nullable=True, index=True)
+    created_by = Column(String(36), ForeignKey("user.id"), nullable=True, index=True)
     name = Column(String(200), nullable=False, index=True)
     description = Column(Text, nullable=True)
     status = Column(String(20), default="draft")  # draft | ready
@@ -29,6 +32,7 @@ class WorkflowVersion(Base):
 
     id = Column(String(24), primary_key=True)
     workflow_id = Column(String(12), nullable=False, index=True)
+    workspace_id = Column(String(36), ForeignKey("workspace.id"), nullable=True, index=True)
     seq = Column(Integer, nullable=False)  # 每个工作流内递增，用于展示 v1/v2
     summary = Column(String(200), nullable=True)
     graph_json = Column(Text, nullable=False)
