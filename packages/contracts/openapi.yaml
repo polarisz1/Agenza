@@ -4,6 +4,710 @@ info:
   description: AgentFlow - Single-user local AI workflow orchestration
   version: 0.2.0
 paths:
+  /api/v1/auth/register:
+    post:
+      tags:
+      - v1-auth
+      - auth
+      summary: Register
+      operationId: register_api_v1_auth_register_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_TokenResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/login:
+    post:
+      tags:
+      - v1-auth
+      - auth
+      summary: Login
+      operationId: login_api_v1_auth_login_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_TokenResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/refresh:
+    post:
+      tags:
+      - v1-auth
+      - auth
+      summary: Refresh
+      operationId: refresh_api_v1_auth_refresh_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_TokenResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/me:
+    get:
+      tags:
+      - v1-auth
+      - auth
+      summary: Me
+      operationId: me_api_v1_auth_me_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_CurrentUserResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workspaces:
+    get:
+      tags:
+      - v1-workspaces
+      - workspaces
+      summary: List Workspaces
+      operationId: list_workspaces_api_v1_workspaces_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkspaceListData_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - v1-workspaces
+      - workspaces
+      summary: Create Workspace
+      operationId: create_workspace_api_v1_workspaces_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkspaceResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workspaces/{workspace_id}:
+    get:
+      tags:
+      - v1-workspaces
+      - workspaces
+      summary: Get Workspace
+      operationId: get_workspace_api_v1_workspaces__workspace_id__get
+      parameters:
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkspaceResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+      - v1-workspaces
+      - workspaces
+      summary: Update Workspace
+      operationId: update_workspace_api_v1_workspaces__workspace_id__put
+      parameters:
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkspaceResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+      - v1-workspaces
+      - workspaces
+      summary: Delete Workspace
+      operationId: delete_workspace_api_v1_workspaces__workspace_id__delete
+      parameters:
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_DeleteResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workspaces/{workspace_id}/members:
+    get:
+      tags:
+      - v1-workspaces
+      - workspaces
+      summary: List Members
+      operationId: list_members_api_v1_workspaces__workspace_id__members_get
+      parameters:
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_list_WorkspaceMemberItem__'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - v1-workspaces
+      - workspaces
+      summary: Invite Member
+      operationId: invite_member_api_v1_workspaces__workspace_id__members_post
+      parameters:
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberInviteRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkspaceMemberItem_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workspaces/{workspace_id}/members/{user_id}:
+    put:
+      tags:
+      - v1-workspaces
+      - workspaces
+      summary: Update Member Role
+      operationId: update_member_role_api_v1_workspaces__workspace_id__members__user_id__put
+      parameters:
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Id
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: User Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberRoleUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkspaceMemberItem_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+      - v1-workspaces
+      - workspaces
+      summary: Remove Member
+      operationId: remove_member_api_v1_workspaces__workspace_id__members__user_id__delete
+      parameters:
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Id
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: User Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_DeleteResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/audit-logs:
+    get:
+      tags:
+      - v1-audit-logs
+      - v1-audit-logs
+      summary: List Audit Logs
+      operationId: list_audit_logs_api_v1_audit_logs_get
+      parameters:
+      - name: action
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Action
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 500
+          minimum: 1
+          default: 100
+          title: Limit
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Offset
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/workflows:
     get:
       tags:
@@ -1943,6 +2647,22 @@ components:
       required:
       - data
       title: ApiResponse[ClearResult]
+    ApiResponse_CurrentUserResponse_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/CurrentUserResponse'
+      type: object
+      required:
+      - data
+      title: ApiResponse[CurrentUserResponse]
     ApiResponse_DeleteResult_:
       properties:
         code:
@@ -2167,6 +2887,22 @@ components:
       required:
       - data
       title: ApiResponse[SystemInfo]
+    ApiResponse_TokenResponse_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/TokenResponse'
+      type: object
+      required:
+      - data
+      title: ApiResponse[TokenResponse]
     ApiResponse_ValidateResult_:
       properties:
         code:
@@ -2263,6 +2999,141 @@ components:
       required:
       - data
       title: ApiResponse[WorkflowVersionListData]
+    ApiResponse_WorkspaceListData_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/WorkspaceListData'
+      type: object
+      required:
+      - data
+      title: ApiResponse[WorkspaceListData]
+    ApiResponse_WorkspaceMemberItem_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/WorkspaceMemberItem'
+      type: object
+      required:
+      - data
+      title: ApiResponse[WorkspaceMemberItem]
+    ApiResponse_WorkspaceResponse_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/WorkspaceResponse'
+      type: object
+      required:
+      - data
+      title: ApiResponse[WorkspaceResponse]
+    ApiResponse_list_WorkspaceMemberItem__:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          items:
+            $ref: '#/components/schemas/WorkspaceMemberItem'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: ApiResponse[list[WorkspaceMemberItem]]
+    AuditLogItem:
+      properties:
+        id:
+          type: string
+          title: Id
+        workspace_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workspace Id
+        user_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+        user_email:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Email
+        action:
+          type: string
+          title: Action
+        resource_type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Resource Type
+        resource_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Resource Id
+        ip:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ip
+        detail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Detail
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - action
+      - created_at
+      title: AuditLogItem
+    AuditLogListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/AuditLogItem'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+      type: object
+      required:
+      - items
+      - total
+      title: AuditLogListResponse
     CancelResult:
       properties:
         cancelled:
@@ -2367,6 +3238,20 @@ components:
       - id
       - name
       title: ConditionNode
+    CurrentUserResponse:
+      properties:
+        user:
+          $ref: '#/components/schemas/UserProfile'
+        workspaces:
+          items:
+            $ref: '#/components/schemas/WorkspaceSummary'
+          type: array
+          title: Workspaces
+      type: object
+      required:
+      - user
+      - workspaces
+      title: CurrentUserResponse
     DeleteResult:
       properties:
         deleted:
@@ -2758,6 +3643,42 @@ components:
       - id
       - name
       title: LLMNode
+    LoginRequest:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - email
+      - password
+      title: LoginRequest
+    MemberInviteRequest:
+      properties:
+        email:
+          type: string
+          title: Email
+        role:
+          type: string
+          title: Role
+          default: viewer
+      type: object
+      required:
+      - email
+      title: MemberInviteRequest
+    MemberRoleUpdate:
+      properties:
+        role:
+          type: string
+          title: Role
+      type: object
+      required:
+      - role
+      title: MemberRoleUpdate
     MergeConfig:
       properties:
         enabled:
@@ -3189,6 +4110,43 @@ components:
       - id
       - name
       title: PythonNode
+    RefreshRequest:
+      properties:
+        refresh_token:
+          type: string
+          title: Refresh Token
+      type: object
+      required:
+      - refresh_token
+      title: RefreshRequest
+    RegisterRequest:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        password:
+          type: string
+          maxLength: 100
+          minLength: 8
+          title: Password
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Name
+        workspace_name:
+          anyOf:
+          - type: string
+            maxLength: 200
+          - type: 'null'
+          title: Workspace Name
+      type: object
+      required:
+      - email
+      - password
+      - name
+      title: RegisterRequest
     RunCompareResult:
       properties:
         a:
@@ -3513,6 +4471,73 @@ components:
       - run_count
       - provider_count
       title: SystemInfo
+    TokenResponse:
+      properties:
+        access_token:
+          type: string
+          title: Access Token
+        refresh_token:
+          type: string
+          title: Refresh Token
+        token_type:
+          type: string
+          title: Token Type
+          default: bearer
+        expires_in:
+          type: integer
+          title: Expires In
+        user:
+          $ref: '#/components/schemas/UserProfile'
+        workspace_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workspace Id
+      type: object
+      required:
+      - access_token
+      - refresh_token
+      - expires_in
+      - user
+      title: TokenResponse
+    UserProfile:
+      properties:
+        id:
+          type: string
+          title: Id
+        email:
+          type: string
+          title: Email
+        name:
+          type: string
+          title: Name
+        avatar_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Avatar Url
+        is_active:
+          type: boolean
+          title: Is Active
+          default: true
+        created_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Created At
+        last_login_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Login At
+      type: object
+      required:
+      - id
+      - email
+      - name
+      title: UserProfile
     ValidateIssue:
       properties:
         code:
@@ -3900,3 +4925,163 @@ components:
       required:
       - items
       title: WorkflowVersionListData
+    WorkspaceCreate:
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+      type: object
+      required:
+      - name
+      title: WorkspaceCreate
+    WorkspaceListData:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/WorkspaceResponse'
+          type: array
+          title: Items
+      type: object
+      required:
+      - items
+      title: WorkspaceListData
+    WorkspaceMemberItem:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        email:
+          type: string
+          title: Email
+        name:
+          type: string
+          title: Name
+        avatar_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Avatar Url
+        role:
+          type: string
+          title: Role
+        joined_at:
+          type: string
+          format: date-time
+          title: Joined At
+        invited_by_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Invited By Name
+      type: object
+      required:
+      - user_id
+      - email
+      - name
+      - role
+      - joined_at
+      title: WorkspaceMemberItem
+    WorkspaceResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        owner_id:
+          type: string
+          title: Owner Id
+        owner_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Owner Name
+        plan:
+          type: string
+          title: Plan
+          default: free
+        member_count:
+          type: integer
+          title: Member Count
+          default: 0
+        my_role:
+          type: string
+          title: My Role
+          default: owner
+        created_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Created At
+      type: object
+      required:
+      - id
+      - name
+      - owner_id
+      title: WorkspaceResponse
+    WorkspaceSummary:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        role:
+          type: string
+          enum:
+          - owner
+          - editor
+          - viewer
+          - operator
+          title: Role
+        plan:
+          type: string
+          title: Plan
+          default: free
+        member_count:
+          type: integer
+          title: Member Count
+          default: 0
+        created_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Created At
+      type: object
+      required:
+      - id
+      - name
+      - role
+      title: WorkspaceSummary
+    WorkspaceUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 200
+            minLength: 1
+          - type: 'null'
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+      type: object
+      title: WorkspaceUpdate

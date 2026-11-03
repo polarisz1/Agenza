@@ -4,6 +4,164 @@
  */
 
 export interface paths {
+    "/api/v1/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register */
+        post: operations["register_api_v1_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Login */
+        post: operations["login_api_v1_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh */
+        post: operations["refresh_api_v1_auth_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Me */
+        get: operations["me_api_v1_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Workspaces */
+        get: operations["list_workspaces_api_v1_workspaces_get"];
+        put?: never;
+        /** Create Workspace */
+        post: operations["create_workspace_api_v1_workspaces_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Workspace */
+        get: operations["get_workspace_api_v1_workspaces__workspace_id__get"];
+        /** Update Workspace */
+        put: operations["update_workspace_api_v1_workspaces__workspace_id__put"];
+        post?: never;
+        /** Delete Workspace */
+        delete: operations["delete_workspace_api_v1_workspaces__workspace_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Members */
+        get: operations["list_members_api_v1_workspaces__workspace_id__members_get"];
+        put?: never;
+        /** Invite Member */
+        post: operations["invite_member_api_v1_workspaces__workspace_id__members_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/members/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Member Role */
+        put: operations["update_member_role_api_v1_workspaces__workspace_id__members__user_id__put"];
+        post?: never;
+        /** Remove Member */
+        delete: operations["remove_member_api_v1_workspaces__workspace_id__members__user_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Audit Logs */
+        get: operations["list_audit_logs_api_v1_audit_logs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workflows": {
         parameters: {
             query?: never;
@@ -604,6 +762,20 @@ export interface components {
             message: string;
             data: components["schemas"]["ClearResult"];
         };
+        /** ApiResponse[CurrentUserResponse] */
+        ApiResponse_CurrentUserResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            /**
+             * Message
+             * @default ok
+             */
+            message: string;
+            data: components["schemas"]["CurrentUserResponse"];
+        };
         /** ApiResponse[DeleteResult] */
         ApiResponse_DeleteResult_: {
             /**
@@ -800,6 +972,20 @@ export interface components {
             message: string;
             data: components["schemas"]["SystemInfo"];
         };
+        /** ApiResponse[TokenResponse] */
+        ApiResponse_TokenResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            /**
+             * Message
+             * @default ok
+             */
+            message: string;
+            data: components["schemas"]["TokenResponse"];
+        };
         /** ApiResponse[ValidateResult] */
         ApiResponse_ValidateResult_: {
             /**
@@ -884,6 +1070,96 @@ export interface components {
             message: string;
             data: components["schemas"]["WorkflowVersionListData"];
         };
+        /** ApiResponse[WorkspaceListData] */
+        ApiResponse_WorkspaceListData_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            /**
+             * Message
+             * @default ok
+             */
+            message: string;
+            data: components["schemas"]["WorkspaceListData"];
+        };
+        /** ApiResponse[WorkspaceMemberItem] */
+        ApiResponse_WorkspaceMemberItem_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            /**
+             * Message
+             * @default ok
+             */
+            message: string;
+            data: components["schemas"]["WorkspaceMemberItem"];
+        };
+        /** ApiResponse[WorkspaceResponse] */
+        ApiResponse_WorkspaceResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            /**
+             * Message
+             * @default ok
+             */
+            message: string;
+            data: components["schemas"]["WorkspaceResponse"];
+        };
+        /** ApiResponse[list[WorkspaceMemberItem]] */
+        ApiResponse_list_WorkspaceMemberItem__: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            /**
+             * Message
+             * @default ok
+             */
+            message: string;
+            /** Data */
+            data: components["schemas"]["WorkspaceMemberItem"][];
+        };
+        /** AuditLogItem */
+        AuditLogItem: {
+            /** Id */
+            id: string;
+            /** Workspace Id */
+            workspace_id?: string | null;
+            /** User Id */
+            user_id?: string | null;
+            /** User Email */
+            user_email?: string | null;
+            /** Action */
+            action: string;
+            /** Resource Type */
+            resource_type?: string | null;
+            /** Resource Id */
+            resource_id?: string | null;
+            /** Ip */
+            ip?: string | null;
+            /** Detail */
+            detail?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** AuditLogListResponse */
+        AuditLogListResponse: {
+            /** Items */
+            items: components["schemas"]["AuditLogItem"][];
+            /** Total */
+            total: number;
+        };
         /** CancelResult */
         CancelResult: {
             /**
@@ -963,6 +1239,12 @@ export interface components {
              */
             type: "condition";
             config?: components["schemas"]["ConditionConfig"];
+        };
+        /** CurrentUserResponse */
+        CurrentUserResponse: {
+            user: components["schemas"]["UserProfile"];
+            /** Workspaces */
+            workspaces: components["schemas"]["WorkspaceSummary"][];
         };
         /** DeleteResult */
         DeleteResult: {
@@ -1270,6 +1552,31 @@ export interface components {
              */
             type: "llm";
             config?: components["schemas"]["LLMConfig"];
+        };
+        /** LoginRequest */
+        LoginRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** MemberInviteRequest */
+        MemberInviteRequest: {
+            /** Email */
+            email: string;
+            /**
+             * Role
+             * @default viewer
+             */
+            role: string;
+        };
+        /** MemberRoleUpdate */
+        MemberRoleUpdate: {
+            /** Role */
+            role: string;
         };
         /** MergeConfig */
         MergeConfig: {
@@ -1579,6 +1886,25 @@ export interface components {
             type: "python";
             config?: components["schemas"]["PythonConfig"];
         };
+        /** RefreshRequest */
+        RefreshRequest: {
+            /** Refresh Token */
+            refresh_token: string;
+        };
+        /** RegisterRequest */
+        RegisterRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password: string;
+            /** Name */
+            name: string;
+            /** Workspace Name */
+            workspace_name?: string | null;
+        };
         /** RunCompareResult */
         RunCompareResult: {
             a: components["schemas"]["RunDetail"];
@@ -1761,6 +2087,43 @@ export interface components {
             run_count: number;
             /** Provider Count */
             provider_count: number;
+        };
+        /** TokenResponse */
+        TokenResponse: {
+            /** Access Token */
+            access_token: string;
+            /** Refresh Token */
+            refresh_token: string;
+            /**
+             * Token Type
+             * @default bearer
+             */
+            token_type: string;
+            /** Expires In */
+            expires_in: number;
+            user: components["schemas"]["UserProfile"];
+            /** Workspace Id */
+            workspace_id?: string | null;
+        };
+        /** UserProfile */
+        UserProfile: {
+            /** Id */
+            id: string;
+            /** Email */
+            email: string;
+            /** Name */
+            name: string;
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+            /** Created At */
+            created_at?: string | null;
+            /** Last Login At */
+            last_login_at?: string | null;
         };
         /** ValidateIssue */
         ValidateIssue: {
@@ -2004,6 +2367,99 @@ export interface components {
             /** Items */
             items: components["schemas"]["WorkflowVersionItem"][];
         };
+        /** WorkspaceCreate */
+        WorkspaceCreate: {
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+        };
+        /** WorkspaceListData */
+        WorkspaceListData: {
+            /** Items */
+            items: components["schemas"]["WorkspaceResponse"][];
+        };
+        /** WorkspaceMemberItem */
+        WorkspaceMemberItem: {
+            /** User Id */
+            user_id: string;
+            /** Email */
+            email: string;
+            /** Name */
+            name: string;
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /** Role */
+            role: string;
+            /**
+             * Joined At
+             * Format: date-time
+             */
+            joined_at: string;
+            /** Invited By Name */
+            invited_by_name?: string | null;
+        };
+        /** WorkspaceResponse */
+        WorkspaceResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /** Owner Id */
+            owner_id: string;
+            /** Owner Name */
+            owner_name?: string | null;
+            /**
+             * Plan
+             * @default free
+             */
+            plan: string;
+            /**
+             * Member Count
+             * @default 0
+             */
+            member_count: number;
+            /**
+             * My Role
+             * @default owner
+             */
+            my_role: string;
+            /** Created At */
+            created_at?: string | null;
+        };
+        /** WorkspaceSummary */
+        WorkspaceSummary: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "owner" | "editor" | "viewer" | "operator";
+            /**
+             * Plan
+             * @default free
+             */
+            plan: string;
+            /**
+             * Member Count
+             * @default 0
+             */
+            member_count: number;
+            /** Created At */
+            created_at?: string | null;
+        };
+        /** WorkspaceUpdate */
+        WorkspaceUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+        };
     };
     responses: never;
     parameters: never;
@@ -2013,6 +2469,910 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    register_api_v1_auth_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TokenResponse_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    login_api_v1_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TokenResponse_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    refresh_api_v1_auth_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TokenResponse_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    me_api_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_CurrentUserResponse_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_workspaces_api_v1_workspaces_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_WorkspaceListData_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_workspace_api_v1_workspaces_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspaceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_WorkspaceResponse_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_workspace_api_v1_workspaces__workspace_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_WorkspaceResponse_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_workspace_api_v1_workspaces__workspace_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspaceUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_WorkspaceResponse_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_workspace_api_v1_workspaces__workspace_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_DeleteResult_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_members_api_v1_workspaces__workspace_id__members_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_list_WorkspaceMemberItem__"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    invite_member_api_v1_workspaces__workspace_id__members_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberInviteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_WorkspaceMemberItem_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_member_role_api_v1_workspaces__workspace_id__members__user_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberRoleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_WorkspaceMemberItem_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    remove_member_api_v1_workspaces__workspace_id__members__user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_DeleteResult_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_audit_logs_api_v1_audit_logs_get: {
+        parameters: {
+            query?: {
+                action?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_workflows_api_workflows_get: {
         parameters: {
             query?: {
