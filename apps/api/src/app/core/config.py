@@ -5,10 +5,9 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+from app.core.defaults import DEFAULT_HOST, DEFAULT_LOG_LEVEL, DEFAULT_PORT
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-from app.core.defaults import DEFAULT_HOST, DEFAULT_LOG_LEVEL, DEFAULT_PORT
 
 # config.py 位于 apps/api/src/app/core → parents[5] 才是仓库根
 # （此前写成 parents[4]，数据目录因此落在 apps/data，评审 S13）
@@ -131,6 +130,9 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     JWT_REFRESH_EXPIRE_DAYS: int = 30
+
+    # ---- SaaS: Async (Celery + Redis) ----
+    CELERY_BROKER_URL: str = ""  # e.g. "redis://localhost:6379/0"; empty = desktop sync mode
 
     @property
     def effective_jwt_secret(self) -> str:

@@ -7,9 +7,6 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
-
 from app.core.config import settings
 from app.core.engine.contexts import NodeResult
 from app.core.engine.limits import clamp_serialized
@@ -32,6 +29,8 @@ from app.modules.runs.schemas import (
 )
 from app.modules.settings.service import SettingsService
 from app.modules.workflows.service import WorkflowService
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 
 class RunService:
@@ -100,8 +99,13 @@ class RunService:
 
         run_id = f"r_{uuid.uuid4().hex[:10]}"
         version = WorkflowService.latest_version(session, wf.id)
+        # 提前取 workspace_id：RunRepository.create 会写入；回调里用同一值写 NodeRun
+        from app.core.tenancy import get_workspace_id
+
+        ws_id = str(get_workspace_id()) if get_workspace_id() else None
         run = Run(
             id=run_id,
+            workspace_id=ws_id,
             workflow_id=wf.id,
             workflow_name=wf.name,
             graph_snapshot=json.dumps(graph, ensure_ascii=False),
@@ -121,6 +125,22 @@ class RunService:
             session.rollback()
             raise AppError(409, "Workflow already has a running run") from None
 
+        # SaaS 异步化（Sprint 2）：Celery 启用时只投递任务，立即返回；
+        # 桌面模式（无 broker）走原同步 in-process 逻辑。
+        # 注意：懒加载导入，避免 service ↔ tasks 循环依赖。
+        from app.modules.runs.tasks import celery_app, execute_workflow_async
+
+        if celery_app is not None:
+            execute_workflow_async(run_id, wf.id, inputs or {}, ws_id)
+            return RunResponse(
+                id=run.id,
+                workflow_id=run.workflow_id,
+                workflow_name=run.workflow_name,
+                status="running",
+                trigger=run.trigger,
+                started_at=run.started_at,
+            )
+
         providers_registry = build_registry(session)
         manager: RunManager = get_run_manager()
 
@@ -135,8 +155,8 @@ class RunService:
             default_timeout=float(default_timeout)
             if isinstance(default_timeout, int | float)
             else None,
-            on_node_started=_make_node_started(run_id),
-            on_node_finished=_make_node_finished(run_id),
+            on_node_started=_make_node_started(run_id, ws_id),
+            on_node_finished=_make_node_finished(run_id, ws_id),
             on_run_finished=_make_run_finished(run_id, wf.id),
         )
 
@@ -322,7 +342,7 @@ def _to_node_detail(nr: NodeRun) -> NodeRunDetail:
 # ---- Engine callbacks（每次独立 Session，避免复用已关闭的请求级 Session）----
 
 
-def _make_node_started(run_id: str):
+def _make_node_started(run_id: str, workspace_id: str | None):
     async def _on_node_started(node_id: str, node: dict, node_input: dict | None = None) -> None:
         nr_id = f"nr_{uuid.uuid4().hex[:14]}"
         node_type = node.get("type") or "unknown"
@@ -337,6 +357,7 @@ def _make_node_started(run_id: str):
                 db.add(
                     NodeRun(
                         id=nr_id,
+                        workspace_id=workspace_id,
                         run_id=run_id,
                         node_id=node_id,
                         node_type=node_type,
@@ -355,7 +376,7 @@ def _make_node_started(run_id: str):
     return _on_node_started
 
 
-def _make_node_finished(run_id: str):
+def _make_node_finished(run_id: str, workspace_id: str | None):
     async def _on_node_finished(
         node_id: str, node: dict, result: NodeResult, duration_ms: int
     ) -> None:
@@ -366,6 +387,7 @@ def _make_node_finished(run_id: str):
                     # 节点未启动就结束（跳过 / 取消）
                     nr = NodeRun(
                         id=f"nr_{uuid.uuid4().hex[:14]}",
+                        workspace_id=workspace_id,
                         run_id=run_id,
                         node_id=node_id,
                         node_type=node.get("type") or "unknown",
