@@ -2,6 +2,8 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import type { RouteObject } from 'react-router-dom';
 
 import AppLayout from '@/shared/components/AppLayout';
+import AuthGuard from '@/shared/components/AuthGuard';
+import { authRoutes } from '@/features/auth';
 
 // Feature modules export their own sub-routes
 const workflowsRoutes: RouteObject[] = [
@@ -66,16 +68,58 @@ const settingsRoutes: RouteObject[] = [
   },
 ];
 
-export const router = createBrowserRouter([
+/** SaaS 工作空间下的子路由：/workspaces/:wsId/* */
+const workspaceChildren: RouteObject[] = [
   {
-    path: '/',
-    element: <AppLayout />,
+    index: true,
+    lazy: async () => {
+      const mod = await import('@/features/dashboard');
+      return { Component: mod.default };
+    },
+  },
+  ...workflowsRoutes,
+  ...runsRoutes,
+  ...modelsRoutes,
+  ...settingsRoutes,
+];
+
+export const router = createBrowserRouter([
+  // 登录 / 注册（无布局）
+  ...authRoutes,
+
+  // 工作空间列表
+  {
+    path: '/workspaces',
+    element: (
+      <AuthGuard>
+        <AppLayout />
+      </AuthGuard>
+    ),
     children: [
-      { index: true, element: <Navigate to="/workflows" replace /> },
-      ...workflowsRoutes,
-      ...runsRoutes,
-      ...modelsRoutes,
-      ...settingsRoutes,
+      {
+        index: true,
+        lazy: async () => {
+          const mod = await import('@/features/workspaces');
+          return { Component: mod.WorkspaceList };
+        },
+      },
     ],
   },
+
+  // SaaS 主路由：/workspaces/:wsId/*
+  {
+    path: '/workspaces/:wsId',
+    element: (
+      <AuthGuard>
+        <AppLayout />
+      </AuthGuard>
+    ),
+    children: workspaceChildren,
+  },
+
+  // 根路径重定向
+  { path: '/', element: <Navigate to="/workspaces" replace /> },
+
+  // 兜底：未匹配路径回到工作空间列表
+  { path: '*', element: <Navigate to="/workspaces" replace /> },
 ]);

@@ -61,7 +61,8 @@ export default function WorkflowEditor() {
 }
 
 function EditorInner() {
-  const { id } = useParams();
+  const { id, wsId } = useParams<{ id: string; wsId: string }>();
+  const wsPrefix = wsId ? `/workspaces/${wsId}` : '';
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const flow = useReactFlow();
@@ -517,8 +518,8 @@ function EditorInner() {
         return;
       }
     }
-    navigate('/workflows');
-  }, [navigate, saveNow, message]);
+    navigate(`${wsPrefix}/workflows`);
+  }, [navigate, saveNow, message, wsPrefix]);
 
   const debugFromMenu = useCallback(
     async (nodeId: string) => {
@@ -580,9 +581,9 @@ function EditorInner() {
     { id: 'undo', label: '撤销', hint: 'Ctrl+Z', run: undo },
     { id: 'redo', label: '重做', hint: 'Ctrl+Shift+Z', run: redo },
     { id: 'find', label: '搜索节点', hint: 'Ctrl+F', run: () => setPalette('node') },
-    { id: 'runs', label: '打开运行记录', run: () => navigate('/runs') },
-    { id: 'models', label: '打开模型配置', run: () => navigate('/models') },
-    { id: 'settings', label: '打开本机设置', run: () => navigate('/settings') },
+    { id: 'runs', label: '打开运行记录', run: () => navigate(`${wsPrefix}/runs`) },
+    { id: 'models', label: '打开模型配置', run: () => navigate(`${wsPrefix}/models`) },
+    { id: 'settings', label: '打开设置', run: () => navigate(`${wsPrefix}/settings`) },
   ];
 
   return (

@@ -8,7 +8,7 @@ import {
   DeleteOutlined,
 } from '@ant-design/icons';
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import {
   listWorkflows,
@@ -30,6 +30,8 @@ const ONBOARDING_KEY = 'agentflow.onboarded.v2';
 export default function WorkflowList() {
   const { message, modal } = App.useApp();
   const nav = useNavigate();
+  const { wsId } = useParams<{ wsId: string }>();
+  const wsPrefix = wsId ? `/workspaces/${wsId}` : '';
   const [items, setItems] = useState<WorkflowListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -86,7 +88,7 @@ export default function WorkflowList() {
           description: '',
           graph: { version: 1, inputs: [], nodes: [], edges: [] },
         });
-        nav(`/workflows/${wf.id}`);
+        nav(`${wsPrefix}/workflows/${wf.id}`);
         return;
       }
 
@@ -98,7 +100,7 @@ export default function WorkflowList() {
         description: template.description,
         graph: template.build(),
       });
-      nav(`/workflows/${wf.id}`);
+      nav(`${wsPrefix}/workflows/${wf.id}`);
     } catch (err: any) {
       message.error(err?.message || '创建工作流失败');
     } finally {
@@ -231,7 +233,7 @@ export default function WorkflowList() {
               dataIndex: 'name',
               width: 260,
               render: (text, record) => (
-                <a onClick={() => nav(`/workflows/${record.id}`)}>{text}</a>
+                <a onClick={() => nav(`${wsPrefix}/workflows/${record.id}`)}>{text}</a>
               ),
             },
             {
@@ -278,7 +280,7 @@ export default function WorkflowList() {
                     type="link"
                     size="small"
                     icon={<EditOutlined />}
-                    onClick={() => nav(`/workflows/${record.id}`)}
+                    onClick={() => nav(`${wsPrefix}/workflows/${record.id}`)}
                   >
                     编辑
                   </Button>
@@ -322,7 +324,7 @@ export default function WorkflowList() {
           setShowOnboarding(false);
           if (done) localStorage.setItem(ONBOARDING_KEY, '1');
         }}
-        onOpenWorkflow={(workflowId) => nav(`/workflows/${workflowId}`)}
+        onOpenWorkflow={(workflowId) => nav(`${wsPrefix}/workflows/${workflowId}`)}
       />
     </div>
   );

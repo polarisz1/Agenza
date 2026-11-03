@@ -1,7 +1,7 @@
 import { App, Table, Tag, Button, Space, Select, DatePicker } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import { listRuns, listWorkflowOptions, rerunRun } from '../api';
 import type { RunListItem, WorkflowOption } from '../api';
@@ -50,6 +50,8 @@ function toNaiveUtc(value?: Dayjs | null): string | undefined {
 export default function RunList() {
   const { message } = App.useApp();
   const nav = useNavigate();
+  const { wsId } = useParams<{ wsId: string }>();
+  const wsPrefix = wsId ? `/workspaces/${wsId}` : '';
   const [items, setItems] = useState<RunListItem[]>([]);
   const [workflows, setWorkflows] = useState<WorkflowOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -154,7 +156,7 @@ export default function RunList() {
             <EmptyState
               title="还没有运行记录"
               description="打开一个工作流，点「▶ 运行」后这里会出现记录。"
-              action={<Button onClick={() => nav('/workflows')}>去工作流</Button>}
+              action={<Button onClick={() => nav(`${wsPrefix}/workflows`)}>去工作流</Button>}
             />
           ),
         }}

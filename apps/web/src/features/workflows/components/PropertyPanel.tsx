@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { App, AutoComplete, Button, Input, Segmented, Switch } from 'antd';
 
 import { CONDITION_OPS, NODE_META, isVariableSafeLabel } from '../types';
@@ -45,6 +45,8 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 /** 右侧属性面板：按节点类型渲染表单 + 变量选择器 + 最近输出 + 单节点调试 */
 export default function PropertyPanel({ variables, latestOutputs, onDebug }: Props) {
   const { message } = App.useApp();
+  const { wsId } = useParams<{ wsId: string }>();
+  const wsPrefix = wsId ? `/workspaces/${wsId}` : '';
   const nodes = useEditorStore((s) => s.nodes);
   const selectedId = useEditorStore((s) => s.selectedId);
   const selectedIds = useEditorStore((s) => s.selectedIds);
@@ -458,7 +460,7 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
                 </Field>
                 {providers.length === 0 && (
                   <div className="afe-hint">
-                    尚未配置服务商，<Link to="/models">前往模型配置</Link>
+                    尚未配置服务商，<Link to={`${wsPrefix}/models`}>前往模型配置</Link>
                   </div>
                 )}
                 <Field

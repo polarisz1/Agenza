@@ -32,8 +32,9 @@ function downloadJson(filename: string, payload: unknown) {
 
 /** 运行详情 v2：输入 / 输出 / 错误 + 失败置顶诊断 + 对比入口（F1）。 */
 export default function RunDetail() {
-  const { id } = useParams();
+  const { id, wsId } = useParams<{ id: string; wsId: string }>();
   const nav = useNavigate();
+  const wsPrefix = wsId ? `/workspaces/${wsId}` : '';
   const { message } = App.useApp();
 
   const [run, setRun] = useState<RunDetailType | null>(null);
@@ -177,7 +178,7 @@ export default function RunDetail() {
   return (
     <div className="rv">
       <div className="rv-head">
-        <Button type="text" onClick={() => nav('/runs')}>
+        <Button type="text" onClick={() => nav(`${wsPrefix}/runs`)}>
           ← 返回
         </Button>
         <h1>运行 {run.id}</h1>
@@ -344,7 +345,7 @@ export default function RunDetail() {
                                 复制错误
                               </Button>
                               {nodeError.action?.target === 'models' && (
-                                <Button size="small" onClick={() => nav('/models')}>
+                                <Button size="small" onClick={() => nav(`${wsPrefix}/models`)}>
                                   去模型配置
                                 </Button>
                               )}

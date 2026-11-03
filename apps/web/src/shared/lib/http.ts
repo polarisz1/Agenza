@@ -1,4 +1,15 @@
-/** 轻量 HTTP 封装，统一解包后端的 { code, message, data } 响应 */
+/**
+ * 轻量 HTTP 封装，统一解包后端的 { code, message, data } 响应。
+ *
+ * SaaS 能力：
+ * - 自动注入 Authorization: Bearer <access_token>
+ * - 401 时用 refresh_token 刷新一次后重放原请求
+ * - 刷新期间并发请求排队，避免重复刷新
+ * - 桌面模式（无 token）不注入
+ */
+
+import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
+
 const apiBase = () => import.meta.env.VITE_API_BASE_URL || '/api';
 const serviceBase = () => apiBase().replace(/\/api$/, '');
 
@@ -15,30 +26,103 @@ async function toError(resp: Response): Promise<Error> {
   return new Error(`HTTP ${resp.status}`);
 }
 
+/** 当前正在进行的 refresh Promise，用于并发请求排队 */
+let refreshPromise: Promise<boolean> | null = null;
+
+async function ensureToken(): Promise<string | null> {
+  const { accessToken } = useAuthStore.getState();
+  return accessToken;
+}
+
+/**
+ * 401 处理：尝试刷新 token。
+ * 并发请求共享同一个 refresh Promise，避免多次刷新。
+ */
+async function handle401(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const { refresh } = useAuthStore.getState();
+    const ok = await refresh();
+    return ok;
+  })();
+
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
+}
+
+/** 判断是否为刷新 token 的请求（避免递归刷新） */
+function isRefreshRequest(url: string): boolean {
+  return url.includes('/auth/refresh');
+}
+
+/** 构建带 Authorization 头的 init */
+async function withAuth(init?: RequestInit): Promise<RequestInit> {
+  const token = await ensureToken();
+  if (!token) return init || {};
+  return {
+    ...init,
+    headers: {
+      ...(init?.headers || {}),
+      Authorization: `Bearer ${token}`,
+    },
+  };
+}
+
+/** 执行请求，处理 401 刷新重试 */
+async function request<T>(
+  url: string,
+  init: RequestInit,
+  retried = false,
+): Promise<T> {
+  const resp = await fetch(serviceBase() + url, init);
+
+  if (resp.status === 401 && !isRefreshRequest(url) && !retried) {
+    const refreshed = await handle401();
+    if (refreshed) {
+      // 用新 token 重新构建请求并重试
+      const retryInit = await withAuth(init);
+      return request<T>(url, { ...retryInit, method: init.method }, true);
+    }
+    // 刷新失败：跳登录
+    const { logout } = useAuthStore.getState();
+    await logout();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+  }
+
+  if (!resp.ok) throw await toError(resp);
+  const json = await resp.json();
+  return json.data ?? json;
+}
+
 export const http = {
   get: async <T>(url: string, init?: RequestInit): Promise<T> => {
-    const resp = await fetch(serviceBase() + url, init);
-    if (!resp.ok) throw await toError(resp);
-    const json = await resp.json();
-    return json.data ?? json;
+    const authInit = await withAuth(init);
+    return request<T>(url, { ...authInit, method: 'GET' });
   },
-  post: async <T>(url: string, body?: any, init?: RequestInit): Promise<T> => {
-    const resp = await fetch(serviceBase() + url, {
+
+  post: async <T>(url: string, body?: unknown, init?: RequestInit): Promise<T> => {
+    const authInit = await withAuth({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,
       ...init,
     });
-    if (!resp.ok) throw await toError(resp);
-    const json = await resp.json();
-    return json.data ?? json;
+    return request<T>(url, authInit);
   },
-  put: async <T>(url: string, body?: any): Promise<T> => http.post(url, body, { method: 'PUT' }),
+
+  put: async <T>(url: string, body?: unknown): Promise<T> => {
+    return http.post<T>(url, body, { method: 'PUT' });
+  },
+
   delete: async <T>(url: string): Promise<T> => {
-    const resp = await fetch(serviceBase() + url, { method: 'DELETE' });
-    if (!resp.ok) throw await toError(resp);
-    const json = await resp.json();
-    return json.data ?? json;
+    const authInit = await withAuth({ method: 'DELETE' });
+    return request<T>(url, authInit);
   },
 };
 

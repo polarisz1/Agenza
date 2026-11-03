@@ -1,6 +1,6 @@
 import { Alert, App, Button, Empty, Spin, Tag } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { compareRuns } from '../api';
 import type { CompareNode, RunDetail, RunCompareResult } from '../api';
@@ -58,6 +58,8 @@ function nodeCell(node: CompareNode['a'], other: CompareNode['a']) {
 /** 运行对比：后端按 node_id 对齐，前端做并排展示与行级输出 diff（F1）。 */
 export default function RunCompare() {
   const nav = useNavigate();
+  const { wsId } = useParams<{ wsId: string }>();
+  const wsPrefix = wsId ? `/workspaces/${wsId}` : '';
   const { message } = App.useApp();
   const [params] = useSearchParams();
   const ids = useMemo(
@@ -101,7 +103,7 @@ export default function RunCompare() {
   if (ids.length !== 2) {
     return (
       <Empty description="请先在运行列表勾选两条运行，再点「对比选中」">
-        <Button type="primary" onClick={() => nav('/runs')}>
+        <Button type="primary" onClick={() => nav(`${wsPrefix}/runs`)}>
           去运行记录
         </Button>
       </Empty>
@@ -174,7 +176,7 @@ export default function RunCompare() {
   return (
     <div className="rv">
       <div className="rv-head">
-        <Button type="text" onClick={() => nav('/runs')}>
+        <Button type="text" onClick={() => nav(`${wsPrefix}/runs`)}>
           ← 返回
         </Button>
         <h1>对比运行</h1>
