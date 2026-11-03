@@ -1,15 +1,29 @@
-"""Workflow repository - SQLAlchemy queries."""
+"""Workflow repository - SQLAlchemy queries.
+
+SaaS 多租户：所有查询显式带 workspace_id 过滤；写操作记录 workspace_id + created_by。
+桌面模式（TENANCY_ENABLED=false）下 workspace_id 为 None，查询不过滤、不写入。
+"""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 
-from sqlalchemy.orm import Session
-
+from app.core.tenancy import get_tenant, get_workspace_id
 from app.core.time import utcnow
 from app.modules.workflows.models import Workflow, WorkflowVersion
+from sqlalchemy.orm import Session
 
-# utcnow 用于 last_run_at
+
+def _ws_id() -> str | None:
+    """当前请求的 workspace_id（字符串形式）；桌面模式返回 None。"""
+    ws = get_workspace_id()
+    return str(ws) if ws is not None else None
+
+
+def _user_id() -> str | None:
+    """当前请求的 user_id；桌面模式返回 None。"""
+    t = get_tenant()
+    return str(t.user_id) if t is not None else None
 
 
 class WorkflowRepository:
@@ -24,6 +38,8 @@ class WorkflowRepository:
     ) -> Workflow:
         obj = Workflow(
             id=wf_id,
+            workspace_id=_ws_id(),
+            created_by=_user_id(),
             name=name,
             description=description,
             graph_json=graph_json,
@@ -36,7 +52,11 @@ class WorkflowRepository:
 
     @staticmethod
     def get(session: Session, wf_id: str) -> Workflow | None:
-        return session.get(Workflow, wf_id)
+        q = session.query(Workflow).filter(Workflow.id == wf_id)
+        ws = _ws_id()
+        if ws is not None:
+            q = q.filter(Workflow.workspace_id == ws)
+        return q.first()
 
     @staticmethod
     def list(
@@ -46,6 +66,9 @@ class WorkflowRepository:
         sort: str = "updated_desc",
     ) -> tuple[Sequence[Workflow], int]:
         query = session.query(Workflow)
+        ws = _ws_id()
+        if ws is not None:
+            query = query.filter(Workflow.workspace_id == ws)
         if q:
             query = query.filter(Workflow.name.ilike(f"%{q}%"))
         if status:
@@ -68,7 +91,7 @@ class WorkflowRepository:
         viewport_json: str | None = None,
         status: str | None = None,
     ) -> Workflow | None:
-        obj = session.get(Workflow, wf_id)
+        obj = WorkflowRepository.get(session, wf_id)
         if obj is None:
             return None
         if name is not None:
@@ -87,7 +110,7 @@ class WorkflowRepository:
 
     @staticmethod
     def delete(session: Session, wf_id: str) -> bool:
-        obj = session.get(Workflow, wf_id)
+        obj = WorkflowRepository.get(session, wf_id)
         if obj is None:
             return False
         session.delete(obj)
@@ -96,7 +119,7 @@ class WorkflowRepository:
 
     @staticmethod
     def mark_run(session: Session, wf_id: str) -> None:
-        obj = session.get(Workflow, wf_id)
+        obj = WorkflowRepository.get(session, wf_id)
         if obj is None:
             return
         obj.last_run_at = utcnow()
@@ -106,6 +129,9 @@ class WorkflowRepository:
 
     @staticmethod
     def create_version(session: Session, version: WorkflowVersion) -> WorkflowVersion:
+        # 版本继承工作流的 workspace_id
+        if version.workspace_id is None:
+            version.workspace_id = _ws_id()
         session.add(version)
         session.flush()
         session.refresh(version)
@@ -113,42 +139,41 @@ class WorkflowRepository:
 
     @staticmethod
     def list_versions(session: Session, workflow_id: str) -> list[WorkflowVersion]:
-        return (
-            session.query(WorkflowVersion)
-            .filter(WorkflowVersion.workflow_id == workflow_id)
-            .order_by(WorkflowVersion.seq.desc())
-            .all()
-        )
+        q = session.query(WorkflowVersion).filter(WorkflowVersion.workflow_id == workflow_id)
+        ws = _ws_id()
+        if ws is not None:
+            q = q.filter(WorkflowVersion.workspace_id == ws)
+        return q.order_by(WorkflowVersion.seq.desc()).all()
 
     @staticmethod
     def latest_version(session: Session, workflow_id: str) -> WorkflowVersion | None:
-        return (
-            session.query(WorkflowVersion)
-            .filter(WorkflowVersion.workflow_id == workflow_id)
-            .order_by(WorkflowVersion.seq.desc())
-            .first()
-        )
+        q = session.query(WorkflowVersion).filter(WorkflowVersion.workflow_id == workflow_id)
+        ws = _ws_id()
+        if ws is not None:
+            q = q.filter(WorkflowVersion.workspace_id == ws)
+        return q.order_by(WorkflowVersion.seq.desc()).first()
 
     @staticmethod
     def get_version(session: Session, workflow_id: str, version_id: str) -> WorkflowVersion | None:
-        return (
-            session.query(WorkflowVersion)
-            .filter(
-                WorkflowVersion.workflow_id == workflow_id,
-                WorkflowVersion.id == version_id,
-            )
-            .first()
+        q = session.query(WorkflowVersion).filter(
+            WorkflowVersion.workflow_id == workflow_id,
+            WorkflowVersion.id == version_id,
         )
+        ws = _ws_id()
+        if ws is not None:
+            q = q.filter(WorkflowVersion.workspace_id == ws)
+        return q.first()
 
     @staticmethod
     def prune_versions(session: Session, workflow_id: str, keep: int = 50) -> None:
-        olds = (
+        q = (
             session.query(WorkflowVersion.id)
             .filter(WorkflowVersion.workflow_id == workflow_id)
-            .order_by(WorkflowVersion.seq.desc())
-            .offset(max(1, keep))
-            .all()
         )
+        ws = _ws_id()
+        if ws is not None:
+            q = q.filter(WorkflowVersion.workspace_id == ws)
+        olds = q.order_by(WorkflowVersion.seq.desc()).offset(max(1, keep)).all()
         ids = [row[0] for row in olds]
         if ids:
             session.query(WorkflowVersion).filter(WorkflowVersion.id.in_(ids)).delete(

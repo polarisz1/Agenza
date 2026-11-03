@@ -22,6 +22,28 @@ class FakeAdapter:
         return ChatResult(content="pong", model="fake-model")
 
 
+class FakeQuery:
+    """支持 .filter().first() 的最小查询替身。"""
+
+    def __init__(self, session: "FakeSession") -> None:
+        self._session = session
+        self._filter_value: str | None = None
+
+    def filter(self, *conditions):
+        # 从 Provider.id == pid 中提取 pid
+        for cond in conditions:
+            # SQLAlchemy BinaryExpression 的右值
+            right = getattr(cond, "right", None)
+            if right is not None:
+                self._filter_value = getattr(right, "value", right)
+        return self
+
+    def first(self):
+        if self._filter_value is not None:
+            return self._session.rows.get(self._filter_value)
+        return None
+
+
 class FakeSession:
     """只够 ProviderRepository.get / create / update 用的最小替身。"""
 
@@ -44,8 +66,8 @@ class FakeSession:
     def refresh(self, _obj):
         return None
 
-    def query(self, *_args, **_kwargs):  # pragma: no cover - 本文件用不到
-        raise AssertionError("unexpected query")
+    def query(self, *_args, **_kwargs):
+        return FakeQuery(self)
 
 
 def _create(session: FakeSession, api_key: str) -> str:
