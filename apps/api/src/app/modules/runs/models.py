@@ -1,17 +1,18 @@
 """Run module."""
 
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text, text
+
 from app.core.time import utcnow
 from app.db.database import Base
-from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text, text
 
 
 class Run(Base):
     __tablename__ = "run"
 
-    id = Column(String(12), primary_key=True, index=True)
+    id = Column(String(32), primary_key=True, index=True)
     # SaaS: 多租户隔离字段
     workspace_id = Column(String(36), ForeignKey("workspace.id"), nullable=True, index=True)
-    workflow_id = Column(String(12), index=True)
+    workflow_id = Column(String(32), index=True)
     workflow_name = Column(String(200))
     graph_snapshot = Column(Text, nullable=False)
     inputs_json = Column(Text, nullable=True)
@@ -28,13 +29,14 @@ class Run(Base):
     version_seq = Column(Integer, nullable=True)
 
     # 同一工作流同时只允许一个 running 的运行（评审 G6）：
-    # SQLite / PostgreSQL 用不同的部分唯一索引
+    # SQLite / PostgreSQL 用不同的部分唯一索引，保证语义一致
     __table_args__ = (
         Index(
             "uq_run_running_per_workflow",
             "workflow_id",
             unique=True,
             sqlite_where=text("status = 'running'"),
+            postgresql_where=text("status = 'running'"),
         ),
     )
 
@@ -42,9 +44,9 @@ class Run(Base):
 class NodeRun(Base):
     __tablename__ = "node_run"
 
-    id = Column(String(16), primary_key=True)
+    id = Column(String(32), primary_key=True)
     workspace_id = Column(String(36), ForeignKey("workspace.id"), nullable=True, index=True)
-    run_id = Column(String(12), index=True)
+    run_id = Column(String(32), index=True)
     node_id = Column(String(24))
     node_type = Column(String(30))
     node_name = Column(String(200))

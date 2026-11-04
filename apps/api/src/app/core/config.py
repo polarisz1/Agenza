@@ -125,7 +125,7 @@ class Settings(BaseSettings):
     MOUNT_FRONTEND: bool = False
 
     # ---- SaaS: Multi-tenant ----
-    TENANCY_ENABLED: bool = False  # set "true" for cloud SaaS mode
+    TENANCY_ENABLED: bool = True  # set "true" for cloud SaaS mode
     JWT_SECRET: str = ""  # set via env in SaaS; auto-generated for desktop
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
