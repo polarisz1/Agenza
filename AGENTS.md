@@ -218,7 +218,7 @@ pnpm contracts:compat     # 破坏性变更检测
 
 ```bash
 # 开发模式
-pnpm dev          # 后端 127.0.0.1:8000 + 前端 localhost:5173
+pnpm dev          # 后端 127.0.0.1:8000 + 前端 localhost:5174
 pnpm dev:api
 pnpm dev:web
 

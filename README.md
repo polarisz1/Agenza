@@ -32,7 +32,7 @@ pnpm dev
 `pnpm dev` 会并行启动：
 
 - 后端 <http://127.0.0.1:8000>（只监听 `src/app` 变化，自动重载）
-- 前端 <http://localhost:5173>（HMR，`/api` 代理到上面的后端）
+- 前端 <http://localhost:5174>（HMR，`/api` 代理到上面的后端）
 
 端口被占用时会**直接报错退出**（前端开了 `--strictPort`，不会悄悄换号），换端口的方式：
 

@@ -21,7 +21,7 @@ const { spawn, spawnSync } = require('node:child_process');
 app.setName('AgentFlow');
 
 const DEV = !app.isPackaged;
-const DEV_URL = process.env.AGENTFLOW_DEV_URL || 'http://localhost:5173';
+const DEV_URL = process.env.AGENTFLOW_DEV_URL || 'http://localhost:5174';
 const HEALTH_TIMEOUT_MS = Number(process.env.AGENTFLOW_HEALTH_TIMEOUT_MS || 30000);
 
 const USER_DATA_DIR = app.getPath('userData');
@@ -174,7 +174,7 @@ async function startBackend() {
   if (!exe) {
     throw new Error(
       '找不到后端程序 backend.exe。\n' +
-        '打包产物应在 resources/backend/backend.exe；开发验证可设 AGENTFLOW_BACKEND_EXE 指定路径。',
+      '打包产物应在 resources/backend/backend.exe；开发验证可设 AGENTFLOW_BACKEND_EXE 指定路径。',
     );
   }
 
@@ -490,7 +490,7 @@ if (!gotLock) {
     }
 
     cleanupStaleBackend();
-    for (;;) {
+    for (; ;) {
       try {
         await startBackend();
         break;

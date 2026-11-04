@@ -11,7 +11,20 @@
 import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
 
 const apiBase = () => import.meta.env.VITE_API_BASE_URL || '/api';
-const serviceBase = () => apiBase().replace(/\/api$/, '');
+/**
+ * API 基础路径：
+ * - 完整 URL（http://https 开头）：直接用，Electron 打包模式（前后端分端口）
+ * - 相对路径（/api 开头）：走 vite dev server 代理
+ *
+ * 历史实现里的 `apiBase().replace(/\/api$/, '')` 是错误的——它假设
+ * VITE_API_BASE_URL 一定以 `/api` 结尾，但 Electron 打包时实际配的是
+ * `http://127.0.0.1:12345`，末尾无 `/api`，replace 不生效导致绕过代理或拼错路径。
+ */
+const isFullUrl = (s: string) => /^https?:\/\//i.test(s);
+const serviceBase = () => {
+  const base = apiBase();
+  return isFullUrl(base) ? base : '';
+};
 
 /** 从错误响应里尽量取出后端 message，取不到时退回 HTTP 状态码 */
 async function toError(resp: Response): Promise<Error> {

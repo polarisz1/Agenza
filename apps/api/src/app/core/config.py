@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     PORT: int = DEFAULT_PORT
 
     # ---- CORS ----
-    CORS_ORIGINS: list[str] = ["http://localhost:5173"]
+    CORS_ORIGINS: list[str] = ["http://localhost:5174"]
 
     # ---- Database ----
     DATABASE_URL: str = ""

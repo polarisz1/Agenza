@@ -4,7 +4,8 @@ import path from 'path';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const apiBaseUrl = env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  // proxy target 必须是完整 URL（http:// 开头），不能是前端代码用的相对路径
+  const apiProxyTarget = env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8000';
 
   return {
     plugins: [react()],
@@ -14,17 +15,17 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: 5173,
+      port: 5174,
       host: true,
       open: false,
       proxy: {
         '/api': {
-          target: apiBaseUrl,
+          target: apiProxyTarget,
           changeOrigin: true,
           secure: false,
         },
-        '/docs': { target: apiBaseUrl, changeOrigin: true, secure: false },
-        '/openapi.json': { target: apiBaseUrl, changeOrigin: true, secure: false },
+        '/docs': { target: apiProxyTarget, changeOrigin: true, secure: false },
+        '/openapi.json': { target: apiProxyTarget, changeOrigin: true, secure: false },
       },
     },
     build: {

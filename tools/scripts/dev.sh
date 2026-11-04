@@ -15,7 +15,7 @@ if ! command -v node >/dev/null 2>&1; then
 
 请改用以下任一方式：
   1) 在 Windows 终端（PowerShell/CMD）里直接运行：  pnpm dev
-  2) 自定义端口：  node tools/scripts/dev.mjs --api-port 8000 --web-port 5173
+  2) 自定义端口：  node tools/scripts/dev.mjs --api-port 8000 --web-port 5174
   3) 或在这个 bash 里先安装 Node.js（>= 20）再重试
 EOF
   exit 127

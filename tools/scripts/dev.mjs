@@ -6,7 +6,7 @@
  * `turbo run dev` 只能拉起前端。AGENTS §8 要求 `pnpm dev` 同时起两个进程。
  *
  * 用法：
- *   pnpm dev                       # 默认 8000 / 5173
+ *   pnpm dev                       # 默认 8000 / 5174
  *   node tools/scripts/dev.mjs --api-port 8010 --web-port 5180
  *   bash tools/scripts/dev.sh 8010 5180     # 兼容旧的 bash 入口（转调本脚本）
  */
@@ -36,7 +36,7 @@ function parsePort(flag, fallback) {
 }
 
 const API_PORT = parsePort('--api-port', 8000);
-const WEB_PORT = parsePort('--web-port', 5173);
+const WEB_PORT = parsePort('--web-port', 5174);
 
 // 直接调 vite 的入口文件，而不是 `pnpm exec vite`：后者在启动失败时会额外抛一句
 // 误导性的 "Command vite not found"，把真正的报错（端口占用）埋掉。
@@ -132,7 +132,7 @@ for (const service of services) {
 }
 console.log(
   `${YELLOW}提示：${RESET}后端首次启动要跑数据库迁移；端口若被占用会启动失败，可用 ` +
-    `${DIM}--api-port / --web-port${RESET} 换端口。前端用了 --strictPort，端口被占用会直接报错而不是悄悄换号。\n`,
+  `${DIM}--api-port / --web-port${RESET} 换端口。前端用了 --strictPort，端口被占用会直接报错而不是悄悄换号。\n`,
 );
 
 for (const service of services) start(service);
