@@ -7,7 +7,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
-from app.core.tenancy import get_tenant
+from app.core.tenancy import TenantContext, clear_tenant, get_tenant, set_tenant
 from app.db.database import SessionLocal
 from app.main import app
 from app.modules.workflows.models import Workflow
@@ -183,3 +183,59 @@ def test_saas_provider_settings_run_isolation(monkeypatch) -> None:
         assert run_id in run_ids(token_a)
         assert run_id not in run_ids(token_b)
         assert client.get(f"/api/v1/runs/{run_id}", headers=_headers(token_b)).status_code == 404
+
+
+def test_session_auto_filters_workspace(monkeypatch) -> None:
+    """INFRA-03：没写显式过滤的 ORM 查询在 SaaS 模式下也会自动带上 workspace。"""
+    monkeypatch.setattr(settings, "TENANCY_ENABLED", True)
+    workspace_a, workspace_b = uuid4(), uuid4()
+    wf_a = f"wf_auto_{uuid4().hex[:8]}"
+    wf_b = f"wf_auto_{uuid4().hex[:8]}"
+
+    with SessionLocal() as session:
+        session.add_all(
+            [
+                Workflow(
+                    id=wf_a,
+                    workspace_id=str(workspace_a),
+                    name="auto-a",
+                    graph_json="{}",
+                    status="draft",
+                ),
+                Workflow(
+                    id=wf_b,
+                    workspace_id=str(workspace_b),
+                    name="auto-b",
+                    graph_json="{}",
+                    status="draft",
+                ),
+            ]
+        )
+        session.commit()
+
+        set_tenant(
+            TenantContext(
+                workspace_id=workspace_a,
+                user_id=uuid4(),
+                user_email="auto@example.com",
+                role="owner",
+            )
+        )
+        try:
+            auto_ids = {wf.id for wf in session.query(Workflow).all()}
+            assert wf_a in auto_ids
+            assert wf_b not in auto_ids
+        finally:
+            clear_tenant()
+
+        # 显式绕过：运维/迁移脚本确实需要跨租户读取时才用
+        all_ids = {
+            wf.id
+            for wf in session.query(Workflow).execution_options(include_all_workspaces=True).all()
+        }
+        assert {wf_a, wf_b} <= all_ids
+
+        session.query(Workflow).filter(Workflow.id.in_([wf_a, wf_b])).delete(
+            synchronize_session=False
+        )
+        session.commit()

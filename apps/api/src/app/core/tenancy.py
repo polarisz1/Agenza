@@ -157,3 +157,71 @@ def _decode_jwt_tenant(token: str) -> TenantContext:
         user_email=payload.get("email", ""),
         role=payload.get("role", "viewer"),
     )
+
+
+# ── Tenant-aware session（INFRA-03） ───────────────────────────────
+
+# 自动过滤只覆盖业务数据；身份/租户元数据表（user / workspace /
+# workspace_member / api_key）刻意排除：登录、工作空间切换、成员校验
+# 必须能跨 workspace 查询。
+_FILTER_INSTALLED_ATTR = "_agentflow_tenant_filter_installed"
+
+
+def _tenant_scoped_models() -> list:
+    """延迟导入模型，避免 tenancy ↔ models ↔ database 的循环依赖。"""
+    from app.modules.audit.models import AuditLog
+    from app.modules.providers.models import Provider
+    from app.modules.runs.models import NodeRun, Run
+    from app.modules.settings.models import AppSetting
+    from app.modules.workflows.models import Workflow, WorkflowVersion
+
+    return [Workflow, WorkflowVersion, Run, NodeRun, Provider, AppSetting, AuditLog]
+
+
+def install_tenant_query_filter() -> None:
+    """给所有 ORM Session 安装 workspace 自动过滤。
+
+    兜底 Repository 里可能漏写的显式过滤（INFRA-03）。生效条件：
+    - SaaS 模式（`TENANCY_ENABLED=true`）；
+    - 当前上下文有 TenantContext（桌面模式、Celery worker 均没有）；
+    - 查询是 ORM SELECT；显式传 `execution_options(include_all_workspaces=True)`
+      可绕过（用于确实需要跨租户的场景）。
+
+    显式过滤与自动过滤叠加不改变结果，Repository 的现有写法保持不变。
+    """
+    from sqlalchemy import event
+    from sqlalchemy.orm import Session
+
+    if getattr(Session, _FILTER_INSTALLED_ATTR, False):
+        return
+    event.listen(Session, "do_orm_execute", _apply_tenant_filter)
+    setattr(Session, _FILTER_INSTALLED_ATTR, True)
+
+
+def _apply_tenant_filter(execute_state) -> None:
+    if execute_state.execution_options.get("include_all_workspaces"):
+        return
+    if not is_saas_mode():
+        return
+
+    workspace_id = get_workspace_id()
+    if workspace_id is None:
+        return
+
+    from sqlalchemy import Select
+    from sqlalchemy.orm import with_loader_criteria
+
+    if not isinstance(execute_state.statement, Select):
+        return
+
+    ws = str(workspace_id)
+    statement = execute_state.statement
+    for model in _tenant_scoped_models():
+        statement = statement.options(
+            with_loader_criteria(
+                model,
+                lambda cls: cls.workspace_id == ws,
+                include_aliases=True,
+            )
+        )
+    execute_state.statement = statement

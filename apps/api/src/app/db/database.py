@@ -5,14 +5,15 @@ from __future__ import annotations
 from collections.abc import Iterator
 from pathlib import Path
 
-from app.core.config import settings
-from app.core.logger import log
-from app.core.time import utcnow
+from alembic.config import Config as AlembicConfig
 from sqlalchemy import create_engine, event, inspect
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from alembic import command
-from alembic.config import Config as AlembicConfig
+from app.core.config import settings
+from app.core.logger import log
+from app.core.tenancy import install_tenant_query_filter
+from app.core.time import utcnow
 
 connect_args = {}
 if settings.effective_database_url.startswith("sqlite"):
@@ -40,6 +41,9 @@ if settings.effective_database_url.startswith("sqlite"):
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+# INFRA-03：SaaS 模式下给所有 ORM SELECT 自动注入 workspace 过滤
+install_tenant_query_filter()
 
 
 def get_db() -> Iterator[Session]:
@@ -174,15 +178,11 @@ def _backfill_delta_schema(conn) -> None:
             )
         )
         conn.execute(
-            text(
-                "CREATE INDEX ix_workflow_version_workflow_id "
-                "ON workflow_version (workflow_id)"
-            )
+            text("CREATE INDEX ix_workflow_version_workflow_id ON workflow_version (workflow_id)")
         )
         conn.execute(
             text(
-                "CREATE UNIQUE INDEX uq_workflow_version_seq "
-                "ON workflow_version (workflow_id, seq)"
+                "CREATE UNIQUE INDEX uq_workflow_version_seq ON workflow_version (workflow_id, seq)"
             )
         )
         log.info("补上 0003 迁移: workflow_version 表")
@@ -199,8 +199,9 @@ def _backfill_delta_schema(conn) -> None:
 def _mark_interrupted_runs() -> None:
     """后端重启后，之前处于 running 的运行不可能还在跑，统一标记失败。"""
 
-    from app.modules.runs.models import NodeRun, Run
     from sqlalchemy import update
+
+    from app.modules.runs.models import NodeRun, Run
 
     now = utcnow()
     with SessionLocal() as session:
