@@ -103,6 +103,22 @@ def _upgrade_schema() -> None:
     cfg.set_main_option("script_location", str(scripts))
     cfg.set_main_option("sqlalchemy.url", settings.effective_database_url)
 
+    # PostgreSQL：让 Alembic 自己管理连接与事务。
+    # 0008 之后的迁移会使用 CREATE INDEX CONCURRENTLY，它不能在应用层
+    # `engine.begin()` 的事务里执行；Alembic 的 autocommit_block 需要自己
+    # 持有连接才能正确提交。
+    if engine.dialect.name != "sqlite":
+        with engine.connect() as probe:
+            existing = set(inspect(probe).get_table_names())
+        if existing and "alembic_version" not in existing:
+            log.warning(
+                "PostgreSQL 库缺少 alembic_version；请先执行 "
+                "`alembic stamp 0007` 或手工迁移，已跳过自动升级"
+            )
+            return
+        command.upgrade(cfg, "head")
+        return
+
     with engine.begin() as conn:
         cfg.attributes["connection"] = conn
         existing = set(inspect(conn).get_table_names())

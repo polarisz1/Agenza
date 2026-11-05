@@ -5,9 +5,10 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import uuid4
 
-from app.db.database import Base
-from sqlalchemy import DateTime, String, Text, func
+from sqlalchemy import DateTime, Index, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
+
+from app.db.database import Base
 
 
 class AuditLog(Base):
@@ -23,4 +24,10 @@ class AuditLog(Base):
     ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+    __table_args__ = (
+        Index("ix_audit_log_workspace_created", "workspace_id", "created_at"),
+    )

@@ -1,4 +1,9 @@
-"""Alembic env.py - generates migrations from SQLAlchemy Base metadata."""
+"""Alembic env.py - generates migrations from SQLAlchemy Base metadata.
+
+DB-03：同时支持 SQLite（本地开发 / 桌面版）与 PostgreSQL（SaaS）；
+PostgreSQL 下保留原生 UUID / JSONB 能力，并由迁移自行使用
+`CREATE INDEX CONCURRENTLY`（见 app/db/pg.py）。
+"""
 from logging.config import fileConfig
 from pathlib import Path
 import sys
@@ -30,6 +35,23 @@ config.set_main_option("sqlalchemy.url", settings.effective_database_url)
 target_metadata = Base.metadata
 
 
+def _configuration(connection) -> dict:
+    """按方言生成 context.configure 参数。
+
+    SQLite 的 ALTER TABLE 能力有限，需要 batch 模式；PostgreSQL 不使用 batch，
+    否则 autogenerate 的 DDL 会被包成多余的重建流程。
+    """
+    is_sqlite = connection.dialect.name == "sqlite"
+    return {
+        "connection": connection,
+        "target_metadata": target_metadata,
+        "render_as_batch": is_sqlite,
+        # 迁移审查时能发现列类型/默认值漂移（DB-03）
+        "compare_type": True,
+        "compare_server_default": True,
+    }
+
+
 def run_migrations_offline() -> None:
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
@@ -37,6 +59,8 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=True,
+        compare_server_default=True,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -47,11 +71,7 @@ def run_migrations_online() -> None:
     # 这样迁移和应用共用同一个 engine（WAL / foreign_keys PRAGMA 才生效）。
     injected = config.attributes.get("connection")
     if injected is not None:
-        context.configure(
-            connection=injected,
-            target_metadata=target_metadata,
-            render_as_batch=True,
-        )
+        context.configure(**_configuration(injected))
         with context.begin_transaction():
             context.run_migrations()
         return
@@ -62,11 +82,7 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            render_as_batch=True,
-        )
+        context.configure(**_configuration(connection))
         with context.begin_transaction():
             context.run_migrations()
 
