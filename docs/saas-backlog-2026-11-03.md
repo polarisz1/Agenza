@@ -1,8 +1,8 @@
 # AgentFlow SaaS 转型 · 执行 Backlog
 
 > **来源**: `docs/saas-strategy-2026-11-03.md` 战略评估
-> **版本**: v1.1 · 2026-11-05（进度对齐）
-> **状态**: Sprint 1 地基基本完成（TenantMiddleware 运行时阻塞）；Sprint 2 主体完成；Sprint 3-5 部分/未开始
+> **版本**: v1.2 · 2026-11-05（INFRA-02 修复 + 多租户隔离回归）
+> **状态**: Sprint 1 地基完成（多租户运行时已打通）；Sprint 2 主体完成；Sprint 3-5 部分/未开始
 
 ---
 
@@ -12,20 +12,21 @@
 
 | 范围 | ✅ 完成 | 🟡 部分 | 🚧 阻塞 | ⛔ 未开始 | 结论 |
 |---|---:|---:|---:|---:|---|
-| Sprint 1 · 地基搭建 | 29 | 1 | 5 | 0 | 代码基本齐备；多租户运行开关失效，ADAPT-01~04 运行时被阻塞 |
+| Sprint 1 · 地基搭建 | 34 | 1 | 0 | 0 | 多租户开关已修复，工作流/运行/服务商/设置的 workspace 隔离有回归测试 |
 | Sprint 2 · 前端重构 + 异步化 | 5 | 3 | 0 | 0 | 导航/Dashboard/Celery/Redis SSE 已完成；协作与审计为部分完成 |
 | Sprint 3 · 差异化功能 | 1 | 2 | 0 | 3 | 运行详情四 Tab 已完成；AI Gateway 后端与触发器未开始 |
 | Sprint 4 · 商业化 | 0 | 4 | 0 | 1 | 仅有 Token 汇总与占位 UI；计量/Stripe 未开始 |
 | Sprint 5 · 打磨 + 部署 | 1 | 2 | 0 | 3 | 暗色主题已完成；Docker/部署未开始 |
-| **合计** | **36** | **12** | **5** | **7** | **60 项中约 60% 完成** |
+| **合计** | **41** | **12** | **0** | **7** | **60 项中约 68% 完成** |
 
 **关键结论**
 
 - 前端 M0–M5 重构已完成：暗色设计系统、应用壳、Dashboard、工作流/编辑器、运行列表/详情、设置中心、成员/审计、登录与工作空间列表。
 - 后端异步链路已落地：Celery 任务投递、RunManager worker 执行、EventBus Redis Pub/Sub 均已有代码。
 - DB-05 已完成：10 张业务表统一 `created_by` / `updated_by` / `deleted_at`；工作流、服务商、工作区、成员、API Key 删除改为软删除，查询统一过滤 `deleted_at IS NULL`。
-- DB-05 的请求级操作者字段依赖 `TenantContext`；在 INFRA-02 修复前，工作流/服务商/运行的 `created_by` / `updated_by` 可能仍为 NULL（用户/工作空间因显式传 `owner_id` 不受影响）。
-- **P0 阻塞**：`core/tenancy.py::is_saas_mode()` 读取 `os.environ`，而 `.env` 由 pydantic-settings 加载，实际 `TENANCY_ENABLED` 没有进入 `os.environ`，导致 `TenantMiddleware` 为 no-op；本地已验证 `settings.TENANCY_ENABLED=True` 但 `is_saas_mode()=False`。这会让 ADAPT-01~04 的 workspace 过滤在运行时失效。
+- INFRA-02 已修复：`is_saas_mode()` 改为读 `settings.TENANCY_ENABLED`；`TenantMiddleware` 增加 OPTIONS/静态资源 bypass，并修复 `"/"` 前缀导致全路径放行的 bug；access token 类型校验后 refresh token 不再能当 access token 用。
+- 多租户运行时已回归：`tests/test_tenancy_middleware.py` 覆盖无 token 401、两个 workspace 的工作流/运行/服务商/设置相互不可见、`created_by` 来自 `TenantContext`、请求结束清理 ContextVar。
+- 顺带修复 ADAPT-04 的真实缺陷：`app_setting` 在 PostgreSQL 上主键仍是 `key` 单列（0004 只加了列），SaaS 下不同 workspace 写同名设置会撞唯一约束；新增 `0010_app_setting_composite_pk.py` 改为复合主键。
 - AI Gateway、Prompt Library、账单目前是前端原型占位；Token/费用计量与 Stripe 未接入。
 - Docker / docker-compose / 私有化部署脚本尚未开始。
 
@@ -38,8 +39,8 @@
 | PostgreSQL 迁移特性 | `apps/api/src/app/db/pg.py`、`alembic/versions/0008_pg_concurrent_indexes.py`；PG `0008`、SQLite 全量升级均验证通过 |
 | 统一审计字段 | `apps/api/src/app/db/audit.py`、`alembic/versions/0009_audit_fields.py`；10 张业务表列校验通过，软删除测试通过 |
 | 四 Tab 运行详情 | `apps/web/src/features/runs/components/RunDetail.tsx` |
-| 多租户过滤代码 | `modules/*/repository.py` 均有 `workspace_id` 过滤 |
-| 多租户运行时阻塞 | `core/tenancy.py` 的 `is_saas_mode()` 读取 `os.environ`；`.env` 不写入 `os.environ` |
+| 多租户运行时 | `apps/api/src/app/core/tenancy.py`（`is_saas_mode` 读 settings）、`tests/test_tenancy_middleware.py`（4 类隔离断言） |
+| app_setting 复合主键 | `apps/api/alembic/versions/0010_app_setting_composite_pk.py`；PG 已在 `0010 (head)` |
 | 未开始 | 仓库内无 `deploy/`、Dockerfile、docker-compose；无 ModelRouter / 预算追踪 |
 
 ---
@@ -73,9 +74,9 @@
 | ID | 任务 | 文件 | 依赖 | 优先级 | 状态 |
 |----|------|------|------|--------|------|
 | INFRA-01 | 创建 `TenantContext`（ContextVar） | `apps/api/src/app/core/tenancy.py` | — | P0 | ✅ |
-| INFRA-02 | 创建 `TenantMiddleware`，从 JWT 提取 workspace_id 注入上下文 | `apps/api/src/app/core/tenancy.py` | INFRA-01 | P0 | 🚧 代码存在，但 `is_saas_mode()` 读 `os.environ` 导致中间件 no-op |
+| INFRA-02 | 创建 `TenantMiddleware`，从 JWT 提取 workspace_id 注入上下文 | `apps/api/src/app/core/tenancy.py` | INFRA-01 | P0 | ✅ `is_saas_mode()` 改读 `settings.TENANCY_ENABLED`；新增 OPTIONS/静态资源 bypass，修复 `"/"` 前缀放行全路径；校验 access token 类型；回归测试 `tests/test_tenancy_middleware.py` |
 | INFRA-03 | tenant-aware session（查询自动注入 workspace 过滤） | `apps/api/src/app/core/tenancy.py` | DB-02, INFRA-01 | P0 | 🟡 实际由各 Repository 显式过滤，未做 Session 自动注入 |
-| INFRA-04 | 注册 TenantMiddleware + 全局异常 + CORS | `apps/api/src/app/main.py` | INFRA-02 | P0 | ✅ 已注册；受 INFRA-02 运行时影响 |
+| INFRA-04 | 注册 TenantMiddleware + 全局异常 + CORS | `apps/api/src/app/main.py` | INFRA-02 | P0 | ✅ 已注册，SaaS 模式下运行时验证通过 |
 
 ### 1.3 Auth 模块（新增）
 
@@ -103,10 +104,10 @@
 
 | ID | 任务 | 文件 | 依赖 | 优先级 | 状态 |
 |----|------|------|------|--------|------|
-| ADAPT-01 | workflows Repository 注入 `workspace_id` 过滤 | `modules/workflows/repository.py`, `service.py` | INFRA-03 | P0 | 🚧 代码完成；运行时受 INFRA-02 阻塞 |
-| ADAPT-02 | runs 模块同上 + `triggered_by` | `modules/runs/` | INFRA-03 | P0 | 🚧 代码完成；运行时受 INFRA-02 阻塞 |
-| ADAPT-03 | providers 模型密钥归属 workspace | `modules/providers/` | DB-04 | P0 | 🚧 代码完成；运行时受 INFRA-02 阻塞 |
-| ADAPT-04 | settings 拆分全局 + 工作空间级 | `modules/settings/` | DB-04 | P1 | 🚧 `app_setting(key, workspace_id)` 复合主键已实现；运行时受 INFRA-02 阻塞 |
+| ADAPT-01 | workflows Repository 注入 `workspace_id` 过滤 | `modules/workflows/repository.py`, `service.py` | INFRA-03 | P0 | ✅ 回归测试验证两个 workspace 互相不可见，`created_by` 取 `TenantContext` |
+| ADAPT-02 | runs 模块同上 + `triggered_by` | `modules/runs/` | INFRA-03 | P0 | ✅ 运行列表/详情按 workspace 隔离，跨租户取详情返回 404 |
+| ADAPT-03 | providers 模型密钥归属 workspace | `modules/providers/` | DB-04 | P0 | ✅ 服务商列表按 workspace 隔离；密钥仍 Fernet 加密存储 |
+| ADAPT-04 | settings 拆分全局 + 工作空间级 | `modules/settings/` | DB-04 | P1 | ✅ `app_setting(key, workspace_id)` 复合主键；新增 0010 迁移修正 PostgreSQL 主键，设置按 workspace 隔离 |
 | ADAPT-05 | 注册 auth/workspaces router，统一 `/api/v1` | `main.py` | AUTH-06, WS-04 | P0 | ✅ |
 
 ### 1.6 前端地基
@@ -185,26 +186,27 @@
 
 ## 关键差异与后续建议
 
-### P0：先修多租户运行开关
+### 已完成：多租户运行开关（原 P0）
 
-`apps/api/src/app/core/tenancy.py::is_saas_mode()` 当前读取 `os.environ`：
+`apps/api/src/app/core/tenancy.py::is_saas_mode()` 原来读取 `os.environ`：
 
 ```python
 return os.environ.get("TENANCY_ENABLED", "false").lower() in ("1", "true", "yes")
 ```
 
-而 `.env` 由 pydantic-settings 加载到 `settings.TENANCY_ENABLED`，不会写入 `os.environ`。本地实测：
+而 `.env` 由 pydantic-settings 加载到 `settings.TENANCY_ENABLED`，不会写入 `os.environ`，
+导致 `TenantMiddleware` 实际为 no-op、`get_workspace_id()` 返回 `None`。
 
-- `settings.TENANCY_ENABLED = True`
-- `os.environ.TENANCY_ENABLED = None`
-- `is_saas_mode() = False`
+已修复为读取 `settings.TENANCY_ENABLED`，同时处理：
 
-影响：`TenantMiddleware` 直接放行，`get_workspace_id()` 返回 `None`，各 Repository 的 `workspace_id` 过滤被跳过，工作流/运行/审计等列表可能返回跨工作空间数据。
+1. `OPTIONS` 预检与 `/docs`、`/health`、`/assets` 等 bypass（原来 `"/"` 走 `startswith` 会放行所有路径）；
+2. 只接受 `type=access` 的 JWT，refresh token 不能当访问令牌用；
+3. 请求结束清理 `ContextVar`（`clear_tenant()`）。
 
-建议：改为读取 `settings.TENANCY_ENABLED`，并在修复后用两个工作空间的真实账号做回归：
-1. 工作流列表只返回本空间数据；
-2. 运行记录/审计日志不出现其他空间记录；
-3. 跨空间访问返回 403/404。
+回归测试 `apps/api/tests/test_tenancy_middleware.py` 已覆盖：无 token 401、两个工作空间的工作流/运行/服务商/设置互不可见、`created_by` 来自 `TenantContext`、跨租户取运行详情返回 404。
+
+顺带修复：`app_setting` 在 PostgreSQL 上主键仍是 `key` 单列（0004 只加了 `workspace_id` 列），
+工作空间级设置会撞唯一约束；`0010_app_setting_composite_pk.py` 改为复合主键 `(key, workspace_id)`。
 
 ### 其他建议
 

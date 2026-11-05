@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from contextvars import ContextVar
 from dataclasses import dataclass
+from typing import ClassVar
 from uuid import UUID
 
 from fastapi import Request
@@ -22,6 +23,7 @@ from starlette.types import ASGIApp
 from app.core.logger import log
 
 # ── TenantContext ──────────────────────────────────────────────────
+
 
 @dataclass
 class TenantContext:
@@ -63,17 +65,21 @@ def clear_tenant() -> None:
 
 # ── SaaS 模式开关 ──────────────────────────────────────────────────
 
+
 def is_saas_mode() -> bool:
     """是否启用 SaaS 多租户模式。
 
-    由环境变量 TENANCY_ENABLED 控制，默认 False（兼容桌面版）。
+    统一读取 pydantic-settings 的 ``settings.TENANCY_ENABLED``：``.env`` 会被
+    pydantic-settings 加载，但不会写入 ``os.environ``，因此不能再直接读
+    ``os.environ``（否则 `.env` 里配置 true 也不会生效）。
     """
-    import os
+    from app.core.config import settings
 
-    return os.environ.get("TENANCY_ENABLED", "false").lower() in ("1", "true", "yes")
+    return bool(settings.TENANCY_ENABLED)
 
 
 # ── TenantMiddleware ───────────────────────────────────────────────
+
 
 class TenantMiddleware(BaseHTTPMiddleware):
     """SaaS 模式的租户识别中间件。
@@ -82,16 +88,20 @@ class TenantMiddleware(BaseHTTPMiddleware):
     桌面单用户模式（TENANCY_ENABLED=False）下此中间件不做任何事。
     """
 
-    BYPASS_PATHS = {
-        "/docs",
-        "/redoc",
-        "/openapi.json",
-        "/health",
-        "/",
-        "/api/v1/auth/register",
-        "/api/v1/auth/login",
-        "/api/v1/auth/refresh",
-    }
+    BYPASS_PATHS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+            "/health",
+            "/api/v1/auth/register",
+            "/api/v1/auth/login",
+            "/api/v1/auth/refresh",
+            "/assets",
+            "/favicon.ico",
+            "/static",
+        }
+    )
 
     def __init__(self, app: ASGIApp):
         super().__init__(app)
@@ -101,9 +111,13 @@ class TenantMiddleware(BaseHTTPMiddleware):
             # 桌面版直通
             return await call_next(request)
 
-        # Bypass 路径跳过
+        # CORS 预检请求不携带 Authorization，必须交给 CORS 中间件处理
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
+        # Bypass 路径跳过（"/" 必须精确匹配，否则 startswith 会放行所有路径）
         path = request.url.path
-        if any(path.startswith(p) for p in self.BYPASS_PATHS):
+        if path == "/" or any(path.startswith(p) for p in self.BYPASS_PATHS):
             return await call_next(request)
 
         tenant: TenantContext | None = None
@@ -134,9 +148,9 @@ def _decode_jwt_tenant(token: str) -> TenantContext:
 
     from app.core.config import settings
 
-    payload = jwt.decode(
-        token, settings.effective_jwt_secret, algorithms=[settings.JWT_ALGORITHM]
-    )
+    payload = jwt.decode(token, settings.effective_jwt_secret, algorithms=[settings.JWT_ALGORITHM])
+    if payload.get("type") != "access":
+        raise ValueError("TenantMiddleware requires an access token")
     return TenantContext(
         workspace_id=UUID(payload["wid"]),
         user_id=UUID(payload["sub"]),

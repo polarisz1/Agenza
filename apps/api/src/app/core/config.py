@@ -5,9 +5,10 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from app.core.defaults import DEFAULT_HOST, DEFAULT_LOG_LEVEL, DEFAULT_PORT
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.core.defaults import DEFAULT_HOST, DEFAULT_LOG_LEVEL, DEFAULT_PORT
 
 # config.py 位于 apps/api/src/app/core → parents[5] 才是仓库根
 # （此前写成 parents[4]，数据目录因此落在 apps/data，评审 S13）
@@ -128,7 +129,8 @@ class Settings(BaseSettings):
     MOUNT_FRONTEND: bool = False
 
     # ---- SaaS: Multi-tenant ----
-    TENANCY_ENABLED: bool = True  # set "true" for cloud SaaS mode
+    # 默认 False：Community / 桌面版无需登录；SaaS 部署在 apps/api/.env 显式设为 true
+    TENANCY_ENABLED: bool = False
     JWT_SECRET: str = ""  # set via env in SaaS; auto-generated for desktop
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days

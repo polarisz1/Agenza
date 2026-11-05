@@ -14,6 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 # 同时关掉 SQL echo（DEBUG=True 会让每个用例刷屏）。
 os.environ.setdefault("DATA_DIR", tempfile.mkdtemp(prefix="agentflow_test_"))
 os.environ.setdefault("DEBUG", "false")
+# 绝大多数后端用例是桌面模式（无 JWT）；SaaS 多租户用例在用例内显式 monkeypatch。
+os.environ.setdefault("TENANCY_ENABLED", "false")
 
 
 def pytest_configure(config) -> None:
