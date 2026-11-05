@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from sqlalchemy.orm import Session
+
 from app.core.tenancy import get_tenant, get_workspace_id
 from app.core.time import utcnow
 from app.modules.workflows.models import Workflow, WorkflowVersion
-from sqlalchemy.orm import Session
 
 
 def _ws_id() -> str | None:
@@ -40,6 +41,7 @@ class WorkflowRepository:
             id=wf_id,
             workspace_id=_ws_id(),
             created_by=_user_id(),
+            updated_by=_user_id(),
             name=name,
             description=description,
             graph_json=graph_json,
@@ -52,7 +54,9 @@ class WorkflowRepository:
 
     @staticmethod
     def get(session: Session, wf_id: str) -> Workflow | None:
-        q = session.query(Workflow).filter(Workflow.id == wf_id)
+        q = session.query(Workflow).filter(
+            Workflow.id == wf_id, Workflow.deleted_at.is_(None)
+        )
         ws = _ws_id()
         if ws is not None:
             q = q.filter(Workflow.workspace_id == ws)
@@ -65,7 +69,7 @@ class WorkflowRepository:
         status: str | None = None,
         sort: str = "updated_desc",
     ) -> tuple[Sequence[Workflow], int]:
-        query = session.query(Workflow)
+        query = session.query(Workflow).filter(Workflow.deleted_at.is_(None))
         ws = _ws_id()
         if ws is not None:
             query = query.filter(Workflow.workspace_id == ws)
@@ -104,16 +108,23 @@ class WorkflowRepository:
             obj.viewport_json = viewport_json
         if status is not None:
             obj.status = status
+        actor = _user_id()
+        if actor is not None:
+            obj.updated_by = actor
         session.flush()
         session.refresh(obj)
         return obj
 
     @staticmethod
     def delete(session: Session, wf_id: str) -> bool:
+        """软删除（DB-05）：保留工作流及其历史，列表/详情不再返回。"""
         obj = WorkflowRepository.get(session, wf_id)
         if obj is None:
             return False
-        session.delete(obj)
+        obj.deleted_at = utcnow()
+        actor = _user_id()
+        if actor is not None:
+            obj.updated_by = actor
         session.flush()
         return True
 
@@ -129,9 +140,13 @@ class WorkflowRepository:
 
     @staticmethod
     def create_version(session: Session, version: WorkflowVersion) -> WorkflowVersion:
-        # 版本继承工作流的 workspace_id
+        # 版本继承工作流的 workspace_id 与操作者
         if version.workspace_id is None:
             version.workspace_id = _ws_id()
+        if version.created_by is None:
+            version.created_by = _user_id()
+        if version.updated_by is None:
+            version.updated_by = version.created_by
         session.add(version)
         session.flush()
         session.refresh(version)
@@ -139,7 +154,10 @@ class WorkflowRepository:
 
     @staticmethod
     def list_versions(session: Session, workflow_id: str) -> list[WorkflowVersion]:
-        q = session.query(WorkflowVersion).filter(WorkflowVersion.workflow_id == workflow_id)
+        q = session.query(WorkflowVersion).filter(
+            WorkflowVersion.workflow_id == workflow_id,
+            WorkflowVersion.deleted_at.is_(None),
+        )
         ws = _ws_id()
         if ws is not None:
             q = q.filter(WorkflowVersion.workspace_id == ws)
@@ -147,7 +165,10 @@ class WorkflowRepository:
 
     @staticmethod
     def latest_version(session: Session, workflow_id: str) -> WorkflowVersion | None:
-        q = session.query(WorkflowVersion).filter(WorkflowVersion.workflow_id == workflow_id)
+        q = session.query(WorkflowVersion).filter(
+            WorkflowVersion.workflow_id == workflow_id,
+            WorkflowVersion.deleted_at.is_(None),
+        )
         ws = _ws_id()
         if ws is not None:
             q = q.filter(WorkflowVersion.workspace_id == ws)
@@ -158,6 +179,7 @@ class WorkflowRepository:
         q = session.query(WorkflowVersion).filter(
             WorkflowVersion.workflow_id == workflow_id,
             WorkflowVersion.id == version_id,
+            WorkflowVersion.deleted_at.is_(None),
         )
         ws = _ws_id()
         if ws is not None:

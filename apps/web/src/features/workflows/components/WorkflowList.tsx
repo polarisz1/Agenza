@@ -154,7 +154,7 @@ export default function WorkflowList() {
   const handleDelete = (id: string) => {
     modal.confirm({
       title: '确定删除该工作流？',
-      content: '将一并删除该工作流的全部运行记录。此操作不可撤销。',
+      content: '工作流将被软删除并从列表隐藏，历史运行记录会保留用于审计。此操作不可撤销。',
       okText: '删除',
       okButtonProps: { danger: true },
       onOk: async () => {

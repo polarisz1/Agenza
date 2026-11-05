@@ -37,6 +37,7 @@ if celery_app is not None:
         workflow_id: str,
         inputs_json: str,
         workspace_id: str | None,
+        triggered_by: str | None = None,
     ) -> None:
         """在 Celery worker 中执行工作流。
 
@@ -65,8 +66,8 @@ if celery_app is not None:
                 else None,
             )
 
-            on_node_started = _make_node_started(run_id, workspace_id)
-            on_node_finished = _make_node_finished(run_id, workspace_id)
+            on_node_started = _make_node_started(run_id, workspace_id, triggered_by)
+            on_node_finished = _make_node_finished(run_id, workspace_id, triggered_by)
             on_run_finished = _make_run_finished(run_id, workflow_id)
 
             asyncio.run(
@@ -91,9 +92,12 @@ def execute_workflow_async(
     workflow_id: str,
     inputs: dict,
     workspace_id: str | None,
+    triggered_by: str | None = None,
 ) -> None:
     """发布异步执行任务到 Celery 队列。"""
     if celery_app is None:
         raise RuntimeError("Celery is not enabled (CELERY_BROKER_URL not set)")
     inputs_json = json.dumps(inputs or {}, ensure_ascii=False)
-    execute_workflow_task.delay(run_id, workflow_id, inputs_json, workspace_id)
+    execute_workflow_task.delay(
+        run_id, workflow_id, inputs_json, workspace_id, triggered_by
+    )

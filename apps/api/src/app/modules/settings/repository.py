@@ -6,9 +6,10 @@ AppSetting 复合主键 (key, workspace_id)，因此用 query 而非 session.get
 
 from __future__ import annotations
 
-from app.core.tenancy import get_workspace_id
-from app.modules.settings.models import AppSetting
 from sqlalchemy.orm import Session
+
+from app.core.tenancy import get_tenant, get_workspace_id
+from app.modules.settings.models import AppSetting
 
 
 def _ws_id() -> str | None:
@@ -16,11 +17,18 @@ def _ws_id() -> str | None:
     return str(ws) if ws is not None else None
 
 
+def _user_id() -> str | None:
+    tenant = get_tenant()
+    return str(tenant.user_id) if tenant is not None else None
+
+
 class SettingsRepository:
     @staticmethod
     def get(session: Session, key: str) -> AppSetting | None:
         ws = _ws_id()
-        q = session.query(AppSetting).filter(AppSetting.key == key)
+        q = session.query(AppSetting).filter(
+            AppSetting.key == key, AppSetting.deleted_at.is_(None)
+        )
         if ws is not None:
             q = q.filter(AppSetting.workspace_id == ws)
         else:
@@ -31,7 +39,7 @@ class SettingsRepository:
     @staticmethod
     def list_all(session: Session) -> list[AppSetting]:
         ws = _ws_id()
-        q = session.query(AppSetting)
+        q = session.query(AppSetting).filter(AppSetting.deleted_at.is_(None))
         if ws is not None:
             q = q.filter(AppSetting.workspace_id == ws)
         else:
@@ -42,8 +50,19 @@ class SettingsRepository:
     def upsert(session: Session, key: str, value_json: str) -> None:
         ws = _ws_id()
         row = SettingsRepository.get(session, key)
+        user_id = _user_id()
         if row is None:
-            session.add(AppSetting(key=key, workspace_id=ws or "", value_json=value_json))
+            session.add(
+                AppSetting(
+                    key=key,
+                    workspace_id=ws or "",
+                    value_json=value_json,
+                    created_by=user_id,
+                    updated_by=user_id,
+                )
+            )
         else:
             row.value_json = value_json
+            if user_id is not None:
+                row.updated_by = user_id
         session.flush()

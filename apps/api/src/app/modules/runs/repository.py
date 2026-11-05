@@ -7,9 +7,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from sqlalchemy.orm import Session
+
 from app.core.tenancy import get_tenant, get_workspace_id
 from app.modules.runs.models import NodeRun, Run
-from sqlalchemy.orm import Session
 
 
 def _ws_id() -> str | None:
@@ -29,6 +30,10 @@ class RunRepository:
             obj.workspace_id = _ws_id()
         if obj.triggered_by is None:
             obj.triggered_by = _user_id()
+        if obj.created_by is None:
+            obj.created_by = obj.triggered_by
+        if obj.updated_by is None:
+            obj.updated_by = obj.triggered_by
         session.add(obj)
         session.flush()
         session.refresh(obj)
@@ -36,7 +41,9 @@ class RunRepository:
 
     @staticmethod
     def get(session: Session, run_id: str) -> Run | None:
-        q = session.query(Run).filter(Run.id == run_id)
+        q = session.query(Run).filter(
+            Run.id == run_id, Run.deleted_at.is_(None)
+        )
         ws = _ws_id()
         if ws is not None:
             q = q.filter(Run.workspace_id == ws)
@@ -51,7 +58,7 @@ class RunRepository:
         started_after: datetime | None = None,
         started_before: datetime | None = None,
     ) -> list[Run]:
-        q = session.query(Run)
+        q = session.query(Run).filter(Run.deleted_at.is_(None))
         ws = _ws_id()
         if ws is not None:
             q = q.filter(Run.workspace_id == ws)
@@ -72,6 +79,9 @@ class RunRepository:
             return None
         for k, v in fields.items():
             setattr(obj, k, v)
+        actor = _user_id()
+        if actor is not None:
+            obj.updated_by = actor
         session.flush()
         session.refresh(obj)
         return obj
@@ -80,13 +90,20 @@ class RunRepository:
     def add_node_run(session: Session, obj: NodeRun) -> NodeRun:
         if obj.workspace_id is None:
             obj.workspace_id = _ws_id()
+        user_id = _user_id()
+        if obj.created_by is None:
+            obj.created_by = user_id
+        if obj.updated_by is None:
+            obj.updated_by = user_id
         session.add(obj)
         session.flush()
         return obj
 
     @staticmethod
     def list_node_runs(session: Session, run_id: str) -> list[NodeRun]:
-        q = session.query(NodeRun).filter(NodeRun.run_id == run_id)
+        q = session.query(NodeRun).filter(
+            NodeRun.run_id == run_id, NodeRun.deleted_at.is_(None)
+        )
         ws = _ws_id()
         if ws is not None:
             q = q.filter(NodeRun.workspace_id == ws)
@@ -94,7 +111,11 @@ class RunRepository:
 
     @staticmethod
     def get_node_run(session: Session, run_id: str, node_id: str) -> NodeRun | None:
-        q = session.query(NodeRun).filter(NodeRun.run_id == run_id, NodeRun.node_id == node_id)
+        q = session.query(NodeRun).filter(
+            NodeRun.run_id == run_id,
+            NodeRun.node_id == node_id,
+            NodeRun.deleted_at.is_(None),
+        )
         ws = _ws_id()
         if ws is not None:
             q = q.filter(NodeRun.workspace_id == ws)

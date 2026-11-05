@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from app.core.time import utcnow
-from app.db.database import Base
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PgUUID  # noqa: N811
 from sqlalchemy.types import TypeDecorator
+
+from app.core.time import utcnow
+from app.db.audit import AuditMixin
+from app.db.database import Base
 
 
 class UUIDType(TypeDecorator):
@@ -41,7 +43,7 @@ def _uuid():
 
 # ── User ───────────────────────────────────────────────────────────
 
-class User(Base):
+class User(AuditMixin, Base):
     __tablename__ = "user"
 
     id = Column(String(36), primary_key=True, default=_uuid, index=True)
@@ -56,7 +58,7 @@ class User(Base):
 
 # ── Workspace ─────────────────────────────────────────────────────
 
-class Workspace(Base):
+class Workspace(AuditMixin, Base):
     __tablename__ = "workspace"
 
     id = Column(String(36), primary_key=True, default=_uuid, index=True)
@@ -69,7 +71,7 @@ class Workspace(Base):
 
 # ── WorkspaceMember ───────────────────────────────────────────────
 
-class WorkspaceMember(Base):
+class WorkspaceMember(AuditMixin, Base):
     __tablename__ = "workspace_member"
 
     workspace_id = Column(String(36), ForeignKey("workspace.id"), primary_key=True)
@@ -86,7 +88,7 @@ class WorkspaceMember(Base):
 
 # ── ApiKey ─────────────────────────────────────────────────────────
 
-class ApiKey(Base):
+class ApiKey(AuditMixin, Base):
     __tablename__ = "api_key"
 
     id = Column(String(36), primary_key=True, default=_uuid)

@@ -71,7 +71,11 @@ def get_current_workspace(
 
     from app.modules.auth.models import Workspace
 
-    ws = session.get(Workspace, workspace_id)
+    ws = (
+        session.query(Workspace)
+        .filter(Workspace.id == workspace_id, Workspace.deleted_at.is_(None))
+        .first()
+    )
     if ws is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
     return ws

@@ -1,11 +1,12 @@
 """Provider module."""
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String, Text
 
+from app.db.audit import AuditMixin
 from app.db.database import Base
 
 
-class Provider(Base):
+class Provider(AuditMixin, Base):
     __tablename__ = "provider"
 
     id = Column(String(32), primary_key=True)
@@ -19,3 +20,7 @@ class Provider(Base):
     extra_json = Column(Text, nullable=True)
     enabled = Column(Boolean, default=True)
     created_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        Index("ix_provider_workspace_enabled", "workspace_id", "enabled"),
+    )

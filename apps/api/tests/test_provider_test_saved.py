@@ -25,17 +25,20 @@ class FakeAdapter:
 class FakeQuery:
     """支持 .filter().first() 的最小查询替身。"""
 
-    def __init__(self, session: "FakeSession") -> None:
+    def __init__(self, session: FakeSession) -> None:
         self._session = session
         self._filter_value: str | None = None
 
     def filter(self, *conditions):
         # 从 Provider.id == pid 中提取 pid
         for cond in conditions:
-            # SQLAlchemy BinaryExpression 的右值
+            # SQLAlchemy BinaryExpression 的右值；忽略 deleted_at IS NULL 这类条件
             right = getattr(cond, "right", None)
-            if right is not None:
-                self._filter_value = getattr(right, "value", right)
+            if right is None:
+                continue
+            value = getattr(right, "value", None)
+            if isinstance(value, str):
+                self._filter_value = value
         return self
 
     def first(self):

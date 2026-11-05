@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from sqlalchemy.orm import Session
+
 from app.core.exceptions import AppError
+from app.core.time import utcnow
 from app.modules.auth.models import WorkspaceMember
 from app.modules.auth.repository import (
     UserRepository,
@@ -18,7 +21,6 @@ from app.modules.workspaces.schemas import (
     WorkspaceResponse,
     WorkspaceUpdate,
 )
-from sqlalchemy.orm import Session
 
 
 class WorkspaceService:
@@ -105,6 +107,7 @@ class WorkspaceService:
             ws.name = body.name
         if body.description is not None:
             ws.description = body.description
+        ws.updated_by = user_id
         session.flush()
         session.commit()
 
@@ -119,11 +122,14 @@ class WorkspaceService:
         if member is None or member.role != "owner":
             raise AppError(403, "只有 Owner 可以解散工作空间")
 
-        # 级联删除成员
+        # 软删除成员与工作空间（DB-05）：保留历史数据，不物理删除
+        deleted_at = utcnow()
         members = WorkspaceMemberRepository.list(session, workspace_id)
-        for m in members:
-            session.delete(m)
-        session.delete(ws)
+        for member in members:
+            member.deleted_at = deleted_at
+            member.updated_by = user_id
+        ws.deleted_at = deleted_at
+        ws.updated_by = user_id
         session.commit()
 
     # ── 成员管理 ──────────────────────────────────────────────
@@ -234,7 +240,9 @@ class WorkspaceService:
         if target.role == "owner" and operator_id != target_user_id:
             raise AppError(400, "不能修改 Owner 的角色")
 
-        WorkspaceMemberRepository.update_role(session, workspace_id, target_user_id, body.role)
+        WorkspaceMemberRepository.update_role(
+            session, workspace_id, target_user_id, body.role, actor_id=operator_id
+        )
         session.commit()
 
     @staticmethod
@@ -257,5 +265,7 @@ class WorkspaceService:
         if target.role == "owner":
             raise AppError(400, "不能移除 Owner")
 
-        WorkspaceMemberRepository.remove(session, workspace_id, target_user_id)
+        WorkspaceMemberRepository.remove(
+            session, workspace_id, target_user_id, actor_id=operator_id
+        )
         session.commit()

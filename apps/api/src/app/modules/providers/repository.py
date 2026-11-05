@@ -5,9 +5,11 @@ SaaS 多租户：模型密钥按 workspace 归属；桌面模式 workspace_id �
 
 from __future__ import annotations
 
-from app.core.tenancy import get_workspace_id
-from app.modules.providers.models import Provider
 from sqlalchemy.orm import Session
+
+from app.core.tenancy import get_tenant, get_workspace_id
+from app.core.time import utcnow
+from app.modules.providers.models import Provider
 
 
 def _ws_id() -> str | None:
@@ -15,11 +17,20 @@ def _ws_id() -> str | None:
     return str(ws) if ws is not None else None
 
 
+def _user_id() -> str | None:
+    tenant = get_tenant()
+    return str(tenant.user_id) if tenant is not None else None
+
+
 class ProviderRepository:
     @staticmethod
     def create(session: Session, p: Provider) -> Provider:
         if p.workspace_id is None:
             p.workspace_id = _ws_id()
+        if p.created_by is None:
+            p.created_by = _user_id()
+        if p.updated_by is None:
+            p.updated_by = p.created_by
         session.add(p)
         session.flush()
         session.refresh(p)
@@ -27,7 +38,9 @@ class ProviderRepository:
 
     @staticmethod
     def get(session: Session, pid: str) -> Provider | None:
-        q = session.query(Provider).filter(Provider.id == pid)
+        q = session.query(Provider).filter(
+            Provider.id == pid, Provider.deleted_at.is_(None)
+        )
         ws = _ws_id()
         if ws is not None:
             q = q.filter(Provider.workspace_id == ws)
@@ -35,7 +48,7 @@ class ProviderRepository:
 
     @staticmethod
     def list(session: Session) -> list[Provider]:
-        q = session.query(Provider)
+        q = session.query(Provider).filter(Provider.deleted_at.is_(None))
         ws = _ws_id()
         if ws is not None:
             q = q.filter(Provider.workspace_id == ws)
@@ -43,7 +56,10 @@ class ProviderRepository:
 
     @staticmethod
     def list_enabled(session: Session) -> list[Provider]:
-        q = session.query(Provider).filter(Provider.enabled == True)  # noqa: E712
+        q = session.query(Provider).filter(
+            Provider.enabled == True,  # noqa: E712
+            Provider.deleted_at.is_(None),
+        )
         ws = _ws_id()
         if ws is not None:
             q = q.filter(Provider.workspace_id == ws)
@@ -56,6 +72,9 @@ class ProviderRepository:
             return None
         for k, v in fields.items():
             setattr(obj, k, v)
+        actor = _user_id()
+        if actor is not None:
+            obj.updated_by = actor
         session.flush()
         session.refresh(obj)
         return obj
@@ -65,6 +84,9 @@ class ProviderRepository:
         obj = ProviderRepository.get(session, pid)
         if not obj:
             return False
-        session.delete(obj)
+        obj.deleted_at = utcnow()
+        actor = _user_id()
+        if actor is not None:
+            obj.updated_by = actor
         session.flush()
         return True

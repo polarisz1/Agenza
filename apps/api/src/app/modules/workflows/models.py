@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text
 
 from app.core.time import utcnow
+from app.db.audit import AuditMixin
 from app.db.database import Base
 
 
@@ -15,6 +16,8 @@ class Workflow(Base):
     # SaaS: 多租户隔离字段（桌面版此字段可为空字符串）
     workspace_id = Column(String(36), ForeignKey("workspace.id"), nullable=True, index=True)
     created_by = Column(String(36), ForeignKey("user.id"), nullable=True, index=True)
+    updated_by = Column(String(36), nullable=True)
+    deleted_at = Column(DateTime, nullable=True)
     name = Column(String(200), nullable=False, index=True)
     description = Column(Text, nullable=True)
     status = Column(String(20), default="draft")  # draft | ready
@@ -24,8 +27,12 @@ class Workflow(Base):
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
     last_run_at = Column(DateTime, nullable=True)
 
+    __table_args__ = (
+        Index("ix_workflow_workspace_updated", "workspace_id", "updated_at"),
+    )
 
-class WorkflowVersion(Base):
+
+class WorkflowVersion(AuditMixin, Base):
     """工作流版本快照（F5）：每次图内容变化保存一版，保留最近 50 版。"""
 
     __tablename__ = "workflow_version"
@@ -38,3 +45,7 @@ class WorkflowVersion(Base):
     graph_json = Column(Text, nullable=False)
     viewport_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=utcnow)
+
+    __table_args__ = (
+        Index("ix_workflow_version_workspace_seq", "workspace_id", "seq"),
+    )

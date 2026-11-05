@@ -3,10 +3,11 @@
 from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text, text
 
 from app.core.time import utcnow
+from app.db.audit import AuditMixin
 from app.db.database import Base
 
 
-class Run(Base):
+class Run(AuditMixin, Base):
     __tablename__ = "run"
 
     id = Column(String(32), primary_key=True, index=True)
@@ -38,10 +39,11 @@ class Run(Base):
             sqlite_where=text("status = 'running'"),
             postgresql_where=text("status = 'running'"),
         ),
+        Index("ix_run_workspace_started", "workspace_id", "started_at"),
     )
 
 
-class NodeRun(Base):
+class NodeRun(AuditMixin, Base):
     __tablename__ = "node_run"
 
     id = Column(String(32), primary_key=True)
@@ -58,6 +60,9 @@ class NodeRun(Base):
     output_json = Column(Text, nullable=True)
     error = Column(Text, nullable=True)
     model = Column(String(100), nullable=True)
+
     tokens_in = Column(Integer, default=0)
     tokens_out = Column(Integer, default=0)
     duration_ms = Column(Integer, default=0)
+
+    __table_args__ = (Index("ix_node_run_workspace_run", "workspace_id", "run_id"),)

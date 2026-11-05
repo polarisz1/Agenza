@@ -7,6 +7,9 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
 from app.core.config import settings
 from app.core.engine.contexts import NodeResult
 from app.core.engine.limits import clamp_serialized
@@ -14,6 +17,7 @@ from app.core.engine.manager import RunManager, get_run_manager
 from app.core.engine.validators import BLOCKING_CODES, validate_graph
 from app.core.exceptions import AppError
 from app.core.logger import log
+from app.core.tenancy import get_tenant
 from app.core.time import utcnow
 from app.db.database import SessionLocal
 from app.modules.providers.service import build_registry
@@ -29,8 +33,6 @@ from app.modules.runs.schemas import (
 )
 from app.modules.settings.service import SettingsService
 from app.modules.workflows.service import WorkflowService
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 
 
 class RunService:
@@ -103,9 +105,14 @@ class RunService:
         from app.core.tenancy import get_workspace_id
 
         ws_id = str(get_workspace_id()) if get_workspace_id() else None
+        tenant = get_tenant()
+        triggered_by = str(tenant.user_id) if tenant is not None else None
         run = Run(
             id=run_id,
             workspace_id=ws_id,
+            triggered_by=triggered_by,
+            created_by=triggered_by,
+            updated_by=triggered_by,
             workflow_id=wf.id,
             workflow_name=wf.name,
             graph_snapshot=json.dumps(graph, ensure_ascii=False),
@@ -131,7 +138,7 @@ class RunService:
         from app.modules.runs.tasks import celery_app, execute_workflow_async
 
         if celery_app is not None:
-            execute_workflow_async(run_id, wf.id, inputs or {}, ws_id)
+            execute_workflow_async(run_id, wf.id, inputs or {}, ws_id, triggered_by)
             return RunResponse(
                 id=run.id,
                 workflow_id=run.workflow_id,
@@ -155,8 +162,8 @@ class RunService:
             default_timeout=float(default_timeout)
             if isinstance(default_timeout, int | float)
             else None,
-            on_node_started=_make_node_started(run_id, ws_id),
-            on_node_finished=_make_node_finished(run_id, ws_id),
+            on_node_started=_make_node_started(run_id, ws_id, triggered_by),
+            on_node_finished=_make_node_finished(run_id, ws_id, triggered_by),
             on_run_finished=_make_run_finished(run_id, wf.id),
         )
 
@@ -343,7 +350,9 @@ def _to_node_detail(nr: NodeRun) -> NodeRunDetail:
 # ---- Engine callbacks（每次独立 Session，避免复用已关闭的请求级 Session）----
 
 
-def _make_node_started(run_id: str, workspace_id: str | None):
+def _make_node_started(
+    run_id: str, workspace_id: str | None, triggered_by: str | None = None
+):
     async def _on_node_started(node_id: str, node: dict, node_input: dict | None = None) -> None:
         nr_id = f"nr_{uuid.uuid4().hex[:14]}"
         node_type = node.get("type") or "unknown"
@@ -368,6 +377,8 @@ def _make_node_started(run_id: str, workspace_id: str | None):
                         started_at=utcnow(),
                         duration_ms=0,
                         input_json=input_json,
+                        created_by=triggered_by,
+                        updated_by=triggered_by,
                     )
                 )
                 db.commit()
@@ -377,7 +388,9 @@ def _make_node_started(run_id: str, workspace_id: str | None):
     return _on_node_started
 
 
-def _make_node_finished(run_id: str, workspace_id: str | None):
+def _make_node_finished(
+    run_id: str, workspace_id: str | None, triggered_by: str | None = None
+):
     async def _on_node_finished(
         node_id: str, node: dict, result: NodeResult, duration_ms: int
     ) -> None:
@@ -396,10 +409,13 @@ def _make_node_finished(run_id: str, workspace_id: str | None):
                         status=result.status,
                         attempt=1,
                         started_at=utcnow(),
+                        created_by=triggered_by,
+                        updated_by=triggered_by,
                     )
                     db.add(nr)
                 nr.status = result.status
                 nr.finished_at = utcnow()
+                nr.updated_by = triggered_by or nr.updated_by
                 nr.duration_ms = duration_ms
                 nr.tokens_in = result.tokens_in
                 nr.tokens_out = result.tokens_out

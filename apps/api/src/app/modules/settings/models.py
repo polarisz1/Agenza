@@ -1,11 +1,13 @@
 """App setting model."""
 
-from app.core.time import utcnow
-from app.db.database import Base
 from sqlalchemy import Column, DateTime, ForeignKey, String, Text
 
+from app.core.time import utcnow
+from app.db.audit import AuditMixin
+from app.db.database import Base
 
-class AppSetting(Base):
+
+class AppSetting(AuditMixin, Base):
     """应用级设置（全局 + 工作空间级别通用）。"""
 
     __tablename__ = "app_setting"
