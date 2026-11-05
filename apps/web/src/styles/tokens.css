@@ -1,0 +1,42 @@
+/* AgentFlow · 设计变量（对齐 docs/prototype/index.html） */
+:root {
+  /* 背景与表面 */
+  --af-bg-primary: #0f172a;
+  --af-bg-secondary: #131b2e;
+  --af-bg-tertiary: #1b2336;
+  --af-surface-card: #1b2336;
+  --af-surface-elevated: #222d44;
+  --af-surface-hover: #273248;
+
+  /* 边框 */
+  --af-border: #334155;
+  --af-border-light: #475569;
+
+  /* 品牌色 */
+  --af-brand: #3b82f6;
+  --af-brand-strong: #2563eb;
+  --af-brand-glow: rgba(59, 130, 246, 0.15);
+
+  /* 状态色 */
+  --af-success: #22c55e;
+  --af-warning: #f59e0b;
+  --af-danger: #ef4444;
+  --af-info: #06b6d4;
+
+  /* 文本 */
+  --af-text-primary: #f8fafc;
+  --af-text-secondary: #cbd5e1;
+  --af-text-muted: #94a3b8;
+  --af-text-dim: #64748b;
+
+  /* 圆角与阴影 */
+  --af-radius-sm: 6px;
+  --af-radius-md: 8px;
+  --af-radius-lg: 12px;
+  --af-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --af-shadow-glow: 0 0 20px rgba(59, 130, 246, 0.3);
+
+  /* 字体 */
+  --af-font-sans: 'IBM Plex Sans Variable', 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --af-font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, Consolas, monospace;
+}

@@ -196,6 +196,7 @@ class RunService:
                 started_at=r.started_at,
                 finished_at=r.finished_at,
                 duration_ms=r.duration_ms,
+                total_tokens=r.total_tokens or 0,
             )
             for r in runs
         ]

@@ -48,6 +48,9 @@ class Settings(BaseSettings):
 
     # ---- CORS ----
     CORS_ORIGINS: list[str] = ["http://localhost:5174"]
+    # 开发期放行本地任意端口（Vite 端口被占用时会自动递增）。
+    # 生产环境必须留空，只用 CORS_ORIGINS 的显式白名单。
+    CORS_ORIGIN_REGEX: str = ""
 
     # ---- Database ----
     DATABASE_URL: str = ""

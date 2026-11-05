@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: AgentFlow
-  description: AgentFlow - Single-user local AI workflow orchestration
+  description: AgentFlow - Enterprise AI workflow orchestration
   version: 0.2.0
 paths:
   /api/v1/auth/register:
@@ -708,6 +708,1887 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/workflows:
+    get:
+      tags:
+      - v1-workflows
+      summary: List Workflows
+      operationId: list_workflows_api_v1_workflows_get
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Q
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          default: updated_desc
+          title: Sort
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowListData_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - v1-workflows
+      summary: Create Workflow
+      operationId: create_workflow_api_v1_workflows_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowCreate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workflows/import:
+    post:
+      tags:
+      - v1-workflows
+      summary: Import Workflows
+      description: 导入工作流：confirm=false 预览（含重名副本命名），confirm=true 写入。
+      operationId: import_workflows_api_v1_workflows_import_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowImportRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowImportResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workflows/validate:
+    post:
+      tags:
+      - v1-workflows
+      summary: Validate Graph Body
+      description: 校验任意（未保存）图结构。
+      operationId: validate_graph_body_api_v1_workflows_validate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GraphDef'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ValidateResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workflows/{wf_id}:
+    get:
+      tags:
+      - v1-workflows
+      summary: Get Workflow
+      operationId: get_workflow_api_v1_workflows__wf_id__get
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+      - v1-workflows
+      summary: Update Workflow
+      operationId: update_workflow_api_v1_workflows__wf_id__put
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+      - v1-workflows
+      summary: Delete Workflow
+      operationId: delete_workflow_api_v1_workflows__wf_id__delete
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      - name: confirm
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Confirm
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_DeleteResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workflows/{wf_id}/duplicate:
+    post:
+      tags:
+      - v1-workflows
+      summary: Duplicate Workflow
+      operationId: duplicate_workflow_api_v1_workflows__wf_id__duplicate_post
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_DuplicateResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workflows/{wf_id}/validate:
+    post:
+      tags:
+      - v1-workflows
+      summary: Validate Workflow
+      description: 校验：给了 body 就校验 body，否则校验已保存的图。
+      operationId: validate_workflow_api_v1_workflows__wf_id__validate_post
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - $ref: '#/components/schemas/GraphDef'
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ValidateResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+      - v1-workflows
+      summary: Validate Workflow Saved
+      description: 校验已保存的工作流图。
+      operationId: validate_workflow_saved_api_v1_workflows__wf_id__validate_get
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ValidateResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workflows/{wf_id}/versions:
+    get:
+      tags:
+      - v1-workflows
+      summary: List Workflow Versions
+      description: 版本历史（F5）：按 seq 倒序。
+      operationId: list_workflow_versions_api_v1_workflows__wf_id__versions_get
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowVersionListData_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workflows/{wf_id}/versions/{version_id}:
+    get:
+      tags:
+      - v1-workflows
+      summary: Get Workflow Version
+      operationId: get_workflow_version_api_v1_workflows__wf_id__versions__version_id__get
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowVersionDetail_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workflows/{wf_id}/versions/{version_id}/restore:
+    post:
+      tags:
+      - v1-workflows
+      summary: Restore Workflow Version
+      description: 恢复到某个版本；恢复本身会生成一个新的版本记录（F5）。
+      operationId: restore_workflow_version_api_v1_workflows__wf_id__versions__version_id__restore_post
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workflows/{wf_id}/runs:
+    post:
+      tags:
+      - v1-workflows
+      summary: Run Workflow
+      description: 发起一次手动运行，立即返回 run_id，后续通过 SSE 观察进度。
+      operationId: run_workflow_api_v1_workflows__wf_id__runs_post
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunCreate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_RunResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workflows/{wf_id}/nodes/{node_id}/test:
+    post:
+      tags:
+      - v1-workflows
+      summary: Test Node
+      description: 单节点调试：只执行该节点，不写运行记录。
+      operationId: test_node_api_v1_workflows__wf_id__nodes__node_id__test_post
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      - name: node_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Node Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - $ref: '#/components/schemas/NodeTestRequest'
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_NodeTestResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/runs:
+    get:
+      tags:
+      - v1-runs
+      summary: List Runs
+      operationId: list_runs_api_v1_runs_get
+      parameters:
+      - name: workflow_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workflow Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 100
+          title: Limit
+      - name: started_after
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Started After
+      - name: started_before
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Started Before
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_RunListData_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - v1-runs
+      summary: Create Run
+      description: 【已废弃，评审 G5 / D-2】发起运行请用 `POST /api/workflows/{wf_id}/runs`：它与工作流资源同一条路径，工作流不存在时语义一致。此入口仅为兼容旧调用方保留，响应与行为完全等价。
+      operationId: create_run_api_v1_runs_post
+      deprecated: true
+      parameters:
+      - name: workflow_id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Workflow Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunCreate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_RunResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/runs/compare:
+    get:
+      tags:
+      - v1-runs
+      summary: Compare Runs
+      description: 按 node_id 对齐两次运行，供前端并排对比（F1）。
+      operationId: compare_runs_api_v1_runs_compare_get
+      parameters:
+      - name: ids
+        in: query
+        required: true
+        schema:
+          type: string
+          description: 两个运行 id，逗号分隔
+          title: Ids
+        description: 两个运行 id，逗号分隔
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_RunCompareResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/runs/{run_id}:
+    get:
+      tags:
+      - v1-runs
+      summary: Get Run
+      operationId: get_run_api_v1_runs__run_id__get
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Run Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_RunDetail_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/runs/{run_id}/nodes/{node_id}:
+    get:
+      tags:
+      - v1-runs
+      summary: Get Node Run
+      operationId: get_node_run_api_v1_runs__run_id__nodes__node_id__get
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Run Id
+      - name: node_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Node Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_NodeRunDetail_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/runs/{run_id}/cancel:
+    post:
+      tags:
+      - v1-runs
+      summary: Cancel Run
+      operationId: cancel_run_api_v1_runs__run_id__cancel_post
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Run Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_CancelResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/runs/{run_id}/rerun:
+    post:
+      tags:
+      - v1-runs
+      summary: Rerun
+      description: 基于历史运行的图快照 + 输入重新发起运行。
+      operationId: rerun_api_v1_runs__run_id__rerun_post
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Run Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_RunResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/runs/{run_id}/events:
+    get:
+      tags:
+      - v1-runs
+      summary: Run Events
+      description: "SSE - 实时推送 run 事件。\n\n- 先回放内存事件历史（按 Last-Event-ID 补齐）；\n- 内存里完全没有这次运行的历史（如后端重启）时，用已落库的\
+        \ node_run 兜底回放，\n  并给回放事件补上单调递增的 seq；\n- 之后持续订阅 EventBus 直到 run 结束。\n\n注意：这里**不**用\
+        \ `Depends(get_session)`。请求级 Session 会一直被这条长连接占着，\n多个 SSE 客户端就能把连接池吃干。存在性检查用完即关。"
+      operationId: run_events_api_v1_runs__run_id__events_get
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Run Id
+      - name: last_event_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Event Id
+      - name: Last-Event-ID
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last-Event-Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/providers:
+    get:
+      tags:
+      - v1-providers
+      summary: List Providers
+      operationId: list_providers_api_v1_providers_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ProviderListData_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - v1-providers
+      summary: Create Provider
+      operationId: create_provider_api_v1_providers_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ProviderResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/providers/test:
+    post:
+      tags:
+      - v1-providers
+      summary: Test Provider
+      description: 保存前试连：用请求体里的明文密钥。
+      operationId: test_provider_api_v1_providers_test_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ProviderTestResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/providers/{pid}/test:
+    post:
+      tags:
+      - v1-providers
+      summary: Test Saved Provider
+      description: 已保存服务商的试连：用库里存的配置（后端负责解密密钥）。
+      operationId: test_saved_provider_api_v1_providers__pid__test_post
+      parameters:
+      - name: pid
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Pid
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ProviderTestResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/providers/{pid}/models:
+    get:
+      tags:
+      - v1-providers
+      summary: List Provider Models
+      description: 服务商可用模型（F3）：OpenAI /models、Ollama /api/tags、Anthropic 内置候选。
+      operationId: list_provider_models_api_v1_providers__pid__models_get
+      parameters:
+      - name: pid
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Pid
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ProviderModels_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/providers/{pid}:
+    get:
+      tags:
+      - v1-providers
+      summary: Get Provider
+      operationId: get_provider_api_v1_providers__pid__get
+      parameters:
+      - name: pid
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Pid
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ProviderResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+      - v1-providers
+      summary: Update Provider
+      operationId: update_provider_api_v1_providers__pid__put
+      parameters:
+      - name: pid
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Pid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ProviderResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+      - v1-providers
+      summary: Delete Provider
+      operationId: delete_provider_api_v1_providers__pid__delete
+      parameters:
+      - name: pid
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Pid
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_DeleteResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/settings:
+    get:
+      tags:
+      - v1-settings
+      summary: Get Settings
+      operationId: get_settings_api_v1_settings_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_SettingsResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+      - v1-settings
+      summary: Update Settings
+      description: 更新本机设置（只校验并接受已声明的字段）。
+      operationId: update_settings_api_v1_settings_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsUpdate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_SettingsResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/settings/system/clear-runs:
+    post:
+      tags:
+      - v1-settings
+      summary: Clear Runs
+      description: 清空全部运行记录（含节点级记录，走 runs 模块的 service）。
+      operationId: clear_runs_api_v1_settings_system_clear_runs_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ClearResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/settings/system/export:
+    get:
+      tags:
+      - v1-settings
+      summary: Export Backup
+      description: 导出备份 JSON（设置 + 全部工作流，不含服务商密钥）。
+      operationId: export_backup_api_v1_settings_system_export_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/settings/system/info:
+    get:
+      tags:
+      - v1-settings
+      summary: System Info
+      description: 系统信息：各 feature 的计数统一通过对方 service 获取（AGENTS §2.1）。
+      operationId: system_info_api_v1_settings_system_info_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_SystemInfo_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/workflows:
     get:
       tags:
@@ -4299,6 +6180,10 @@ components:
           - type: integer
           - type: 'null'
           title: Duration Ms
+        total_tokens:
+          type: integer
+          title: Total Tokens
+          default: 0
       type: object
       required:
       - id

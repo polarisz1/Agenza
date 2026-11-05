@@ -6,6 +6,8 @@ import React from 'react';
 
 import { router } from './router';
 import { theme } from './styles/theme';
+import '@fontsource-variable/ibm-plex-sans';
+import '@fontsource-variable/jetbrains-mono';
 import './styles/global.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

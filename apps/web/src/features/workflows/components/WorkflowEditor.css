@@ -1,28 +1,29 @@
 /* AgentFlow · 画布编辑器 */
 
 .afe-root {
-  --afe-brand-700: #1f4e3d;
-  --afe-brand-500: #2f7059;
-  --afe-brand-400: #4a8c73;
-  --afe-brand-50: #edf3ef;
-  --afe-paper: #fbfaf6;
-  --afe-ink-900: #1b1c1a;
-  --afe-ink-700: #4b4e49;
-  --afe-ink-500: #7c807a;
-  --afe-line: #e2e0d8;
-  --afe-bg-soft: #e9e8e1;
-  --afe-canvas: #eef0ea;
-  --afe-success: #2f7059;
-  --afe-warn: #a86612;
-  --afe-danger: #b03a3a;
-  --afe-info: #3d5a80;
-  --afe-mono: ui-monospace, SFMono-Regular, 'Cascadia Mono', Consolas, monospace;
+  --afe-brand-700: #3b82f6;
+  --afe-brand-500: #60a5fa;
+  --afe-brand-400: #3b82f6;
+  --afe-brand-50: rgba(59, 130, 246, 0.15);
+  --afe-paper: #131b2e;
+  --afe-ink-900: #f8fafc;
+  --afe-ink-700: #cbd5e1;
+  --afe-ink-500: #94a3b8;
+  --afe-line: #334155;
+  --afe-bg-soft: #1b2336;
+  --afe-canvas: #0f172a;
+  --afe-success: #22c55e;
+  --afe-warn: #f59e0b;
+  --afe-danger: #ef4444;
+  --afe-info: #06b6d4;
+  --afe-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, 'Cascadia Mono', Consolas,
+    monospace;
 
-  height: calc(100vh - 112px);
+  height: calc(100vh - 104px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #fff;
+  background: var(--af-bg-primary);
   border: 1px solid var(--afe-line);
   border-radius: 10px;
   color: var(--afe-ink-900);
@@ -38,7 +39,7 @@
   gap: 12px;
   padding: 0 16px;
   border-bottom: 1px solid var(--afe-line);
-  background: #fff;
+  background: var(--afe-paper);
 }
 
 .afe-back {
@@ -82,7 +83,7 @@
 }
 .afe-title-input:focus {
   border-color: var(--afe-brand-400);
-  box-shadow: 0 0 0 2px rgba(47, 112, 89, 0.12);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.18);
 }
 
 .afe-save-state {
@@ -92,9 +93,9 @@
 
 .afe-save-error {
   padding: 2px 8px;
-  border: 1px solid #e7c4b4;
+  border: 1px solid rgba(239, 68, 68, 0.35);
   border-radius: 10px;
-  background: #fdf2ea;
+  background: rgba(239, 68, 68, 0.12);
   color: var(--afe-danger);
   font-size: 11.5px;
   cursor: pointer;
@@ -109,11 +110,15 @@
 
 /* ---------- 通用按钮 / 标签 / 表单 ---------- */
 .afe-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   height: 30px;
   padding: 0 12px;
   border: 1px solid var(--afe-line);
   border-radius: 6px;
-  background: #fff;
+  background: var(--af-surface-card);
   color: var(--afe-ink-700);
   font-size: 12.5px;
   cursor: pointer;
@@ -141,6 +146,17 @@
   background: #17402f;
   color: #fff;
 }
+.afe-btn--publish {
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+.afe-btn--publish:hover:not(:disabled) {
+  border-color: var(--af-success);
+  background: rgba(34, 197, 94, 0.25);
+  color: #86efac;
+}
+
 .afe-btn--text {
   height: auto;
   padding: 0 6px;
@@ -162,8 +178,8 @@
   white-space: nowrap;
 }
 .afe-tag--success {
-  border-color: #cfe0d6;
-  background: #e7f0eb;
+  border-color: rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.12);
   color: var(--afe-success);
 }
 .afe-tag--draft {
@@ -180,7 +196,7 @@
   border: 1px solid var(--afe-line);
   border-radius: 6px;
   outline: none;
-  background: #fff;
+  background: var(--af-bg-primary);
   color: var(--afe-ink-900);
   font-family: inherit;
   font-size: 12.5px;
@@ -189,7 +205,7 @@
 .afe-select:focus,
 .afe-textarea:focus {
   border-color: var(--afe-brand-400);
-  box-shadow: 0 0 0 2px rgba(47, 112, 89, 0.12);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.18);
 }
 .afe-textarea {
   resize: vertical;
@@ -209,8 +225,8 @@
   justify-content: space-between;
   gap: 12px;
   padding: 6px 16px;
-  border-bottom: 1px solid #f0dcc8;
-  background: #fdf2ea;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.12);
   color: var(--afe-warn);
   font-size: 12px;
 }
@@ -271,8 +287,8 @@
 }
 .afe-lib-item:hover {
   border-color: var(--afe-line);
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(20, 20, 10, 0.06);
+  background: var(--af-surface-hover);
+  box-shadow: none;
 }
 .afe-lib-item:active {
   cursor: grabbing;
@@ -322,9 +338,9 @@
   width: 320px;
   padding: 22px;
   transform: translate(-50%, -60%);
-  border: 1px dashed #b9c3b8;
+  border: 1px dashed var(--afe-line);
   border-radius: 12px;
-  background: rgba(251, 250, 246, 0.86);
+  background: rgba(19, 27, 46, 0.88);
   text-align: center;
   pointer-events: none;
 }
@@ -346,14 +362,14 @@
   padding: 3px 8px;
   border: 1px solid var(--afe-line);
   border-radius: 6px;
-  background: rgba(251, 250, 246, 0.9);
+  background: rgba(19, 27, 46, 0.9);
   color: var(--afe-ink-500);
   font-size: 11px;
   pointer-events: none;
 }
 
 .afe-minimap {
-  background: rgba(251, 250, 246, 0.9) !important;
+  background: rgba(19, 27, 46, 0.9) !important;
   border: 1px solid var(--afe-line);
   border-radius: 8px;
 }
@@ -370,8 +386,8 @@
   flex-direction: column;
   border: 1px solid var(--afe-line);
   border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 8px 24px -12px rgba(20, 20, 10, 0.28);
+  background: var(--af-surface-card);
+  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
 .afe-issues-head {
@@ -416,7 +432,7 @@
   font-size: 10px;
 }
 .afe-issue-code--blocking {
-  background: #faece4;
+  background: rgba(239, 68, 68, 0.12);
   color: var(--afe-danger);
 }
 .afe-issue-msg {
@@ -467,8 +483,8 @@
 
 .afe-props-warn {
   padding: 5px 12px;
-  background: #fdf2ea;
-  color: var(--afe-danger);
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--afe-warn);
   font-size: 11px;
 }
 
@@ -552,10 +568,10 @@ button.afe-var-chip {
   gap: 1px;
   margin: 0;
   padding: 3px 8px;
-  border: 1px solid #cfe0d6;
+  border: 1px solid rgba(59, 130, 246, 0.35);
   border-radius: 12px;
-  background: #fff;
-  color: var(--afe-brand-700);
+  background: var(--af-surface-card);
+  color: var(--afe-brand-500);
   cursor: pointer;
   font-family: var(--afe-mono);
   font-size: 11px;
@@ -618,7 +634,7 @@ button.afe-var-chip .afe-var-chip-field {
   flex-direction: column;
   height: 190px;
   border-top: 1px solid var(--afe-line);
-  background: #fff;
+  background: var(--afe-paper);
 }
 .afe-runpanel--collapsed {
   height: 36px;
@@ -667,7 +683,7 @@ button.afe-var-chip .afe-var-chip-field {
 .afe-stream {
   margin-top: 8px;
   padding: 8px 10px;
-  border: 1px solid #cfe0d6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
   border-radius: 8px;
   background: var(--afe-brand-50);
 }
@@ -729,7 +745,7 @@ button.afe-var-chip .afe-var-chip-field {
   height: 8px;
   margin-right: 8px;
   border-radius: 50%;
-  background: #b9c3b8;
+  background: #475569;
 }
 .afe-dot--running {
   background: var(--afe-info);
@@ -793,7 +809,7 @@ button.afe-var-chip .afe-var-chip-field {
 }
 
 .afe-palette {
-  background: #fff;
+  background: var(--af-surface-card);
 }
 
 .afe-palette-head {
@@ -876,10 +892,10 @@ button.afe-var-chip .afe-var-chip-field {
   z-index: 1200;
   min-width: 190px;
   padding: 4px;
-  background: #fff;
+  background: var(--af-surface-elevated);
   border: 1px solid var(--afe-line);
   border-radius: 8px;
-  box-shadow: 0 18px 48px -12px rgba(20, 20, 10, 0.28);
+  box-shadow: 0 18px 48px -12px rgba(0, 0, 0, 0.5);
 }
 
 .afe-ctx button {
@@ -907,7 +923,7 @@ button.afe-var-chip .afe-var-chip-field {
 }
 
 .afe-ctx button.danger:hover {
-  background: #fdf2ea;
+  background: rgba(239, 68, 68, 0.12);
 }
 
 .afe-ctx-kbd {
@@ -921,4 +937,80 @@ button.afe-var-chip .afe-var-chip-field {
   height: 1px;
   margin: 4px 6px;
   background: var(--afe-line);
+}
+
+/* ---------- 协作 / 自动保存状态条 ---------- */
+.afe-statusbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 32px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--afe-line);
+  background: var(--af-bg-tertiary);
+  color: var(--afe-ink-500);
+  font-size: 11px;
+}
+
+.afe-statusbar__left,
+.afe-statusbar__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.afe-statusbar__right {
+  margin-left: auto;
+}
+
+.afe-statusbar__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--afe-success);
+}
+
+.afe-statusbar__user {
+  color: var(--afe-brand-500);
+  font-weight: 500;
+}
+
+.afe-statusbar__divider {
+  width: 1px;
+  height: 14px;
+  background: var(--afe-line);
+}
+
+.afe-statusbar__mode {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--afe-brand-50);
+  color: var(--afe-brand-500);
+  font-size: 10px;
+}
+
+/* ---------- React Flow 控件暗色化 ---------- */
+.afe-canvas .react-flow__controls {
+  overflow: hidden;
+  border: 1px solid var(--afe-line);
+  border-radius: 8px;
+  background: var(--af-bg-tertiary);
+  box-shadow: var(--af-shadow-card);
+}
+
+.afe-canvas .react-flow__controls-button {
+  border-bottom-color: var(--afe-line);
+  background: var(--af-bg-tertiary);
+  color: var(--af-text-muted);
+  fill: currentColor;
+}
+
+.afe-canvas .react-flow__controls-button:hover {
+  background: var(--af-surface-hover);
+}
+
+.afe-minimap .react-flow__minimap-mask {
+  fill: rgba(15, 23, 42, 0.6);
 }

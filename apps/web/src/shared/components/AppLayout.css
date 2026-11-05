@@ -1,0 +1,440 @@
+/* AgentFlow · SaaS 应用壳（对齐 docs/prototype/index.html） */
+
+.af-shell {
+  min-height: 100vh;
+  background: var(--af-bg-primary);
+}
+
+/* ---------- 顶栏 ---------- */
+.af-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+  padding: 0 16px;
+  background: var(--af-bg-secondary);
+  border-bottom: 1px solid var(--af-border);
+}
+
+.af-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.af-brand__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--af-radius-md);
+  background: linear-gradient(135deg, var(--af-brand), var(--af-brand-strong));
+  color: #fff;
+}
+
+.af-brand__name {
+  color: var(--af-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.af-workspace {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 220px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--af-radius-md);
+  background: transparent;
+  color: var(--af-text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.af-workspace:hover {
+  background: var(--af-surface-hover);
+}
+
+.af-workspace__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.af-workspace__caret {
+  color: var(--af-text-muted);
+}
+
+.af-topbar__spacer {
+  flex: 1;
+}
+
+/* ---------- 全局搜索 ---------- */
+.af-search {
+  position: relative;
+  width: 264px;
+}
+
+.af-search__icon {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  color: var(--af-text-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.af-search__input {
+  width: 100%;
+  height: 30px;
+  padding: 0 12px 0 32px;
+  border: 1px solid var(--af-border);
+  border-radius: var(--af-radius-sm);
+  outline: none;
+  background: var(--af-bg-primary);
+  color: var(--af-text-primary);
+  font-size: 12px;
+  transition: border-color 0.15s ease;
+}
+
+.af-search__input::placeholder {
+  color: var(--af-text-dim);
+}
+
+.af-search__input:focus {
+  border-color: var(--af-brand);
+}
+
+.af-search__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  overflow: hidden;
+  padding: 4px;
+  border: 1px solid var(--af-border);
+  border-radius: var(--af-radius-md);
+  background: var(--af-surface-elevated);
+  box-shadow: var(--af-shadow-card);
+}
+
+.af-search__empty {
+  padding: 10px 12px;
+  color: var(--af-text-muted);
+  font-size: 12px;
+}
+
+.af-search__result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--af-radius-sm);
+  background: transparent;
+  color: var(--af-text-primary);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.af-search__result:hover {
+  background: var(--af-surface-hover);
+}
+
+.af-search__result-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.af-search__result-meta {
+  flex: none;
+  color: var(--af-text-dim);
+  font-family: var(--af-font-mono);
+  font-size: 10px;
+}
+
+/* ---------- 顶栏右侧 ---------- */
+.af-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.af-bell {
+  position: relative;
+}
+
+.af-bell__dot {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--af-danger);
+}
+
+.af-topbar__divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 6px;
+  background: var(--af-border);
+}
+
+.af-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--af-radius-md);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.af-user:hover {
+  background: var(--af-surface-hover);
+}
+
+.af-user__meta {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.af-user__name {
+  color: var(--af-text-primary);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.af-user__role {
+  color: var(--af-text-muted);
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+/* ---------- 主体 ---------- */
+.af-body {
+  display: flex;
+  min-height: calc(100vh - 56px);
+}
+
+/* ---------- 侧栏 ---------- */
+.af-sidebar {
+  position: sticky;
+  top: 56px;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 224px;
+  height: calc(100vh - 56px);
+  background: var(--af-bg-secondary);
+  border-right: 1px solid var(--af-border);
+}
+
+.af-sidebar__nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 8px;
+}
+
+.af-nav-group {
+  margin-bottom: 4px;
+}
+
+.af-nav-group__title {
+  padding: 8px 12px 4px;
+  color: var(--af-text-dim);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.af-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--af-radius-sm);
+  background: transparent;
+  color: var(--af-text-secondary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.af-nav-item:hover {
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--af-text-primary);
+}
+
+.af-nav-item--active {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--af-brand);
+}
+
+.af-nav-item--active::before {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 0;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: var(--af-brand);
+  content: '';
+}
+
+.af-nav-item__icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.af-sidebar__divider {
+  height: 1px;
+  margin: 10px 8px;
+  background: var(--af-border);
+}
+
+/* ---------- 侧栏 Pro 卡 ---------- */
+.af-sidebar__pro {
+  margin: 8px;
+  padding: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: var(--af-radius-md);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+}
+
+.af-sidebar__pro-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  color: var(--af-text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.af-sidebar__pro-head svg {
+  color: var(--af-warning);
+}
+
+.af-sidebar__pro-text {
+  color: var(--af-text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.af-sidebar__pro-bar {
+  height: 4px;
+  margin: 8px 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--af-bg-primary);
+}
+
+.af-sidebar__pro-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--af-brand), #8b5cf6);
+}
+
+.af-sidebar__pro-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  margin-top: 4px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: var(--af-radius-sm);
+  background: var(--af-brand);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.af-sidebar__pro-btn:hover {
+  background: var(--af-brand-strong);
+}
+
+/* ---------- 内容区 ---------- */
+.af-content {
+  flex: 1;
+  min-width: 0;
+  height: calc(100vh - 56px);
+  overflow-y: auto;
+  padding: 24px;
+  background: var(--af-bg-primary);
+}
+
+/* ---------- 离线提示 ---------- */
+.af-offline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 24px;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--af-warning);
+  font-size: 12px;
+}
+
+.af-offline button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--af-brand);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 1100px) {
+  .af-sidebar {
+    display: none;
+  }
+
+  .af-search {
+    width: 200px;
+  }
+}
+
+@media (max-width: 760px) {
+  .af-search {
+    display: none;
+  }
+
+  .af-content {
+    padding: 16px;
+  }
+}

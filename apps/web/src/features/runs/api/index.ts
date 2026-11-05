@@ -1,4 +1,4 @@
-import { http } from '@/shared/lib/http';
+﻿import { http } from '@/shared/lib/http';
 import type { ApiData, ApiQuery, components } from '@agentflow/contracts';
 
 export type RunListItem = components['schemas']['RunListItem'];
@@ -9,14 +9,14 @@ export type CancelResult = components['schemas']['CancelResult'];
 export type CompareNode = components['schemas']['CompareNode'];
 export type RunCompareResult = components['schemas']['RunCompareResult'];
 
-type RunListData = ApiData<'/api/runs', 'get'>;
-type WorkflowListData = ApiData<'/api/workflows', 'get'>;
+type RunListData = ApiData<'/api/v1/runs', 'get'>;
+type WorkflowListData = ApiData<'/api/v1/workflows', 'get'>;
 
 /** 运行列表的"按工作流筛选"选项：从契约里的列表项派生，不再手写（评审 G24） */
 export type WorkflowOption = Pick<components['schemas']['WorkflowListItem'], 'id' | 'name'>;
 
-/** 运行列表查询参数：直接取后端 `/api/runs` 的 query 契约（评审 G24） */
-export type RunListQuery = ApiQuery<'/api/runs', 'get'>;
+/** 运行列表查询参数：直接取后端 `/api/v1/runs` 的 query 契约（评审 G24） */
+export type RunListQuery = ApiQuery<'/api/v1/runs', 'get'>;
 
 export async function listRuns(query: RunListQuery = {}): Promise<RunListItem[]> {
   const params = new URLSearchParams();
@@ -26,37 +26,37 @@ export async function listRuns(query: RunListQuery = {}): Promise<RunListItem[]>
   if (query.started_after) params.set('started_after', query.started_after);
   if (query.started_before) params.set('started_before', query.started_before);
   const data = await http.get<RunListData>(
-    `/api/runs${params.toString() ? `?${params.toString()}` : ''}`,
+    `/api/v1/runs${params.toString() ? `?${params.toString()}` : ''}`,
   );
   return data.items;
 }
 
 export async function getRun(id: string): Promise<RunDetail> {
-  return http.get<RunDetail>(`/api/runs/${id}`);
+  return http.get<RunDetail>(`/api/v1/runs/${id}`);
 }
 
 export async function getRunNode(runId: string, nodeId: string): Promise<RunNodeDetail> {
-  return http.get<RunNodeDetail>(`/api/runs/${runId}/nodes/${nodeId}`);
+  return http.get<RunNodeDetail>(`/api/v1/runs/${runId}/nodes/${nodeId}`);
 }
 
 export async function cancelRun(id: string): Promise<CancelResult> {
-  return http.post<CancelResult>(`/api/runs/${id}/cancel`);
+  return http.post<CancelResult>(`/api/v1/runs/${id}/cancel`);
 }
 
 export async function rerunRun(id: string): Promise<RunResponse> {
-  return http.post<RunResponse>(`/api/runs/${id}/rerun`);
+  return http.post<RunResponse>(`/api/v1/runs/${id}/rerun`);
 }
 
 /** 对比两次运行：后端按 node_id 对齐（F1） */
 export async function compareRuns(a: string, b: string): Promise<RunCompareResult> {
   return http.get<RunCompareResult>(
-    `/api/runs/compare?ids=${encodeURIComponent(a)},${encodeURIComponent(b)}`,
+    `/api/v1/runs/compare?ids=${encodeURIComponent(a)},${encodeURIComponent(b)}`,
   );
 }
 
 /** 运行列表的“按工作流筛选”下拉选项 */
 export async function listWorkflowOptions(): Promise<WorkflowOption[]> {
-  // 后端 /api/workflows 没有 limit 参数（此前带 ?limit=200 会被静默忽略，评审 G24）
-  const data = await http.get<WorkflowListData>('/api/workflows');
+  // 后端 /api/v1/workflows 没有 limit 参数（此前带 ?limit=200 会被静默忽略，评审 G24）
+  const data = await http.get<WorkflowListData>('/api/v1/workflows');
   return data.items.map((item) => ({ id: item.id, name: item.name }));
 }

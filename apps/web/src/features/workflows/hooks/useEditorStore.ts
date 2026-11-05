@@ -71,6 +71,7 @@ interface EditorState {
   load(payload: LoadPayload): void;
   setName(name: string): void;
   setDescription(description: string): void;
+  setStatus(status: WorkflowStatus): void;
   setViewport(viewport: Viewport, markDirty?: boolean): void;
   select(id: string | null): void;
   /** 多选：由画布 onSelectionChange 调用（F2） */
@@ -214,6 +215,8 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     if (description === get().description) return;
     set({ description, dirty: true, rev: get().rev + 1 });
   },
+
+  setStatus: (status) => set({ status }),
 
   /**
    * 更新视口。`markDirty` 只在用户真的平移/缩放时传 true

@@ -1,17 +1,18 @@
 /* 运行详情 / 运行对比（v0.2 · F1） */
 
 .rv {
-  --rv-line: #e2e0d8;
-  --rv-line-soft: #eff0ec;
-  --rv-ink-900: #1b1c1a;
-  --rv-ink-700: #4b4e49;
-  --rv-ink-500: #6b706a;
-  --rv-brand: #1f4e3d;
-  --rv-brand-50: #edf3ef;
-  --rv-danger: #b03a3a;
-  --rv-danger-soft: #fbe9e7;
-  --rv-warning: #a86612;
-  --rv-mono: ui-monospace, SFMono-Regular, 'Cascadia Mono', Consolas, monospace;
+  --rv-line: #334155;
+  --rv-line-soft: #273248;
+  --rv-ink-900: #f8fafc;
+  --rv-ink-700: #cbd5e1;
+  --rv-ink-500: #94a3b8;
+  --rv-brand: #3b82f6;
+  --rv-brand-50: rgba(59, 130, 246, 0.15);
+  --rv-danger: #ef4444;
+  --rv-danger-soft: rgba(239, 68, 68, 0.12);
+  --rv-warning: #f59e0b;
+  --rv-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, 'Cascadia Mono', Consolas,
+    monospace;
 
   display: grid;
   gap: 16px;
@@ -44,7 +45,7 @@
 }
 .rv-stat {
   padding: 10px 12px;
-  background: #fbfaf6;
+  background: var(--af-bg-secondary);
   border: 1px solid var(--rv-line);
   border-radius: 10px;
 }
@@ -71,7 +72,7 @@
 }
 
 .rv-panel {
-  background: #fff;
+  background: var(--af-surface-card);
   border: 1px solid var(--rv-line);
   border-radius: 10px;
   overflow: hidden;
@@ -102,13 +103,13 @@
   border-radius: 8px;
   margin-bottom: 8px;
   overflow: hidden;
-  background: #fff;
+  background: var(--af-surface-card);
 }
 .rv-node:last-child {
   margin-bottom: 0;
 }
 .rv-node--failed {
-  border-color: #f0cfc9;
+  border-color: rgba(239, 68, 68, 0.3);
 }
 .rv-node-head {
   width: 100%;
@@ -124,14 +125,14 @@
   cursor: pointer;
 }
 .rv-node-head:hover {
-  background: #fafbf8;
+  background: var(--af-surface-hover);
 }
 .rv-node-head .idx {
   width: 20px;
   height: 20px;
   flex: none;
   border-radius: 50%;
-  background: #eef0ec;
+  background: var(--af-bg-tertiary);
   color: var(--rv-ink-500);
   display: grid;
   place-items: center;
@@ -152,7 +153,7 @@
   white-space: nowrap;
 }
 .rv-node-head .chev {
-  color: #9aa09a;
+  color: var(--af-text-dim);
   font-size: 10px;
   width: 12px;
   text-align: center;
@@ -160,7 +161,7 @@
 .rv-node-body {
   border-top: 1px solid var(--rv-line-soft);
   padding: 10px;
-  background: #fbfaf6;
+  background: var(--af-bg-secondary);
 }
 .rv-tabs {
   display: flex;
@@ -177,7 +178,7 @@
   cursor: pointer;
 }
 .rv-tab.on {
-  background: #fff;
+  background: var(--af-surface-card);
   border-color: var(--rv-line);
   color: var(--rv-ink-900);
   font-weight: 500;
@@ -192,7 +193,7 @@
   padding: 10px;
   max-height: 260px;
   overflow: auto;
-  background: #fff;
+  background: var(--af-surface-card);
   border: 1px solid var(--rv-line-soft);
   border-radius: 6px;
   color: var(--rv-ink-700);
@@ -209,8 +210,8 @@
 }
 
 .rv-error {
-  border: 1px solid #f0cfc9;
-  background: #fff;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: var(--af-surface-card);
   border-radius: 8px;
   padding: 10px;
 }
@@ -268,7 +269,7 @@
   border: 1px solid var(--rv-line);
   border-radius: 10px;
   overflow: hidden;
-  background: #fff;
+  background: var(--af-surface-card);
 }
 .rv-compare-head,
 .rv-compare-row {
@@ -276,7 +277,7 @@
   grid-template-columns: 190px minmax(0, 1fr) minmax(0, 1fr);
 }
 .rv-compare-head {
-  background: #fbfaf6;
+  background: var(--af-bg-secondary);
   border-bottom: 1px solid var(--rv-line);
   font-size: 11.5px;
   color: var(--rv-ink-500);
@@ -296,10 +297,10 @@
   cursor: pointer;
 }
 .rv-compare-row:hover {
-  background: #fafbf8;
+  background: var(--af-surface-hover);
 }
 .rv-compare-row.on {
-  background: #fbfaf6;
+  background: var(--af-bg-secondary);
   box-shadow: inset 3px 0 0 var(--rv-brand);
 }
 .rv-compare-row:last-child {
@@ -320,7 +321,7 @@
   color: var(--rv-danger);
 }
 .rv-delta.down {
-  color: #2f7059;
+  color: var(--af-success);
 }
 
 .rv-diff {
@@ -328,7 +329,7 @@
   border: 1px solid var(--rv-line);
   border-radius: 8px;
   overflow: hidden;
-  background: #fff;
+  background: var(--af-surface-card);
 }
 .rv-diff-head {
   padding: 8px 12px;
@@ -349,15 +350,238 @@
   word-break: break-all;
 }
 .rv-diff-line.rem {
-  background: #fdecea;
-  color: #8f2f27;
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
 }
 .rv-diff-line.add {
-  background: #e9f4ee;
-  color: #1f5c43;
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
 }
 .rv-diff-empty {
   padding: 10px 12px;
   color: var(--rv-ink-500);
   font-size: 12px;
+}
+
+/* ---------- 运行详情 v3：头部 / 概览 / 成本 / 诊断 ---------- */
+.rv-head-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rv-head .rv-actions {
+  flex: none;
+}
+
+.rv-actions .ant-btn {
+  white-space: nowrap;
+}
+
+.rv-head-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rv-head-title h1 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 600;
+}
+
+.rv-submeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  color: var(--rv-ink-500);
+  font-size: 11px;
+}
+
+.rv-overview {
+  display: grid;
+  gap: 16px;
+}
+
+.rv-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rv-timeline-row {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) 72px 56px;
+  align-items: center;
+  gap: 8px;
+}
+
+.rv-timeline-name {
+  overflow: hidden;
+  color: var(--rv-ink-500);
+  font-family: var(--rv-mono);
+  font-size: 11px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rv-timeline-track {
+  position: relative;
+  height: 26px;
+  overflow: hidden;
+  border: 1px solid var(--rv-line);
+  border-radius: 4px;
+  background: var(--af-bg-primary);
+}
+
+.rv-timeline-bar {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 3px;
+  opacity: 0.9;
+}
+
+.rv-timeline-meta {
+  color: var(--rv-ink-500);
+  font-family: var(--rv-mono);
+  font-size: 10px;
+}
+
+.rv-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--rv-ink-700);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.rv-insight svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--rv-brand);
+}
+
+.rv-snapshots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.rv-cost {
+  display: flex;
+  flex-direction: column;
+  overflow-x: auto;
+}
+
+.rv-cost-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 90px 140px 80px 80px 80px 80px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--rv-line-soft);
+  font-size: 11.5px;
+}
+
+.rv-cost-head {
+  border-bottom: 1px solid var(--rv-line);
+  color: var(--rv-ink-500);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.rv-cost-name {
+  overflow: hidden;
+  color: var(--rv-ink-900);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rv-cost-type,
+.rv-cost-model {
+  overflow: hidden;
+  color: var(--rv-ink-500);
+  font-family: var(--rv-mono);
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rv-cost-num {
+  color: var(--rv-ink-700);
+  font-family: var(--rv-mono);
+  font-size: 10.5px;
+  text-align: right;
+}
+
+.rv-cost-total {
+  border-top: 1px solid var(--rv-line);
+  border-bottom: 0;
+  color: var(--rv-ink-900);
+  font-weight: 600;
+}
+
+.rv-diag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rv-diag-item {
+  padding: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.rv-diag-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.rv-diag-error {
+  margin-top: 6px;
+  color: #fca5a5;
+  font-family: var(--rv-mono);
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.rv-diag-suggestion {
+  margin-top: 4px;
+  color: var(--rv-ink-700);
+  font-size: 11.5px;
+}
+
+@media (max-width: 1100px) {
+  .rv-snapshots {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rv-timeline-row {
+    grid-template-columns: 96px minmax(0, 1fr) 60px 52px;
+  }
+
+  .rv-cost-row {
+    min-width: 720px;
+  }
 }

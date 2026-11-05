@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from fastapi import Depends, HTTPException, Request
+from jose import JWTError, jwt
+from sqlalchemy.orm import Session
+
 from app.api_deps import get_session
 from app.core.config import settings
 from app.modules.auth.models import User, Workspace
 from app.modules.auth.repository import UserRepository
-from fastapi import Depends, HTTPException, Request
-from jose import JWTError, jwt
-from sqlalchemy.orm import Session
 
 
 def _decode_access_token(token: str) -> dict:
@@ -22,7 +23,14 @@ def _decode_access_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Invalid or expired token") from None
 
 
-async def _extract_bearer(request: Request) -> str | None:
+def _extract_bearer(request: Request) -> str | None:
+    """从 Authorization 头取 Bearer token。
+
+    注意：这里必须是同步函数。之前写成 `async def`，而所有调用处都是直接
+    `token = _extract_bearer(request)`，拿到的是 coroutine 对象而非字符串，
+    传给 jose 的 jwt.decode 就会抛 AttributeError，表现为登录后
+    /api/v1/auth/me、/api/v1/workspaces 全部 500。
+    """
     auth = request.headers.get("authorization", "")
     if auth.startswith("Bearer "):
         return auth[7:]

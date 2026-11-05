@@ -16,6 +16,8 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5174,
+      // 不设 strictPort：5174 被占用时 Vite 自动递增到 5175/5176 继续启动。
+      // 前端所有请求都走同源 /api（由下面的 proxy 转发），所以端口变化不影响可用性。
       host: true,
       open: false,
       proxy: {

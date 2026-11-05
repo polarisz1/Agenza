@@ -2,6 +2,7 @@ import {
   Alert,
   App,
   Button,
+  Card,
   Table,
   Tag,
   Space,
@@ -24,6 +25,7 @@ import {
 } from '../api';
 import type { ProviderResponse } from '../api';
 import EmptyState from '@/shared/components/EmptyState';
+import PageHeader from '@/shared/components/PageHeader';
 
 const KINDS: { value: string; label: string }[] = [
   { value: 'openai-compat', label: 'OpenAI 兼容（GPT / DeepSeek 等）' },
@@ -68,12 +70,15 @@ export default function ModelSettings() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div style={{ fontSize: 20, fontWeight: 600 }}>模型与密钥</div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          添加服务商
-        </Button>
-      </div>
+      <PageHeader
+        title="模型与密钥"
+        description="配置本工作空间可用的模型服务商（密钥加密存储，仅显示掩码）"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+            添加服务商
+          </Button>
+        }
+      />
 
       {loadError && (
         <Alert
@@ -90,100 +95,103 @@ export default function ModelSettings() {
         />
       )}
 
-      <Table
-        rowKey="id"
-        loading={loading}
-        dataSource={items}
-        scroll={{ x: 1100 }}
-        locale={{
-          emptyText: loading ? (
-            <span />
-          ) : (
-            <EmptyState
-              title="还没有配置模型服务商"
-              description="支持 OpenAI 兼容（DeepSeek 等）、Ollama 本地、Anthropic 兼容。"
-              action={
-                <Button type="primary" onClick={openCreate}>
-                  添加服务商
-                </Button>
-              }
-            />
-          ),
-        }}
-        columns={[
-          { title: '名称', dataIndex: 'name' },
-          {
-            title: '类型',
-            dataIndex: 'kind',
-            render: (k) => <Tag>{KINDS.find((x) => x.value === k)?.label || k}</Tag>,
-          },
-          { title: '服务地址', dataIndex: 'base_url', ellipsis: true },
-          { title: '默认模型', dataIndex: 'default_model' },
-          { title: '密钥', dataIndex: 'api_key_masked', width: 160 },
-          {
-            title: '操作',
-            key: 'ops',
-            width: 220,
-            render: (_, r) => (
-              <Space>
-                <Button
-                  type="link"
-                  size="small"
-                  icon={<LinkOutlined />}
-                  disabled={testing}
-                  onClick={async () => {
-                    setTesting(true);
-                    try {
-                      // 已保存的服务商按 id 测试：后端用库里解密的密钥，
-                      // 前端不需要（也不应该）拿到明文（F5）
-                      const res = await testProviderById(r.id);
-                      if (res.ok) {
-                        message.success(`连接成功${res.model ? `（${res.model}）` : ''}`);
-                      } else {
-                        message.error(`连接失败：${res.message}`);
-                      }
-                    } catch (err: any) {
-                      message.error(err?.message || '测试失败');
-                    } finally {
-                      setTesting(false);
-                    }
-                  }}
-                >
-                  测试
-                </Button>
-                <Button
-                  type="link"
-                  size="small"
-                  icon={<EditOutlined />}
-                  onClick={() => {
-                    setEditingId(r.id);
-                    form.setFieldsValue(r);
-                    setOpen(true);
-                  }}
-                >
-                  编辑
-                </Button>
-                <Popconfirm
-                  title="确定删除该服务商？"
-                  onConfirm={async () => {
-                    try {
-                      await deleteProvider(r.id);
-                      message.success('已删除');
-                      load();
-                    } catch (err: any) {
-                      message.error(err?.message || '删除失败');
-                    }
-                  }}
-                >
-                  <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-                    删除
+      <Card styles={{ body: { padding: 0 } }}>
+        <Table
+          rowKey="id"
+          loading={loading}
+          dataSource={items}
+          pagination={false}
+          scroll={{ x: 1100 }}
+          locale={{
+            emptyText: loading ? (
+              <span />
+            ) : (
+              <EmptyState
+                title="还没有配置模型服务商"
+                description="支持 OpenAI 兼容（DeepSeek 等）、Ollama 本地、Anthropic 兼容。"
+                action={
+                  <Button type="primary" onClick={openCreate}>
+                    添加服务商
                   </Button>
-                </Popconfirm>
-              </Space>
+                }
+              />
             ),
-          },
-        ]}
-      />
+          }}
+          columns={[
+            { title: '名称', dataIndex: 'name' },
+            {
+              title: '类型',
+              dataIndex: 'kind',
+              render: (k) => <Tag>{KINDS.find((x) => x.value === k)?.label || k}</Tag>,
+            },
+            { title: '服务地址', dataIndex: 'base_url', ellipsis: true },
+            { title: '默认模型', dataIndex: 'default_model' },
+            { title: '密钥', dataIndex: 'api_key_masked', width: 160 },
+            {
+              title: '操作',
+              key: 'ops',
+              width: 220,
+              render: (_, r) => (
+                <Space>
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<LinkOutlined />}
+                    disabled={testing}
+                    onClick={async () => {
+                      setTesting(true);
+                      try {
+                        // 已保存的服务商按 id 测试：后端用库里解密的密钥，
+                        // 前端不需要（也不应该）拿到明文（F5）
+                        const res = await testProviderById(r.id);
+                        if (res.ok) {
+                          message.success(`连接成功${res.model ? `（${res.model}）` : ''}`);
+                        } else {
+                          message.error(`连接失败：${res.message}`);
+                        }
+                      } catch (err: any) {
+                        message.error(err?.message || '测试失败');
+                      } finally {
+                        setTesting(false);
+                      }
+                    }}
+                  >
+                    测试
+                  </Button>
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => {
+                      setEditingId(r.id);
+                      form.setFieldsValue(r);
+                      setOpen(true);
+                    }}
+                  >
+                    编辑
+                  </Button>
+                  <Popconfirm
+                    title="确定删除该服务商？"
+                    onConfirm={async () => {
+                      try {
+                        await deleteProvider(r.id);
+                        message.success('已删除');
+                        load();
+                      } catch (err: any) {
+                        message.error(err?.message || '删除失败');
+                      }
+                    }}
+                  >
+                    <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+                      删除
+                    </Button>
+                  </Popconfirm>
+                </Space>
+              ),
+            },
+          ]}
+        />
+      </Card>
 
       <Modal
         open={open}

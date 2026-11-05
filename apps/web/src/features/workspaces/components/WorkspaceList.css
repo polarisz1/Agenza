@@ -1,0 +1,151 @@
+/* AgentFlow · 工作空间列表 */
+
+.af-wsp {
+  min-height: 100vh;
+  background: var(--af-bg-primary);
+}
+
+.af-wsp__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--af-border);
+  background: var(--af-bg-secondary);
+}
+
+.af-wsp__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--af-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.af-wsp__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--af-radius-md);
+  background: linear-gradient(135deg, var(--af-brand), var(--af-brand-strong));
+  color: #fff;
+}
+
+.af-wsp__user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--af-text-muted);
+  font-size: 12px;
+}
+
+.af-wsp__main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.af-wsp__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.af-wsp__title {
+  margin: 0;
+  color: var(--af-text-primary);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.af-wsp__subtitle {
+  margin-top: 2px;
+  color: var(--af-text-muted);
+  font-size: 13px;
+}
+
+.af-wsp__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.af-wsp__card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.af-wsp__card:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.af-wsp__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.af-wsp__name {
+  color: var(--af-text-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.af-wsp__desc {
+  min-height: 34px;
+  color: var(--af-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.af-wsp__meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--af-text-muted);
+  font-size: 11px;
+}
+
+.af-wsp__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--af-border);
+  color: var(--af-brand);
+  font-size: 11px;
+}
+
+.af-wsp__loading {
+  padding: 24px;
+}
+
+@media (max-width: 1100px) {
+  .af-wsp__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .af-wsp__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

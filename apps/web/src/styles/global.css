@@ -1,3 +1,5 @@
+@import './tokens.css';
+
 /* AgentFlow - Global Styles */
 html,
 body,
@@ -5,8 +7,9 @@ body,
   height: 100%;
   margin: 0;
   padding: 0;
-  background: #f4f5f2;
-  color: #1d1f1c;
+  background: var(--af-bg-primary);
+  color: var(--af-text-primary);
+  font-family: var(--af-font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -20,47 +23,65 @@ a {
   text-decoration: none;
 }
 
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.3);
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #dfe1da;
-  border-radius: 4px;
+  background: var(--af-border);
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #c0c3bb;
+  background: var(--af-border-light);
+}
+
+.af-mono {
+  font-family: var(--af-font-mono);
 }
 
 /* React Flow canvas */
 .react-flow__node {
   border-radius: 10px;
-  box-shadow:
-    0 1px 3px rgba(20, 20, 10, 0.08),
-    0 6px 18px -8px rgba(20, 20, 10, 0.15);
-  background: #fff;
+  box-shadow: var(--af-shadow-card);
+  background: var(--af-surface-card);
+  color: var(--af-text-primary);
   font-size: 13px;
 }
 
 .react-flow__node.selected {
   box-shadow:
-    0 0 0 2px #1f4e3d,
-    0 1px 3px rgba(20, 20, 10, 0.08);
+    0 0 0 2px var(--af-brand),
+    var(--af-shadow-glow);
 }
 
 .react-flow__handle {
   width: 10px;
   height: 10px;
-  background: #1f4e3d;
-  border: 2px solid #fff;
+  background: var(--af-brand);
+  border: 2px solid var(--af-bg-primary);
 }
 
-/* 键盘可达性（v0.2 / M5.4）：所有可聚焦元素都有清晰的 focus ring */
+.react-flow__minimap {
+  background: var(--af-bg-tertiary);
+}
+
+/* 键盘可达性：所有可聚焦元素都有清晰的 focus ring */
 :focus-visible {
-  outline: 2px solid #2f7059;
+  outline: 2px solid var(--af-brand);
   outline-offset: 2px;
 }
 
@@ -69,8 +90,7 @@ a:focus:not(:focus-visible) {
   outline: none;
 }
 
-/* 画布节点键盘聚焦时也给一圈提示（React Flow 默认只有 selected） */
 .react-flow__node:focus-visible {
-  outline: 2px solid #2f7059;
+  outline: 2px solid var(--af-brand);
   outline-offset: 3px;
 }

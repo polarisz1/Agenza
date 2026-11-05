@@ -11,12 +11,24 @@
  *   bash tools/scripts/dev.sh 8010 5180     # 兼容旧的 bash 入口（转调本脚本）
  */
 import { spawn, spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const isWin = process.platform === 'win32';
 const isTTY = process.stdout.isTTY;
+
+// 后端解释器：优先用 apps/api/.venv 里的 Python，避免每次启动都依赖 uv 的缓存目录。
+// uv 在部分机器上会因为 UV_CACHE_DIR 指向不可写的位置（如只读盘 / 权限异常的目录）
+// 直接报 "Failed to initialize cache" 退出，把整个 pnpm dev 带崩。
+// 只有没有 venv 时才回退到 `uv run`（首次 clone 后由用户自行 uv sync）。
+const API_VENV_PYTHON = resolve(
+  ROOT,
+  'apps/api/.venv',
+  isWin ? 'Scripts/python.exe' : 'bin/python',
+);
+const HAS_API_VENV = existsSync(API_VENV_PYTHON);
 
 const RED = isTTY ? '\u001b[31m' : '';
 const YELLOW = isTTY ? '\u001b[33m' : '';
@@ -47,11 +59,14 @@ const services = [
     name: 'api',
     label: '后端',
     // 只监听 src/app 的变化，避免被临时文件/数据库写入触发重启
-    command:
-      `uv run --directory apps/api python -m uvicorn app.main:app ` +
-      `--host 127.0.0.1 --port ${API_PORT} --reload --reload-dir src/app`,
+    command: HAS_API_VENV
+      ? `"${API_VENV_PYTHON}" -m uvicorn app.main:app ` +
+        `--host 127.0.0.1 --port ${API_PORT} --reload --reload-dir src/app`
+      : `uv run --directory apps/api python -m uvicorn app.main:app ` +
+        `--host 127.0.0.1 --port ${API_PORT} --reload --reload-dir src/app`,
     url: `http://127.0.0.1:${API_PORT}`,
-    cwd: ROOT,
+    // venv 直跑要求 cwd 在 apps/api（`app` 包由可编辑安装指向 src）
+    cwd: HAS_API_VENV ? resolve(ROOT, 'apps/api') : ROOT,
     // Windows 下 Python 的 stdout 默认按 cp936 编码；pnpm 的日志管道按 UTF-8 解读，
     // 不强制的话中文日志（迁移信息、节点错误）会变成乱码
     env: { PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' },
@@ -59,11 +74,15 @@ const services = [
   {
     name: 'web',
     label: '前端',
-    command: `"${process.execPath}" "${VITE_BIN}" --port ${WEB_PORT} --host --strictPort`,
+    // 端口被占用时允许 Vite 自动递增（不传 --strictPort）：
+    // 前端请求走同源 /api 代理，端口变化不影响功能，实际地址以 Vite 输出为准。
+    command: `"${process.execPath}" "${VITE_BIN}" --port ${WEB_PORT} --host`,
     url: `http://localhost:${WEB_PORT}`,
     cwd: resolve(ROOT, 'apps/web'),
-    // 让 Vite 的 /api 代理指向自定义的后端端口
-    env: { VITE_API_BASE_URL: `http://127.0.0.1:${API_PORT}` },
+    // 只改 Vite 的代理目标，不能改 VITE_API_BASE_URL：
+    // 后者一旦变成绝对 URL，前端会绕过 Vite 代理直连后端，触发跨域预检；
+    // 而后端 CORS 白名单不包含 Vite 端口，请求会被浏览器拦成 "Failed to fetch"。
+    env: { VITE_API_PROXY_TARGET: `http://127.0.0.1:${API_PORT}` },
   },
 ];
 
@@ -128,11 +147,13 @@ function start(service) {
 
 console.log(`${DIM}AgentFlow 开发环境：正在启动后端与前端…${RESET}`);
 for (const service of services) {
-  console.log(`  ${service.label}：${service.url}`);
+  // 前端端口被占用时 Vite 会自动递增，这里只标注默认值
+  const suffix = service.name === 'web' ? '（被占用时自动换端口，以 Vite 输出为准）' : '';
+  console.log(`  ${service.label}：${service.url}${suffix}`);
 }
 console.log(
-  `${YELLOW}提示：${RESET}后端首次启动要跑数据库迁移；端口若被占用会启动失败，可用 ` +
-  `${DIM}--api-port / --web-port${RESET} 换端口。前端用了 --strictPort，端口被占用会直接报错而不是悄悄换号。\n`,
+  `${YELLOW}提示：${RESET}后端首次启动要跑数据库迁移；后端端口若被占用会启动失败，可用 ` +
+  `${DIM}--api-port / --web-port${RESET} 换端口。\n`,
 );
 
 for (const service of services) start(service);

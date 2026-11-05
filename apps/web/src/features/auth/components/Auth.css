@@ -1,0 +1,78 @@
+/* AgentFlow · 登录 / 注册 */
+
+.af-auth {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.12), transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.1), transparent 40%),
+    var(--af-bg-primary);
+}
+
+.af-auth__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--af-text-primary);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.af-auth__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--af-brand), var(--af-brand-strong));
+  color: #fff;
+}
+
+.af-auth__card {
+  width: 420px;
+  max-width: 100%;
+}
+
+.af-auth__card--wide {
+  width: 480px;
+}
+
+.af-auth__head {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.af-auth__title {
+  margin: 0;
+  color: var(--af-text-primary);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.af-auth__subtitle {
+  margin-top: 6px;
+  color: var(--af-text-muted);
+  font-size: 13px;
+}
+
+.af-auth__switch {
+  margin-top: 4px;
+  color: var(--af-text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.af-auth__switch a {
+  color: var(--af-brand);
+}
+
+.af-auth__footer {
+  color: var(--af-text-dim);
+  font-size: 11px;
+}

@@ -1,4 +1,4 @@
-import { http } from '@/shared/lib/http';
+﻿import { http } from '@/shared/lib/http';
 import type { ApiData, components } from '@agentflow/contracts';
 
 export type WorkflowListItem = components['schemas']['WorkflowListItem'];
@@ -16,10 +16,10 @@ export type WorkflowImportResult = components['schemas']['WorkflowImportResult']
 export type WorkflowVersionItem = components['schemas']['WorkflowVersionItem'];
 export type WorkflowVersionDetail = components['schemas']['WorkflowVersionDetail'];
 
-type WorkflowListData = ApiData<'/api/workflows', 'get'>;
-type RunListData = ApiData<'/api/runs', 'get'>;
+type WorkflowListData = ApiData<'/api/v1/workflows', 'get'>;
+type RunListData = ApiData<'/api/v1/runs', 'get'>;
 type RunDetail = components['schemas']['RunDetail'];
-type ProviderListData = ApiData<'/api/providers', 'get'>;
+type ProviderListData = ApiData<'/api/v1/providers', 'get'>;
 
 export type ProviderOption = components['schemas']['ProviderResponse'];
 
@@ -33,42 +33,42 @@ export async function listWorkflows(
   if (status) params.set('status', status);
   if (sort) params.set('sort', sort);
   const data = await http.get<WorkflowListData>(
-    `/api/workflows${params.toString() ? `?${params.toString()}` : ''}`,
+    `/api/v1/workflows${params.toString() ? `?${params.toString()}` : ''}`,
   );
   return data.items;
 }
 
 export async function getWorkflow(id: string): Promise<WorkflowResponse> {
-  return http.get<WorkflowResponse>(`/api/workflows/${id}`);
+  return http.get<WorkflowResponse>(`/api/v1/workflows/${id}`);
 }
 
 export async function createWorkflow(body: WorkflowCreate): Promise<WorkflowResponse> {
-  return http.post<WorkflowResponse>('/api/workflows', body);
+  return http.post<WorkflowResponse>('/api/v1/workflows', body);
 }
 
 export async function updateWorkflow(id: string, body: WorkflowUpdate): Promise<WorkflowResponse> {
-  return http.put<WorkflowResponse>(`/api/workflows/${id}`, body);
+  return http.put<WorkflowResponse>(`/api/v1/workflows/${id}`, body);
 }
 
 export async function deleteWorkflow(id: string): Promise<void> {
-  await http.delete(`/api/workflows/${id}?confirm=true`);
+  await http.delete(`/api/v1/workflows/${id}?confirm=true`);
 }
 
 export async function duplicateWorkflow(id: string): Promise<DuplicateResult> {
-  return http.post<DuplicateResult>(`/api/workflows/${id}/duplicate`);
+  return http.post<DuplicateResult>(`/api/v1/workflows/${id}/duplicate`);
 }
 
 export async function validateWorkflow(id?: string, graph?: unknown): Promise<ValidateResult> {
-  if (id) return http.get<ValidateResult>(`/api/workflows/${id}/validate`);
-  return http.post<ValidateResult>('/api/workflows/validate', graph);
+  if (id) return http.get<ValidateResult>(`/api/v1/workflows/${id}/validate`);
+  return http.post<ValidateResult>('/api/v1/workflows/validate', graph);
 }
 
-/** 发起一次手动运行，返回 run_id（进度通过 SSE /api/runs/{id}/events 观察） */
+/** 发起一次手动运行，返回 run_id（进度通过 SSE /api/v1/runs/{id}/events 观察） */
 export async function runWorkflow(
   id: string,
   inputs: Record<string, unknown> = {},
 ): Promise<RunResponse> {
-  return http.post<RunResponse>(`/api/workflows/${id}/runs`, { inputs });
+  return http.post<RunResponse>(`/api/v1/workflows/${id}/runs`, { inputs });
 }
 
 /** 单节点调试：只执行该节点，不写运行记录 */
@@ -77,12 +77,12 @@ export async function testNode(
   nodeId: string,
   payload: NodeTestRequest = {},
 ): Promise<NodeTestResult> {
-  return http.post<NodeTestResult>(`/api/workflows/${id}/nodes/${nodeId}/test`, payload);
+  return http.post<NodeTestResult>(`/api/v1/workflows/${id}/nodes/${nodeId}/test`, payload);
 }
 
 /** 取消运行（runs 域接口，供编排侧调用） */
 export async function cancelWorkflowRun(runId: string): Promise<CancelResult> {
-  return http.post<CancelResult>(`/api/runs/${runId}/cancel`);
+  return http.post<CancelResult>(`/api/v1/runs/${runId}/cancel`);
 }
 
 /**
@@ -97,11 +97,11 @@ export async function getLatestRunNodeOutputs(
     status: 'success',
     limit: '1',
   });
-  const list = await http.get<RunListData>(`/api/runs?${params.toString()}`);
+  const list = await http.get<RunListData>(`/api/v1/runs?${params.toString()}`);
   const latest = list.items[0];
   if (!latest) return {};
 
-  const detail = await http.get<RunDetail>(`/api/runs/${latest.id}`);
+  const detail = await http.get<RunDetail>(`/api/v1/runs/${latest.id}`);
   const outputs: Record<string, unknown> = {};
   for (const node of detail.nodes) {
     if (node.status === 'success' && node.output !== null && node.output !== undefined) {
@@ -113,13 +113,13 @@ export async function getLatestRunNodeOutputs(
 
 /** LLM / 抽取节点的服务商下拉选项 */
 export async function listProviderOptions(): Promise<ProviderOption[]> {
-  const data = await http.get<ProviderListData>('/api/providers');
+  const data = await http.get<ProviderListData>('/api/v1/providers');
   return data.items;
 }
 
 /** 服务商可用模型列表（F3）：失败时返回空数组，界面仍允许手动输入 */
 export async function listProviderModels(providerId: string): Promise<string[]> {
-  const data = await http.get<{ items: string[] }>(`/api/providers/${providerId}/models`);
+  const data = await http.get<{ items: string[] }>(`/api/v1/providers/${providerId}/models`);
   return data.items ?? [];
 }
 
@@ -129,22 +129,22 @@ export type ProviderCreate = components['schemas']['ProviderCreate'];
 export type ProviderTestResult = components['schemas']['ProviderTestResult'];
 
 export async function createProviderForOnboarding(body: ProviderCreate): Promise<ProviderOption> {
-  return http.post<ProviderOption>('/api/providers', body);
+  return http.post<ProviderOption>('/api/v1/providers', body);
 }
 
 export async function testProviderForOnboarding(body: ProviderCreate): Promise<ProviderTestResult> {
-  return http.post<ProviderTestResult>('/api/providers/test', body);
+  return http.post<ProviderTestResult>('/api/v1/providers/test', body);
 }
 
 /** 轮询运行状态（引导里的示例运行用） */
 export async function getRunStatus(runId: string): Promise<components['schemas']['RunDetail']> {
-  return http.get<components['schemas']['RunDetail']>(`/api/runs/${runId}`);
+  return http.get<components['schemas']['RunDetail']>(`/api/v1/runs/${runId}`);
 }
 
 // ---- 版本历史（F5） ----
 
 export async function listWorkflowVersions(id: string): Promise<WorkflowVersionItem[]> {
-  const data = await http.get<{ items: WorkflowVersionItem[] }>(`/api/workflows/${id}/versions`);
+  const data = await http.get<{ items: WorkflowVersionItem[] }>(`/api/v1/workflows/${id}/versions`);
   return data.items ?? [];
 }
 
@@ -152,14 +152,14 @@ export async function getWorkflowVersion(
   id: string,
   versionId: string,
 ): Promise<WorkflowVersionDetail> {
-  return http.get<WorkflowVersionDetail>(`/api/workflows/${id}/versions/${versionId}`);
+  return http.get<WorkflowVersionDetail>(`/api/v1/workflows/${id}/versions/${versionId}`);
 }
 
 export async function restoreWorkflowVersion(
   id: string,
   versionId: string,
 ): Promise<WorkflowResponse> {
-  return http.post<WorkflowResponse>(`/api/workflows/${id}/versions/${versionId}/restore`);
+  return http.post<WorkflowResponse>(`/api/v1/workflows/${id}/versions/${versionId}/restore`);
 }
 
 /** 导入工作流：confirm=false 预览重名处理，confirm=true 写入 */
@@ -167,7 +167,7 @@ export async function importWorkflows(
   payload: unknown,
   confirm = false,
 ): Promise<WorkflowImportResult> {
-  return http.post<WorkflowImportResult>('/api/workflows/import', { payload, confirm });
+  return http.post<WorkflowImportResult>('/api/v1/workflows/import', { payload, confirm });
 }
 
 export interface EditorPreferences {
@@ -187,6 +187,6 @@ export function toEditorPreferences(settings: { auto_save?: unknown } | null): E
  * （AGENTS §3.1 禁止 feature 之间互相依赖）。
  */
 export async function getEditorPreferences(): Promise<EditorPreferences> {
-  const settings = await http.get<components['schemas']['SettingsResponse']>('/api/settings');
+  const settings = await http.get<components['schemas']['SettingsResponse']>('/api/v1/settings');
   return toEditorPreferences(settings);
 }

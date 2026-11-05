@@ -1,0 +1,370 @@
+/* AgentFlow · Dashboard（对齐 docs/prototype/index.html） */
+
+.af-dash__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.af-dash__title {
+  margin: 0;
+  color: var(--af-text-primary);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+}
+
+.af-dash__subtitle {
+  margin-top: 2px;
+  color: var(--af-text-muted);
+  font-size: 13px;
+}
+
+.af-dash__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- 今日焦点 ---------- */
+.af-dash__focus {
+  padding: 16px;
+  margin-bottom: 20px;
+  border-left: 4px solid var(--af-warning);
+}
+
+.af-dash__focus-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--af-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.af-dash__focus-head svg {
+  color: var(--af-warning);
+}
+
+.af-dash__focus-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.af-dash__focus-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.af-dash__focus-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-top: 2px;
+  border-radius: var(--af-radius-md);
+}
+
+.af-dash__focus-icon--success {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--af-success);
+}
+.af-dash__focus-icon--warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--af-warning);
+}
+.af-dash__focus-icon--danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--af-danger);
+}
+.af-dash__focus-icon--brand {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--af-brand);
+}
+
+.af-dash__focus-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.af-dash__focus-label {
+  color: var(--af-text-muted);
+  font-size: 11px;
+}
+
+.af-dash__focus-title {
+  overflow: hidden;
+  color: var(--af-text-primary);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.af-dash__focus-hint {
+  margin-top: 2px;
+  color: var(--af-text-dim);
+  font-size: 11px;
+}
+
+/* ---------- KPI ---------- */
+.af-dash__kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* ---------- 图表 ---------- */
+.af-dash__charts {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.af-dash__chart-card {
+  min-width: 0;
+}
+
+.af-dash__range-tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.af-dash__range {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: var(--af-radius-sm);
+  background: transparent;
+  color: var(--af-text-muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.af-dash__range:hover {
+  color: var(--af-text-secondary);
+}
+
+.af-dash__range.is-active {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--af-brand);
+}
+
+.af-dash__chart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 240px;
+  gap: 6px;
+  color: var(--af-text-muted);
+  font-size: 12px;
+}
+
+.af-dash__chart-empty small {
+  color: var(--af-text-dim);
+  font-size: 11px;
+}
+
+/* ---------- 底部两栏 ---------- */
+.af-dash__bottom {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.af-dash__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--af-brand);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.af-dash__link:hover {
+  text-decoration: underline;
+}
+
+/* ---------- 热门工作流 ---------- */
+.af-dash__hot-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--af-radius-md);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.af-dash__hot-item:hover {
+  background: rgba(39, 50, 72, 0.6);
+}
+
+.af-dash__hot-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--af-radius-md);
+}
+
+.af-dash__hot-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.af-dash__hot-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.af-dash__hot-name > span:first-child {
+  overflow: hidden;
+  color: var(--af-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.af-dash__hot-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+  color: var(--af-text-muted);
+  font-size: 11px;
+}
+
+.af-dash__hot-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.af-dash__caret {
+  flex: none;
+  color: var(--af-text-dim);
+}
+
+/* ---------- 最近运行 ---------- */
+.af-dash__run-head,
+.af-dash__run-row {
+  display: grid;
+  grid-template-columns: 34px 84px minmax(0, 1fr) 104px 62px 16px;
+  align-items: center;
+  gap: 8px;
+}
+
+.af-dash__run-head {
+  padding: 0 8px 6px;
+  border-bottom: 1px solid var(--af-border);
+  color: var(--af-text-dim);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.af-dash__run-row {
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--af-radius-sm);
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.af-dash__run-row:hover {
+  background: rgba(39, 50, 72, 0.5);
+}
+
+.af-dash__run-status {
+  padding: 3px;
+}
+
+.af-dash__run-id {
+  color: var(--af-text-muted);
+  font-family: var(--af-font-mono);
+  font-size: 11px;
+}
+
+.af-dash__run-name {
+  overflow: hidden;
+  color: var(--af-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.af-dash__run-duration {
+  color: var(--af-text-muted);
+  font-family: var(--af-font-mono);
+  font-size: 11px;
+  text-align: right;
+}
+
+.af-dash__run-trigger {
+  justify-self: start;
+}
+
+.af-dash__loading {
+  padding: 24px;
+}
+
+@media (max-width: 1280px) {
+  .af-dash__kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .af-dash__charts,
+  .af-dash__bottom {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .af-dash__focus-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .af-dash__run-head,
+  .af-dash__run-row {
+    grid-template-columns: 30px 72px minmax(0, 1fr) 56px 16px;
+  }
+
+  .af-dash__run-head > :nth-child(4),
+  .af-dash__run-row > :nth-child(4) {
+    display: none;
+  }
+}

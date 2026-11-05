@@ -5,10 +5,10 @@
   width: 208px;
   min-height: 64px;
   padding: 9px 11px 10px;
-  border: 1px solid #e2e0d8;
+  border: 1px solid var(--af-border);
   border-radius: 10px;
-  background: #fff;
-  color: #1b1c1a;
+  background: var(--af-surface-card);
+  color: var(--af-text-primary);
   font-size: 12px;
   text-align: left;
   transition:
@@ -17,28 +17,30 @@
 }
 
 .afn--selected {
-  border-color: #1f4e3d;
-  box-shadow: 0 0 0 2px rgba(31, 78, 61, 0.18);
+  border-color: var(--af-brand);
+  box-shadow:
+    0 0 0 2px rgba(59, 130, 246, 0.2),
+    var(--af-shadow-glow);
 }
 
 .afn--issue {
-  border-color: #d9b26a;
-  box-shadow: 0 0 0 2px rgba(168, 102, 18, 0.12);
+  border-color: rgba(245, 158, 11, 0.7);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.12);
 }
 
 .afn--failed {
-  border-left: 3px solid #b03a3a;
+  border-left: 3px solid var(--af-danger);
 }
 
 .afn--running {
-  border-color: #3d5a80;
-  box-shadow: 0 0 0 2px rgba(61, 90, 128, 0.14);
+  border-color: var(--af-info);
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.14);
 }
 
 .afn--muted {
   border-style: dashed;
-  background: #fbfbf9;
-  color: #6b706a;
+  background: var(--af-bg-secondary);
+  color: var(--af-text-muted);
 }
 
 .afn-head {
@@ -78,28 +80,28 @@
 }
 
 .afn-status--queued {
-  background: #eef0ec;
-  color: #7c807a;
+  background: rgba(100, 116, 139, 0.2);
+  color: var(--af-text-muted);
 }
 .afn-status--running {
-  background: #e9eef6;
-  color: #3d5a80;
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--af-info);
 }
 .afn-status--success {
-  background: #e7f0eb;
-  color: #2f7059;
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--af-success);
 }
 .afn-status--failed {
-  background: #fbe9e7;
-  color: #b03a3a;
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--af-danger);
 }
 .afn-status--skipped {
-  background: #fbf1e4;
-  color: #a86612;
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--af-warning);
 }
 .afn-status--cancelled {
-  background: #eef0ec;
-  color: #6b706a;
+  background: rgba(100, 116, 139, 0.2);
+  color: var(--af-text-muted);
 }
 
 .afn-issue-dot {
@@ -107,12 +109,12 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #d9b26a;
+  background: var(--af-warning);
 }
 
 .afn-main {
   margin-top: 6px;
-  color: #4b4e49;
+  color: var(--af-text-secondary);
   font-size: 12px;
   line-height: 16px;
   white-space: nowrap;
@@ -122,8 +124,8 @@
 
 .afn-sub {
   margin-top: 1px;
-  color: #6b706a;
-  font-family: ui-monospace, SFMono-Regular, 'Cascadia Mono', Consolas, monospace;
+  color: var(--af-text-muted);
+  font-family: var(--af-font-mono);
   font-size: 11px;
   line-height: 15px;
   white-space: nowrap;
@@ -133,7 +135,7 @@
 
 .afn-err {
   margin-top: 5px;
-  color: #b03a3a;
+  color: #f87171;
   font-size: 11px;
   line-height: 15px;
   white-space: nowrap;
@@ -145,7 +147,7 @@
   margin-top: 6px;
   display: flex;
   gap: 8px;
-  color: #6b706a;
+  color: var(--af-text-muted);
   font-size: 10.5px;
   line-height: 14px;
 }
@@ -155,32 +157,32 @@
 .react-flow__handle.afn-handle {
   width: 10px;
   height: 10px;
-  border: 2px solid #fff;
-  background: #2f7059;
-  box-shadow: 0 0 0 1px #cfe0d6;
+  border: 2px solid var(--af-bg-primary);
+  background: var(--af-brand);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
 }
 
 .react-flow__handle.afn-handle:hover {
-  box-shadow: 0 0 0 3px rgba(47, 112, 89, 0.25);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
 
 /* 连线过程中：不可连的端口置灰，可连的放大提示 */
 .react-flow__handle.afn-handle.connectingto:not(.valid) {
-  background: #c3c7c0;
+  background: #475569;
   box-shadow: none;
 }
 
 .react-flow__handle.afn-handle.connectingto.valid {
-  box-shadow: 0 0 0 4px rgba(47, 112, 89, 0.22);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
 }
 
-/* 条件节点的两个分支端口：真=实心绿，假=空心灰 */
+/* 条件节点的两个分支端口：真=实心蓝，假=空心灰 */
 .react-flow__handle.afn-handle--true {
-  background: #2f7059;
+  background: var(--af-brand);
 }
 
 .react-flow__handle.afn-handle--false {
-  background: #b6bcb4;
+  background: #64748b;
 }
 
 /* 分支文字标签贴在手柄左侧，避免盖住连线 */
@@ -198,9 +200,9 @@
 }
 
 .afn-branch--true {
-  background: #2f7059;
+  background: var(--af-brand);
 }
 
 .afn-branch--false {
-  background: #9aa39a;
+  background: #475569;
 }

@@ -2,6 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { App } from 'antd';
 import {
+  ArrowClockwise,
+  ArrowCounterClockwise,
+  DownloadSimple,
+  FloppyDisk,
+  GitBranch,
+  Play,
+  UploadSimple,
+} from '@phosphor-icons/react';
+import {
   Background,
   BackgroundVariant,
   Controls,
@@ -16,6 +25,7 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { useRunStream } from '@/features/runs/hooks/useRunStream';
+import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
 
 import {
   cancelWorkflowRun,
@@ -25,6 +35,7 @@ import {
   getWorkflow,
   runWorkflow,
   testNode,
+  updateWorkflow,
   validateWorkflow,
   type NodeTestResult,
   type WorkflowResponse,
@@ -68,9 +79,12 @@ function EditorInner() {
   const flow = useReactFlow();
   // AntD 静态 message 不继承主题/语言上下文；走 App.useApp() 拿到上下文里的实例（评审 G26）
   const { message } = App.useApp();
+  const user = useAuthStore((s) => s.user);
 
   const workflowId = useEditorStore((s) => s.workflowId);
   const name = useEditorStore((s) => s.name);
+  const description = useEditorStore((s) => s.description);
+  const status = useEditorStore((s) => s.status);
   const nodes = useEditorStore((s) => s.nodes);
   const edges = useEditorStore((s) => s.edges);
   const viewport = useEditorStore((s) => s.viewport);
@@ -83,6 +97,7 @@ function EditorInner() {
   const futureCount = useEditorStore((s) => s.future.length);
 
   const setName = useEditorStore((s) => s.setName);
+  const setStatus = useEditorStore((s) => s.setStatus);
   const setViewport = useEditorStore((s) => s.setViewport);
   const select = useEditorStore((s) => s.select);
   const setSelection = useEditorStore((s) => s.setSelection);
@@ -124,6 +139,7 @@ function EditorInner() {
   const [creating, setCreating] = useState(false);
   const [validating, setValidating] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [inputsOpen, setInputsOpen] = useState(false);
   const [drawerCollapsed, setDrawerCollapsed] = useState(false);
   // F2：命令面板 / 节点搜索 / 右键菜单
@@ -171,7 +187,7 @@ function EditorInner() {
           });
           creatingRef.current = false;
           // StrictMode 下首个 effect 会被清理，这里不依赖 cancelled 标记，确保只创建一次并跳转
-          navigate(`/workflows/${created.id}`, { replace: true });
+          navigate(`${wsPrefix}/workflows/${created.id}`, { replace: true });
         } catch (err: any) {
           creatingRef.current = false;
           message.error(err?.message || '创建工作流失败');
@@ -503,6 +519,36 @@ function EditorInner() {
     [saveNow],
   );
 
+  const handlePublish = async () => {
+    if (!workflowId) return;
+    setPublishing(true);
+    try {
+      flushDraft();
+      const saved = await saveNow();
+      if (!saved) throw new Error('保存失败，无法发布');
+      await updateWorkflow(workflowId, { status: 'ready' });
+      setStatus('ready');
+      message.success('工作流已发布');
+    } catch (err: any) {
+      message.error(err?.message || '发布失败');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleExport = () => {
+    const payload = { version: 1, name, description, nodes, edges };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${name || 'workflow'}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const nameOf = (nodeId: string) => nodes.find((n) => n.id === nodeId)?.data.label || nodeId;
 
   const inputFields = useMemo(() => extractWorkflowInputs(nodes), [nodes]);
@@ -588,6 +634,29 @@ function EditorInner() {
 
   return (
     <div className="afe-root">
+      <div className="afe-statusbar">
+        <div className="afe-statusbar__left">
+          <span className="afe-statusbar__dot" />
+          <span>
+            <span className="afe-statusbar__user">@{user?.name || '本地用户'}</span> 正在编辑
+          </span>
+          <span className="afe-statusbar__divider" />
+          <span className="afe-statusbar__mode">
+            {status === 'ready' ? 'Ready · 已发布' : 'Draft · 可编辑'}
+          </span>
+        </div>
+        <div className="afe-statusbar__right">
+          {saveState === 'saving'
+            ? '保存中…'
+            : dirty
+              ? '有未保存修改'
+              : lastSavedAt
+                ? `已自动保存 ${new Date(lastSavedAt).toTimeString().slice(0, 5)}`
+                : '尚未保存'}
+          {!autoSaveEnabled && ' · 自动保存已关闭'}
+        </div>
+      </div>
+
       <div className="afe-header">
         <button className="afe-back" onClick={() => void handleBack()}>
           ← 返回
@@ -618,11 +687,13 @@ function EditorInner() {
         </div>
 
         <div className="afe-header-actions">
-          <button className="afe-btn" onClick={undo} disabled={pastCount === 0}>
-            ↶ 撤销
+          <button className="afe-btn" onClick={undo} disabled={pastCount === 0} title="撤销">
+            <ArrowCounterClockwise size={14} />
+            撤销
           </button>
-          <button className="afe-btn" onClick={redo} disabled={futureCount === 0}>
-            ↷ 重做
+          <button className="afe-btn" onClick={redo} disabled={futureCount === 0} title="重做">
+            <ArrowClockwise size={14} />
+            重做
           </button>
           <button className="afe-btn" onClick={handleAutoLayout}>
             ⊞ 自动布局
@@ -631,17 +702,32 @@ function EditorInner() {
             {validating ? '校验中…' : '校验'}
           </button>
           <button className="afe-btn" onClick={() => void saveNow()} disabled={!workflowId}>
+            <FloppyDisk size={14} />
             保存
           </button>
           <button className="afe-btn" onClick={() => setVersionsOpen(true)} disabled={!workflowId}>
+            <GitBranch size={14} />
             版本
+          </button>
+          <button className="afe-btn" onClick={handleExport} disabled={loading}>
+            <DownloadSimple size={14} />
+            导出
           </button>
           <button
             className="afe-btn afe-btn--primary"
             onClick={handleRun}
             disabled={starting || creating || loading}
           >
-            {starting ? '发起中…' : '▶ 运行'}
+            <Play size={14} weight="fill" />
+            {starting ? '发起中…' : '运行'}
+          </button>
+          <button
+            className="afe-btn afe-btn--publish"
+            onClick={() => void handlePublish()}
+            disabled={!workflowId || publishing || status === 'ready'}
+          >
+            <UploadSimple size={14} />
+            {status === 'ready' ? '已发布' : publishing ? '发布中…' : '发布'}
           </button>
         </div>
       </div>
@@ -718,7 +804,7 @@ function EditorInner() {
               deleteKeyCode={['Backspace', 'Delete']}
               proOptions={{ hideAttribution: true }}
             >
-              <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#c9d1c8" />
+              <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#273248" />
               <Controls showInteractive={false} />
               <MiniMap pannable zoomable className="afe-minimap" />
             </ReactFlow>
@@ -788,7 +874,7 @@ function EditorInner() {
         onToggle={() => setDrawerCollapsed((v) => !v)}
         onCancel={handleCancelRun}
         onClear={handleClearRun}
-        onOpenDetail={runId ? () => navigate(`/runs/${runId}`) : undefined}
+        onOpenDetail={runId ? () => navigate(`${wsPrefix}/runs/${runId}`) : undefined}
       />
 
       <RunInputsModal

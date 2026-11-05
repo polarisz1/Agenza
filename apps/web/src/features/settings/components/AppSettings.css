@@ -1,0 +1,173 @@
+/* AgentFlow · 设置中心 */
+
+.af-settings {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.af-settings__nav {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--af-border);
+  border-radius: var(--af-radius-lg);
+  background: var(--af-bg-secondary);
+}
+
+.af-settings__group {
+  padding: 8px 10px 4px;
+  color: var(--af-text-dim);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.af-settings__nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--af-radius-sm);
+  background: transparent;
+  color: var(--af-text-muted);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.af-settings__nav-item:hover {
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--af-text-primary);
+}
+
+.af-settings__nav-item.is-active {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--af-brand);
+}
+
+.af-settings__divider {
+  height: 1px;
+  margin: 8px 6px;
+  background: var(--af-border);
+}
+
+.af-settings__nav-item.is-danger {
+  color: var(--af-danger);
+}
+
+.af-settings__nav-item.is-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.af-settings__content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.af-settings__heading {
+  margin: 0;
+  color: var(--af-text-primary);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.af-settings__subheading {
+  margin-top: 2px;
+  color: var(--af-text-muted);
+  font-size: 13px;
+}
+
+.af-settings__usage {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.af-settings__kv {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 8px 16px;
+  font-size: 12px;
+}
+
+.af-settings__kv .k {
+  color: var(--af-text-muted);
+}
+
+.af-settings__kv .v {
+  color: var(--af-text-secondary);
+  word-break: break-all;
+}
+
+.af-settings__billing {
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(139, 92, 246, 0.08));
+}
+
+.af-settings__billing-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--af-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.af-settings__billing-head svg {
+  color: var(--af-warning);
+}
+
+.af-settings__billing-meta {
+  margin-top: 6px;
+  color: var(--af-text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.af-settings__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1100px) {
+  .af-settings {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .af-settings__nav {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .af-settings__group {
+    display: none;
+  }
+
+  .af-settings__divider {
+    display: none;
+  }
+
+  .af-settings__nav-item {
+    width: auto;
+    white-space: nowrap;
+  }
+
+  .af-settings__usage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

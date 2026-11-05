@@ -1,31 +1,64 @@
-import { Alert, App, Button, Dropdown, Input, Select, Skeleton, Table, Tag, Space } from 'antd';
+import { Alert, App, Button, Dropdown, Input, Select, Skeleton } from 'antd';
 import {
-  PlusOutlined,
-  SearchOutlined,
-  EditOutlined,
-  MoreOutlined,
-  CopyOutlined,
-  DeleteOutlined,
-} from '@ant-design/icons';
+  ChartLine,
+  DotsThree,
+  Envelope,
+  MagnifyingGlass,
+  Microphone,
+  Newspaper,
+  PencilSimple,
+  Play,
+  Plus,
+  SquaresFour,
+  Target,
+  Warning,
+} from '@phosphor-icons/react';
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import EmptyState from '@/shared/components/EmptyState';
+import { Card, IconButton, Pill } from '@/shared/components/ui';
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
+import { formatDateTime, parseServerTime } from '@/shared/utils/datetime';
 import {
-  listWorkflows,
+  createWorkflow,
   deleteWorkflow,
   duplicateWorkflow,
-  createWorkflow,
   listProviderOptions,
+  listWorkflows,
 } from '../api';
 import type { WorkflowListItem } from '../api';
 import { WORKFLOW_TEMPLATES } from '../templates';
-import EmptyState from '@/shared/components/EmptyState';
 import OnboardingWizard from './OnboardingWizard';
 import TemplateGallery from './TemplateGallery';
-import { formatDateTime } from '@/shared/utils/datetime';
-import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
+import './WorkflowList.css';
 
 const ONBOARDING_KEY = 'agentflow.onboarded.v2';
+
+const CARD_ICONS: ReactNode[] = [
+  <Target size={18} key="target" />,
+  <Microphone size={18} key="mic" />,
+  <Newspaper size={18} key="news" />,
+  <Envelope size={18} key="mail" />,
+  <ChartLine size={18} key="chart" />,
+  <SquaresFour size={18} key="squares" />,
+];
+
+const CARD_STYLES = [
+  { background: 'rgba(59,130,246,0.15)', color: '#3B82F6' },
+  { background: 'rgba(139,92,246,0.15)', color: '#A78BFA' },
+  { background: 'rgba(245,158,11,0.15)', color: '#F59E0B' },
+  { background: 'rgba(6,182,212,0.15)', color: '#22D3EE' },
+  { background: 'rgba(244,63,94,0.15)', color: '#FB7185' },
+  { background: 'rgba(34,197,94,0.15)', color: '#4ADE80' },
+];
+
+function shortDate(value?: string | null): string {
+  const date = parseServerTime(value);
+  if (!date) return '—';
+  return date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+}
 
 export default function WorkflowList() {
   const { message, modal } = App.useApp();
@@ -136,47 +169,72 @@ export default function WorkflowList() {
     });
   };
 
+  const readyCount = items.filter((item) => item.status === 'ready').length;
+  const draftCount = items.length - readyCount;
+
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 16,
-          gap: 12,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div style={{ fontSize: 20, fontWeight: 600 }}>工作流</div>
-        <Space wrap>
-          <Select
-            value={sort}
-            style={{ width: 140 }}
-            onChange={setSort}
-            options={[
-              { value: 'updated_desc', label: '最近编辑' },
-              { value: 'last_run_desc', label: '最近运行' },
-            ]}
-          />
+      <div className="af-wf__header">
+        <div>
+          <h1 className="af-wf__title">工作流</h1>
+          <div className="af-wf__subtitle">
+            共 {items.length} 个 · 已发布 {readyCount} · 草稿 {draftCount}
+          </div>
+        </div>
+        <div className="af-wf__actions">
           <Input
             allowClear
-            placeholder="搜索工作流"
-            prefix={<SearchOutlined />}
-            style={{ width: 220 }}
+            className="af-wf__search"
+            placeholder="搜索工作流名称..."
+            prefix={<MagnifyingGlass size={14} />}
             value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onPressEnter={load}
+            onChange={(event) => setQ(event.target.value)}
+            onPressEnter={() => void load()}
+          />
+          <Select
+            value={sort}
+            style={{ width: 132 }}
+            onChange={setSort}
+            options={[
+              { value: 'updated_desc', label: '按最近修改' },
+              { value: 'last_run_desc', label: '按最近运行' },
+            ]}
           />
           <Button
             type="primary"
-            icon={<PlusOutlined />}
+            icon={<Plus size={14} />}
             loading={creating}
             onClick={() => setGalleryOpen(true)}
           >
             新建工作流
           </Button>
-        </Space>
+        </div>
+      </div>
+
+      <div className="af-wf__tabs">
+        <button type="button" className="af-wf__tab is-active">
+          全部 ({items.length})
+        </button>
+        <button
+          type="button"
+          className="af-wf__tab"
+          disabled
+          title="按成员筛选即将上线"
+        >
+          我的
+        </button>
+        <button
+          type="button"
+          className="af-wf__tab"
+          disabled
+          title="团队共享筛选即将上线"
+        >
+          团队共享
+        </button>
+        <button type="button" className="af-wf__tab" onClick={() => setGalleryOpen(true)}>
+          模板中心
+        </button>
+        <span className="af-wf__tabs-note">按最近修改排序</span>
       </div>
 
       {loadError && (
@@ -195,120 +253,141 @@ export default function WorkflowList() {
       )}
 
       {loading && items.length === 0 ? (
-        <div style={{ padding: 20, background: '#fff', borderRadius: 10 }}>
-          <Skeleton active paragraph={{ rows: 6 }} />
+        <div className="af-wf__skeleton">
+          {[0, 1, 2].map((index) => (
+            <Card key={index} padded>
+              <Skeleton active paragraph={{ rows: 3 }} />
+            </Card>
+          ))}
         </div>
+      ) : items.length === 0 && !loadError ? (
+        <Card padded>
+          <EmptyState
+            title={debouncedQ ? '没有匹配的工作流' : '还没有工作流'}
+            description={
+              debouncedQ
+                ? '换个关键词，或清除搜索条件。'
+                : '新建一张空白画布，或从模板中心开始。'
+            }
+            action={
+              debouncedQ ? (
+                <Button onClick={() => setQ('')}>清除搜索</Button>
+              ) : (
+                <Button type="primary" onClick={() => setGalleryOpen(true)}>
+                  新建工作流
+                </Button>
+              )
+            }
+          />
+        </Card>
       ) : (
-        <Table
-          rowKey="id"
-          loading={loading}
-          dataSource={items}
-          scroll={{ x: 1140 }}
-          locale={{
-            emptyText: loading ? (
-              <span />
-            ) : (
-              <EmptyState
-                title={debouncedQ ? '没有匹配的工作流' : '还没有工作流'}
-                description={
-                  debouncedQ
-                    ? '换个关键词，或清除搜索条件。'
-                    : '新建一张空白画布，或等模板中心上线后从模板开始。'
-                }
-                action={
-                  debouncedQ ? (
-                    <Button onClick={() => setQ('')}>清除搜索</Button>
-                  ) : (
-                    <Button type="primary" onClick={() => void handleCreate('blank')}>
-                      新建空白工作流
-                    </Button>
-                  )
-                }
-              />
-            ),
-          }}
-          columns={[
-            {
-              title: '名称',
-              dataIndex: 'name',
-              width: 260,
-              render: (text, record) => (
-                <a onClick={() => nav(`${wsPrefix}/workflows/${record.id}`)}>{text}</a>
-              ),
-            },
-            {
-              title: '描述',
-              dataIndex: 'description',
-              ellipsis: true,
-              render: (value?: string | null) => value || '—',
-            },
-            {
-              // 不再展示不可控的"草稿/就绪"（D-13）：按当前图实时给出可用性
-              title: '可用性',
-              key: 'availability',
-              width: 120,
-              render: (_, record) =>
-                record.blocking_count > 0 ? (
-                  <Tag color="red">{record.blocking_count} 个阻断</Tag>
-                ) : record.issue_count > 0 ? (
-                  <Tag color="orange">{record.issue_count} 个提示</Tag>
-                ) : (
-                  <Tag color="green">可用</Tag>
-                ),
-            },
-            { title: '节点数', dataIndex: 'node_count', width: 80 },
-            {
-              title: '最近运行',
-              dataIndex: 'last_run_at',
-              width: 170,
-              render: (value) => formatDateTime(value),
-            },
-            {
-              title: '最近编辑',
-              dataIndex: 'updated_at',
-              width: 150,
-              render: (value) => formatDateTime(value),
-            },
-            {
-              title: '操作',
-              key: 'ops',
-              width: 130,
-              fixed: 'right',
-              render: (_, record) => (
-                <Space size={2}>
-                  <Button
-                    type="link"
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => nav(`${wsPrefix}/workflows/${record.id}`)}
+        <div className="af-wf__grid">
+          {items.map((record, index) => {
+            const status =
+              record.status === 'ready' ? (
+                <Pill tone="success">已发布</Pill>
+              ) : (
+                <Pill tone="neutral">草稿</Pill>
+              );
+
+            return (
+              <Card
+                key={record.id}
+                className="af-wf__card"
+                role="button"
+                tabIndex={0}
+                aria-label={`打开工作流 ${record.name}`}
+                onClick={() => nav(`${wsPrefix}/workflows/${record.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    nav(`${wsPrefix}/workflows/${record.id}`);
+                  }
+                }}
+              >
+                <div className="af-wf__card-head">
+                  <div className="af-wf__identity">
+                    <span
+                      className="af-wf__icon"
+                      style={CARD_STYLES[index % CARD_STYLES.length]}
+                    >
+                      {CARD_ICONS[index % CARD_ICONS.length]}
+                    </span>
+                    <div className="af-wf__name-wrap">
+                      <div className="af-wf__name" title={record.name}>
+                        {record.name}
+                      </div>
+                      <div className="af-wf__meta">
+                        {record.node_count} 节点 · 编辑于 {shortDate(record.updated_at)}
+                      </div>
+                    </div>
+                  </div>
+                  {status}
+                </div>
+
+                <div className="af-wf__desc">{record.description || '暂无描述'}</div>
+
+                <div className="af-wf__stats">
+                  <span>
+                    <SquaresFour size={11} /> {record.node_count} 节点
+                  </span>
+                  <span>
+                    <Play size={11} />{' '}
+                    {record.last_run_at ? `最近运行 ${shortDate(record.last_run_at)}` : '从未运行'}
+                  </span>
+                  {record.blocking_count > 0 && (
+                    <span className="is-danger">
+                      <Warning size={11} /> {record.blocking_count} 个阻断
+                    </span>
+                  )}
+                  {record.blocking_count === 0 && record.issue_count > 0 && (
+                    <span className="is-warning">
+                      <Warning size={11} /> {record.issue_count} 个提示
+                    </span>
+                  )}
+                </div>
+
+                <div className="af-wf__footer">
+                  <span className="af-wf__updated">
+                    更新于 {formatDateTime(record.updated_at)}
+                  </span>
+                  <div
+                    className="af-wf__card-actions"
+                    onClick={(event) => event.stopPropagation()}
                   >
-                    编辑
-                  </Button>
-                  <Dropdown
-                    trigger={['click']}
-                    menu={{
-                      items: [
-                        { key: 'duplicate', label: '复制', icon: <CopyOutlined /> },
-                        { key: 'delete', label: '删除', icon: <DeleteOutlined />, danger: true },
-                      ],
-                      onClick: ({ key }) => {
-                        if (key === 'duplicate') void handleDuplicate(record.id);
-                        if (key === 'delete') handleDelete(record.id);
-                      },
-                    }}
-                  >
-                    <Button
-                      type="link"
-                      size="small"
-                      icon={<MoreOutlined />}
-                      aria-label="更多操作"
+                    <IconButton
+                      label="打开编辑器"
+                      icon={<Play size={14} />}
+                      onClick={() => nav(`${wsPrefix}/workflows/${record.id}`)}
                     />
-                  </Dropdown>
-                </Space>
-              ),
-            },
-          ]}
-        />
+                    <IconButton
+                      label="编辑"
+                      icon={<PencilSimple size={14} />}
+                      onClick={() => nav(`${wsPrefix}/workflows/${record.id}`)}
+                    />
+                    <Dropdown
+                      trigger={['click']}
+                      menu={{
+                        items: [
+                          { key: 'duplicate', label: '复制' },
+                          { key: 'delete', label: '删除', danger: true },
+                        ],
+                        onClick: ({ key }) => {
+                          if (key === 'duplicate') void handleDuplicate(record.id);
+                          if (key === 'delete') handleDelete(record.id);
+                        },
+                      }}
+                    >
+                      <span>
+                        <IconButton label="更多操作" icon={<DotsThree size={16} />} />
+                      </span>
+                    </Dropdown>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
       )}
 
       <TemplateGallery

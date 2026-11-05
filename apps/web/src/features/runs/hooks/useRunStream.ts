@@ -110,7 +110,7 @@ export function useRunStream(runId: string | null) {
     }
   }, []);
 
-  const url = useMemo(() => (runId ? buildSseUrl(`/api/runs/${runId}/events`) : null), [runId]);
+  const url = useMemo(() => (runId ? buildSseUrl(`/api/v1/runs/${runId}/events`) : null), [runId]);
 
   useEventSource({
     url,

@@ -1,4 +1,4 @@
-import { apiUrl, http } from '@/shared/lib/http';
+﻿import { apiUrl, http } from '@/shared/lib/http';
 import type { components } from '@agentflow/contracts';
 
 export type SettingsResponse = components['schemas']['SettingsResponse'];
@@ -6,26 +6,32 @@ export type SettingsUpdate = components['schemas']['SettingsUpdate'];
 export type SystemInfo = components['schemas']['SystemInfo'];
 export type ClearResult = components['schemas']['ClearResult'];
 export type WorkflowImportResult = components['schemas']['WorkflowImportResult'];
+export type WorkspaceSummary = components['schemas']['WorkspaceResponse'];
 
 export async function getSettings(): Promise<SettingsResponse> {
-  return http.get<SettingsResponse>('/api/settings');
+  return http.get<SettingsResponse>('/api/v1/settings');
 }
 
 export async function updateSettings(data: SettingsUpdate): Promise<SettingsResponse> {
-  return http.put<SettingsResponse>('/api/settings', data);
+  return http.put<SettingsResponse>('/api/v1/settings', data);
 }
 
 export async function getSystemInfo(): Promise<SystemInfo> {
-  return http.get<SystemInfo>('/api/settings/system/info');
+  return http.get<SystemInfo>('/api/v1/settings/system/info');
+}
+
+/** 工作空间摘要：计划、成员数（设置页用量概览） */
+export async function getWorkspaceSummary(wsId: string): Promise<WorkspaceSummary> {
+  return http.get<WorkspaceSummary>(`/api/v1/workspaces/${wsId}`);
 }
 
 export async function clearRuns(): Promise<ClearResult> {
-  return http.post<ClearResult>('/api/settings/system/clear-runs');
+  return http.post<ClearResult>('/api/v1/settings/system/clear-runs');
 }
 
 /** 导出备份（设置 + 工作流，不含服务商密钥），浏览器直接下载 JSON 文件 */
 export async function exportBackup(): Promise<void> {
-  const resp = await fetch(apiUrl('/api/settings/system/export'));
+  const resp = await fetch(apiUrl('/api/v1/settings/system/export'));
   if (!resp.ok) throw new Error(`导出失败（HTTP ${resp.status}）`);
 
   const disposition = resp.headers.get('content-disposition') || '';
@@ -48,5 +54,5 @@ export async function importWorkflows(
   payload: unknown,
   confirm = false,
 ): Promise<WorkflowImportResult> {
-  return http.post<WorkflowImportResult>('/api/workflows/import', { payload, confirm });
+  return http.post<WorkflowImportResult>('/api/v1/workflows/import', { payload, confirm });
 }

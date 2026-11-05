@@ -57,6 +57,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
+    # 开发期用正则兜住 localhost/127.0.0.1 的任意端口，避免 Vite 端口递增后跨域被拒；
+    # 生产环境该值为空，只认 CORS_ORIGINS 显式白名单。
+    allow_origin_regex=settings.CORS_ORIGIN_REGEX or None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -125,12 +128,16 @@ from app.modules.settings.router import router as settings_router
 from app.modules.workflows.router import router as workflows_router
 from app.modules.workspaces.router import router as workspaces_router
 
-# SaaS v1 路由（认证 + 工作空间 + 审计）
+# SaaS v1 路由（认证 + 工作空间 + 审计 + 核心业务）
 app.include_router(auth_router, prefix="/api/v1", tags=["v1-auth"])
 app.include_router(workspaces_router, prefix="/api/v1", tags=["v1-workspaces"])
 app.include_router(audit_router, prefix="/api/v1", tags=["v1-audit-logs"])
+app.include_router(workflows_router, prefix="/api/v1/workflows", tags=["v1-workflows"])
+app.include_router(runs_router, prefix="/api/v1/runs", tags=["v1-runs"])
+app.include_router(providers_router, prefix="/api/v1/providers", tags=["v1-providers"])
+app.include_router(settings_router, prefix="/api/v1/settings", tags=["v1-settings"])
 
-# 原有路由（保持向后兼容；未来逐步切到 v1）
+# 原有路由（保留桌面 / Electron 兼容；新前端一律走 /api/v1）
 app.include_router(workflows_router, prefix="/api/workflows", tags=["workflows"])
 app.include_router(runs_router, prefix="/api/runs", tags=["runs"])
 app.include_router(providers_router, prefix="/api/providers", tags=["providers"])

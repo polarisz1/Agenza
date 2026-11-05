@@ -7,13 +7,23 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   user: UserProfile | null;
+  /** 当前默认工作空间 id（登录/注册时由后端返回，用于登录后直接进入） */
+  workspaceId: string | null;
   /** 桌面模式标记：无 token 时视为已登录（单用户） */
   isDesktop: boolean;
 
   setTokens: (access: string, refresh: string) => void;
   setUser: (user: UserProfile | null) => void;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, workspaceName?: string) => Promise<void>;
+  setWorkspaceId: (workspaceId: string | null) => void;
+  /** 登录成功后返回默认工作空间 id（可能为 null） */
+  login: (email: string, password: string) => Promise<string | null>;
+  /** 注册成功后返回自动创建的工作空间 id（可能为 null） */
+  register: (
+    email: string,
+    password: string,
+    name: string,
+    workspaceName?: string,
+  ) => Promise<string | null>;
   logout: () => Promise<void>;
   refresh: () => Promise<boolean>;
   fetchMe: () => Promise<void>;
@@ -31,10 +41,12 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       user: null,
+      workspaceId: null,
       isDesktop: detectDesktop(),
 
       setTokens: (access, refresh) => set({ accessToken: access, refreshToken: refresh }),
       setUser: (user) => set({ user }),
+      setWorkspaceId: (workspaceId) => set({ workspaceId }),
 
       login: async (email, password) => {
         const resp = await authApi.login({ email, password });
@@ -42,7 +54,9 @@ export const useAuthStore = create<AuthState>()(
           accessToken: resp.access_token,
           refreshToken: resp.refresh_token,
           user: resp.user,
+          workspaceId: resp.workspace_id ?? null,
         });
+        return resp.workspace_id ?? null;
       },
 
       register: async (email, password, name, workspaceName) => {
@@ -51,7 +65,9 @@ export const useAuthStore = create<AuthState>()(
           accessToken: resp.access_token,
           refreshToken: resp.refresh_token,
           user: resp.user,
+          workspaceId: resp.workspace_id ?? null,
         });
+        return resp.workspace_id ?? null;
       },
 
       logout: async () => {
@@ -60,7 +76,7 @@ export const useAuthStore = create<AuthState>()(
         } catch {
           // 网络错误时也清除本地状态
         }
-        set({ accessToken: null, refreshToken: null, user: null });
+        set({ accessToken: null, refreshToken: null, user: null, workspaceId: null });
       },
 
       refresh: async () => {
@@ -72,6 +88,7 @@ export const useAuthStore = create<AuthState>()(
             accessToken: resp.access_token,
             refreshToken: resp.refresh_token,
             user: resp.user,
+            workspaceId: resp.workspace_id ?? get().workspaceId,
           });
           return true;
         } catch {
@@ -97,6 +114,7 @@ export const useAuthStore = create<AuthState>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         user: state.user,
+        workspaceId: state.workspaceId,
       }),
     },
   ),

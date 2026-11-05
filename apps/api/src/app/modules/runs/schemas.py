@@ -44,6 +44,7 @@ class RunListItem(BaseModel):
     started_at: datetime
     finished_at: datetime | None = None
     duration_ms: int | None = None
+    total_tokens: int = 0
 
 
 class RunCreate(BaseModel):

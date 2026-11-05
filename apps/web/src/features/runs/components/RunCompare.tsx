@@ -186,7 +186,7 @@ export default function RunCompare() {
         <div className="rv-actions">
           <Button
             onClick={() => {
-              nav(`/runs/compare?ids=${data.b.id},${data.a.id}`);
+              nav(`${wsPrefix}/runs/compare?ids=${data.b.id},${data.a.id}`);
               message.info('已交换 A/B');
             }}
           >

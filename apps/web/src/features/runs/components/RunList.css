@@ -1,0 +1,134 @@
+/* AgentFlow · 运行记录（对齐 docs/prototype/index.html） */
+
+.af-rl__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.af-rl__title {
+  margin: 0;
+  color: var(--af-text-primary);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+}
+
+.af-rl__subtitle {
+  margin-top: 2px;
+  color: var(--af-text-muted);
+  font-size: 13px;
+}
+
+.af-rl__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.af-rl__table {
+  overflow: hidden;
+}
+
+.af-rl__row {
+  display: grid;
+  grid-template-columns: 34px 34px 92px minmax(0, 1fr) 120px 154px 76px 64px 56px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 0;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.af-rl__row:last-child {
+  border-bottom: 0;
+}
+
+.af-rl__row:hover {
+  background: rgba(39, 50, 72, 0.45);
+}
+
+.af-rl__head {
+  background: var(--af-bg-tertiary);
+  color: var(--af-text-dim);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: default;
+}
+
+.af-rl__head:hover {
+  background: var(--af-bg-tertiary);
+}
+
+.af-rl__id {
+  color: var(--af-brand);
+  font-family: var(--af-font-mono);
+  font-size: 11px;
+}
+
+.af-rl__name {
+  overflow: hidden;
+  color: var(--af-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.af-rl__mono {
+  color: var(--af-text-muted);
+  font-family: var(--af-font-mono);
+  font-size: 11px;
+}
+
+.af-rl__time {
+  color: var(--af-text-muted);
+  font-size: 11px;
+}
+
+.af-rl__status {
+  padding: 3px;
+}
+
+.af-rl__row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.af-rl__row:hover .af-rl__row-actions {
+  opacity: 1;
+}
+
+.af-rl__caret {
+  color: var(--af-text-dim);
+}
+
+.af-rl__loading {
+  padding: 24px;
+}
+
+@media (max-width: 1100px) {
+  .af-rl__row {
+    grid-template-columns: 34px 34px 86px minmax(0, 1fr) 110px 70px 56px;
+  }
+
+  .af-rl__head > :nth-child(6),
+  .af-rl__row > :nth-child(6),
+  .af-rl__head > :nth-child(8),
+  .af-rl__row > :nth-child(8) {
+    display: none;
+  }
+}
