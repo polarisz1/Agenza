@@ -11,14 +11,16 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
 from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.logger import log
 from app.core.tenancy import TenantMiddleware
 from app.db.database import init_db
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from app.modules.audit.middleware import AuditMiddleware
 
 # 前端产物位置统一由 settings.frontend_dist 决定（开发态回退仓库布局，打包态取注入的资源目录）
 
@@ -65,7 +67,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# TenantMiddleware 必须在 CORSMiddleware 之后、路由处理之前
+# AuditMiddleware 必须在 TenantMiddleware 内层（先注册），
+# 这样响应返回时 TenantContext 还没被清理，审计能带上 user/workspace。
+app.add_middleware(AuditMiddleware)
 app.add_middleware(TenantMiddleware)
 
 

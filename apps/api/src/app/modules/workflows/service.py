@@ -7,6 +7,8 @@ import time
 import uuid
 from typing import Any
 
+from sqlalchemy.orm import Session
+
 from app.core.engine.contexts import NodeContext
 from app.core.engine.registry import build_default_registry
 from app.core.engine.validators import validate_graph
@@ -29,7 +31,6 @@ from app.modules.workflows.schemas import (
     WorkflowVersionDetail,
     WorkflowVersionItem,
 )
-from sqlalchemy.orm import Session
 
 
 class WorkflowService:
@@ -50,16 +51,7 @@ class WorkflowService:
             session, wf_id, body.graph.model_dump_json(), None, "初始版本"
         )
 
-        # 审计日志：创建工作流
-        from app.modules.audit.service import log_action
-
-        log_action(
-            session,
-            "workflow.create",
-            resource_type="workflow",
-            resource_id=wf_id,
-            detail=f"创建工作流 {body.name}",
-        )
+        # 审计日志由 AuditMiddleware 统一记录（ASYNC-06），这里不再手动写
         session.commit()
         return _to_response(obj)
 

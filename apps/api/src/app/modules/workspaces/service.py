@@ -76,6 +76,20 @@ class WorkspaceService:
             session, name=body.name, description=body.description, owner_id=owner_id
         )
         session.commit()
+
+        # 新工作空间尚未成为租户上下文，审计归属需显式传入（ASYNC-06 例外）
+        from app.modules.audit.service import log_action
+
+        log_action(
+            session,
+            "workspace.create",
+            resource_type="workspace",
+            resource_id=ws.id,
+            workspace_id=ws.id,
+            detail=f"创建工作空间 {body.name}",
+        )
+        session.commit()
+
         return WorkspaceResponse(
             id=ws.id,
             name=ws.name,
@@ -192,17 +206,7 @@ class WorkspaceService:
             invited_by=inviter_id,
         )
 
-        # 审计日志：邀请成员
-        from app.modules.audit.service import log_action
-
-        log_action(
-            session,
-            "workspace.member_invite",
-            resource_type="workspace",
-            resource_id=workspace_id,
-            workspace_id=workspace_id,
-            detail=f"邀请 {user.email} 加入工作空间（角色：{body.role}）",
-        )
+        # 审计日志由 AuditMiddleware 统一记录（ASYNC-06），这里不再手动写
         session.commit()
 
         return WorkspaceMemberItem(
