@@ -26,10 +26,11 @@ class Workflow(Base):
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
     last_run_at = Column(DateTime, nullable=True)
+    # ASYNC-05：发布状态与版本独立于 status（status 是「可运行性」，每次保存自动重算）
+    published_version_id = Column(String(32), nullable=True)
+    published_at = Column(DateTime, nullable=True)
 
-    __table_args__ = (
-        Index("ix_workflow_workspace_updated", "workspace_id", "updated_at"),
-    )
+    __table_args__ = (Index("ix_workflow_workspace_updated", "workspace_id", "updated_at"),)
 
 
 class WorkflowVersion(AuditMixin, Base):
@@ -46,6 +47,4 @@ class WorkflowVersion(AuditMixin, Base):
     viewport_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=utcnow)
 
-    __table_args__ = (
-        Index("ix_workflow_version_workspace_seq", "workspace_id", "seq"),
-    )
+    __table_args__ = (Index("ix_workflow_version_workspace_seq", "workspace_id", "seq"),)

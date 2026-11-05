@@ -71,6 +71,18 @@ _RULES: tuple[AuditRule, ...] = (
     ),
     _rule(
         "POST",
+        r"/api/v1/workflows/(?P<resource_id>[^/]+)/publish",
+        "workflow.publish",
+        "workflow",
+    ),
+    _rule(
+        "POST",
+        r"/api/v1/workflows/(?P<resource_id>[^/]+)/unpublish",
+        "workflow.unpublish",
+        "workflow",
+    ),
+    _rule(
+        "POST",
         r"/api/v1/workflows/(?P<resource_id>[^/]+)/runs",
         "run.start",
         "run",

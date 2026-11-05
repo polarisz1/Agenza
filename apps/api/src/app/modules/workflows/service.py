@@ -53,14 +53,14 @@ class WorkflowService:
 
         # 审计日志由 AuditMiddleware 统一记录（ASYNC-06），这里不再手动写
         session.commit()
-        return _to_response(obj)
+        return _response(session, obj)
 
     @staticmethod
     def get(session: Session, wf_id: str) -> WorkflowResponse | None:
         obj = WorkflowRepository.get(session, wf_id)
         if not obj:
             return None
-        return _to_response(obj)
+        return _response(session, obj)
 
     @staticmethod
     def list(
@@ -70,6 +70,7 @@ class WorkflowService:
         sort: str = "updated_desc",
     ) -> list[WorkflowListItem]:
         objs, _ = WorkflowRepository.list(session, q=q, status=status, sort=sort)
+        latest_ids = WorkflowRepository.latest_version_ids(session, [obj.id for obj in objs])
         out = []
         for obj in objs:
             try:
@@ -99,6 +100,9 @@ class WorkflowService:
                     node_count=node_count,
                     last_run_at=obj.last_run_at,
                     updated_at=obj.updated_at,
+                    published_version_id=obj.published_version_id,
+                    published_at=obj.published_at,
+                    has_unpublished_changes=_has_unpublished_changes(obj, latest_ids.get(obj.id)),
                 )
             )
         return out
@@ -147,7 +151,7 @@ class WorkflowService:
                 version_summary,
             )
         session.commit()
-        return _to_response(updated) if updated else None
+        return _response(session, updated) if updated else None
 
     # ---- 版本历史（F5） ----
 
@@ -224,7 +228,60 @@ class WorkflowService:
             f"恢复到 v{version.seq}",
         )
         session.commit()
-        return _to_response(updated)
+        return _response(session, updated)
+
+    @staticmethod
+    def publish(
+        session: Session, wf_id: str, version_id: str | None = None
+    ) -> WorkflowResponse | None:
+        """发布工作流（ASYNC-05）。
+
+        - 不传 `version_id`：校验当前图并发布当前内容（必要时生成版本快照）；
+        - 传 `version_id`：发布指定历史版本，不改动当前画布。
+        """
+        obj = WorkflowRepository.get(session, wf_id)
+        if obj is None:
+            return None
+
+        version = None
+        if version_id:
+            version = WorkflowRepository.get_version(session, wf_id, version_id)
+            if version is None:
+                raise AppError(404, "版本不存在")
+            graph = json.loads(version.graph_json)
+        else:
+            graph = json.loads(obj.graph_json)
+
+        if WorkflowService._validate_dict(graph)["blocking"]:
+            raise AppError(422, "当前配置存在阻断问题，无法发布")
+
+        if version is not None:
+            target = version
+        else:
+            latest = WorkflowRepository.latest_version(session, wf_id)
+            target = (
+                latest
+                if latest is not None and latest.graph_json == obj.graph_json
+                else WorkflowService._create_version(
+                    session,
+                    wf_id,
+                    obj.graph_json,
+                    obj.viewport_json,
+                    "发布当前版本",
+                )
+            )
+
+        published = WorkflowRepository.set_published(session, wf_id, target.id)
+        session.commit()
+        return _response(session, published) if published is not None else None
+
+    @staticmethod
+    def unpublish(session: Session, wf_id: str) -> WorkflowResponse | None:
+        obj = WorkflowRepository.set_published(session, wf_id, None)
+        if obj is None:
+            return None
+        session.commit()
+        return _response(session, obj)
 
     @staticmethod
     def latest_version(session: Session, wf_id: str) -> tuple[str, int] | None:
@@ -431,7 +488,19 @@ def _unique_name(name: str, existing: set[str]) -> str:
     return candidate
 
 
-def _to_response(obj: Any) -> WorkflowResponse:
+def _has_unpublished_changes(obj: Any, latest_version_id: str | None) -> bool:
+    """已发布，且最新版本不是被发布的那一版（保存或发布旧版本都会命中）。"""
+    published_version_id = getattr(obj, "published_version_id", None)
+    return bool(published_version_id and published_version_id != latest_version_id)
+
+
+def _response(session: Session, obj: Any) -> WorkflowResponse:
+    """单条响应：额外查一次最新版本，用于计算是否有未发布修改。"""
+    latest = WorkflowRepository.latest_version(session, obj.id)
+    return _to_response(obj, latest.id if latest else None)
+
+
+def _to_response(obj: Any, latest_version_id: str | None = None) -> WorkflowResponse:
     graph = json.loads(obj.graph_json)
     viewport = json.loads(obj.viewport_json) if obj.viewport_json else None
     return WorkflowResponse(
@@ -444,6 +513,9 @@ def _to_response(obj: Any) -> WorkflowResponse:
         created_at=obj.created_at,
         updated_at=obj.updated_at,
         last_run_at=obj.last_run_at,
+        published_version_id=obj.published_version_id,
+        published_at=obj.published_at,
+        has_unpublished_changes=_has_unpublished_changes(obj, latest_version_id),
     )
 
 

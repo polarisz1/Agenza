@@ -39,6 +39,9 @@ interface LoadPayload {
   status: WorkflowStatus;
   graph: unknown;
   viewport?: Viewport | null;
+  publishedVersionId?: string | null;
+  publishedAt?: string | null;
+  hasUnpublishedChanges?: boolean;
 }
 
 interface EditorState {
@@ -46,6 +49,10 @@ interface EditorState {
   name: string;
   description: string;
   status: WorkflowStatus;
+  /** ASYNC-05：发布状态（与 status 分离） */
+  publishedVersionId: string | null;
+  publishedAt: string | null;
+  hasUnpublishedChanges: boolean;
   nodes: EditorNode[];
   edges: Edge[];
   viewport: Viewport | null;
@@ -94,6 +101,12 @@ interface EditorState {
   markSaving(): void;
   markSaved(revAtStart: number, status: WorkflowStatus): void;
   markSaveError(message?: string): void;
+  /** 保存/发布接口返回后同步发布状态（ASYNC-05） */
+  setPublishState(info: {
+    publishedVersionId: string | null;
+    publishedAt: string | null;
+    hasUnpublishedChanges: boolean;
+  }): void;
 }
 
 const MAX_HISTORY = 50;
@@ -167,6 +180,9 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   name: '未命名工作流',
   description: '',
   status: 'draft',
+  publishedVersionId: null,
+  publishedAt: null,
+  hasUnpublishedChanges: false,
   nodes: [],
   edges: [],
   viewport: null,
@@ -182,13 +198,26 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   past: [],
   future: [],
 
-  load: ({ id, name, description, status, graph, viewport }) => {
+  load: ({
+    id,
+    name,
+    description,
+    status,
+    graph,
+    viewport,
+    publishedVersionId,
+    publishedAt,
+    hasUnpublishedChanges,
+  }) => {
     const { nodes, edges } = deserializeGraph(graph);
     set({
       workflowId: id,
       name,
       description: description ?? '',
       status,
+      publishedVersionId: publishedVersionId ?? null,
+      publishedAt: publishedAt ?? null,
+      hasUnpublishedChanges: hasUnpublishedChanges ?? false,
       nodes,
       edges,
       viewport: viewport ?? null,
@@ -600,4 +629,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     })),
 
   markSaveError: (message) => set({ saveState: 'error', saveError: message || '保存失败' }),
+
+  setPublishState: ({ publishedVersionId, publishedAt, hasUnpublishedChanges }) =>
+    set({ publishedVersionId, publishedAt, hasUnpublishedChanges }),
 }));

@@ -205,6 +205,17 @@ class WorkflowResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     last_run_at: datetime | None = None
+    # ASYNC-05：发布信息（status 只表达可运行性）
+    published_version_id: str | None = None
+    published_at: datetime | None = None
+    # 发布后又保存过（updated_at 晚于 published_at）
+    has_unpublished_changes: bool = False
+
+
+class WorkflowPublishRequest(BaseModel):
+    """发布入参：不传 version_id 表示发布当前图，否则发布指定历史版本。"""
+
+    version_id: str | None = None
 
 
 class WorkflowListItem(BaseModel):
@@ -219,6 +230,9 @@ class WorkflowListItem(BaseModel):
     node_count: int
     last_run_at: datetime | None = None
     updated_at: datetime
+    published_version_id: str | None = None
+    published_at: datetime | None = None
+    has_unpublished_changes: bool = False
 
 
 class ValidateIssue(BaseModel):

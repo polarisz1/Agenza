@@ -1407,6 +1407,116 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workflows/{wf_id}/publish:
+    post:
+      tags:
+      - v1-workflows
+      summary: Publish Workflow
+      description: 发布工作流（ASYNC-05）：默认发布当前图，传 version_id 则发布指定历史版本。
+      operationId: publish_workflow_api_v1_workflows__wf_id__publish_post
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - $ref: '#/components/schemas/WorkflowPublishRequest'
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/workflows/{wf_id}/unpublish:
+    post:
+      tags:
+      - v1-workflows
+      summary: Unpublish Workflow
+      description: 取消发布：清空发布标记，当前画布与历史版本不受影响。
+      operationId: unpublish_workflow_api_v1_workflows__wf_id__unpublish_post
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/workflows/{wf_id}/runs:
     post:
       tags:
@@ -3251,6 +3361,116 @@ paths:
         schema:
           type: string
           title: Version Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/workflows/{wf_id}/publish:
+    post:
+      tags:
+      - workflows
+      summary: Publish Workflow
+      description: 发布工作流（ASYNC-05）：默认发布当前图，传 version_id 则发布指定历史版本。
+      operationId: publish_workflow_api_workflows__wf_id__publish_post
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - $ref: '#/components/schemas/WorkflowPublishRequest'
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/workflows/{wf_id}/unpublish:
+    post:
+      tags:
+      - workflows
+      summary: Unpublish Workflow
+      description: 取消发布：清空发布标记，当前画布与历史版本不受影响。
+      operationId: unpublish_workflow_api_workflows__wf_id__unpublish_post
+      parameters:
+      - name: wf_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Wf Id
       responses:
         '200':
           description: Successful Response
@@ -6646,6 +6866,21 @@ components:
           type: string
           format: date-time
           title: Updated At
+        published_version_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Published Version Id
+        published_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Published At
+        has_unpublished_changes:
+          type: boolean
+          title: Has Unpublished Changes
+          default: false
       type: object
       required:
       - id
@@ -6654,6 +6889,16 @@ components:
       - node_count
       - updated_at
       title: WorkflowListItem
+    WorkflowPublishRequest:
+      properties:
+        version_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Version Id
+      type: object
+      title: WorkflowPublishRequest
+      description: 发布入参：不传 version_id 表示发布当前图，否则发布指定历史版本。
     WorkflowResponse:
       properties:
         id:
@@ -6695,6 +6940,21 @@ components:
             format: date-time
           - type: 'null'
           title: Last Run At
+        published_version_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Published Version Id
+        published_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Published At
+        has_unpublished_changes:
+          type: boolean
+          title: Has Unpublished Changes
+          default: false
       type: object
       required:
       - id

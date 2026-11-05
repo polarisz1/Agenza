@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
 from app.core.tenancy import get_tenant, get_workspace_id
@@ -54,9 +55,7 @@ class WorkflowRepository:
 
     @staticmethod
     def get(session: Session, wf_id: str) -> Workflow | None:
-        q = session.query(Workflow).filter(
-            Workflow.id == wf_id, Workflow.deleted_at.is_(None)
-        )
+        q = session.query(Workflow).filter(Workflow.id == wf_id, Workflow.deleted_at.is_(None))
         ws = _ws_id()
         if ws is not None:
             q = q.filter(Workflow.workspace_id == ws)
@@ -136,6 +135,21 @@ class WorkflowRepository:
         obj.last_run_at = utcnow()
         session.flush()
 
+    @staticmethod
+    def set_published(session: Session, wf_id: str, version_id: str | None) -> Workflow | None:
+        """设置/清除发布状态；version_id 为 None 表示取消发布。"""
+        obj = WorkflowRepository.get(session, wf_id)
+        if obj is None:
+            return None
+        now = utcnow()
+        obj.published_version_id = version_id
+        obj.published_at = now if version_id else None
+        # 同一时间戳写入 updated_at：避免 onupdate 让 updated_at 晚于 published_at，
+        # 导致刚发布就被判定为「有未发布修改」
+        obj.updated_at = now
+        session.flush()
+        return obj
+
     # ---- 版本快照（F5） ----
 
     @staticmethod
@@ -175,6 +189,36 @@ class WorkflowRepository:
         return q.order_by(WorkflowVersion.seq.desc()).first()
 
     @staticmethod
+    def latest_version_ids(session: Session, workflow_ids: Sequence[str]) -> dict[str, str]:
+        """批量取每个工作流最新版本的 id（列表页判断是否有未发布修改）。"""
+        if not workflow_ids:
+            return {}
+        newest_seq = (
+            session.query(
+                WorkflowVersion.workflow_id.label("workflow_id"),
+                func.max(WorkflowVersion.seq).label("seq"),
+            )
+            .filter(
+                WorkflowVersion.workflow_id.in_(workflow_ids),
+                WorkflowVersion.deleted_at.is_(None),
+            )
+            .group_by(WorkflowVersion.workflow_id)
+            .subquery()
+        )
+        rows = (
+            session.query(WorkflowVersion.workflow_id, WorkflowVersion.id)
+            .join(
+                newest_seq,
+                and_(
+                    WorkflowVersion.workflow_id == newest_seq.c.workflow_id,
+                    WorkflowVersion.seq == newest_seq.c.seq,
+                ),
+            )
+            .all()
+        )
+        return {workflow_id: version_id for workflow_id, version_id in rows}
+
+    @staticmethod
     def get_version(session: Session, workflow_id: str, version_id: str) -> WorkflowVersion | None:
         q = session.query(WorkflowVersion).filter(
             WorkflowVersion.workflow_id == workflow_id,
@@ -188,10 +232,7 @@ class WorkflowRepository:
 
     @staticmethod
     def prune_versions(session: Session, workflow_id: str, keep: int = 50) -> None:
-        q = (
-            session.query(WorkflowVersion.id)
-            .filter(WorkflowVersion.workflow_id == workflow_id)
-        )
+        q = session.query(WorkflowVersion.id).filter(WorkflowVersion.workflow_id == workflow_id)
         ws = _ws_id()
         if ws is not None:
             q = q.filter(WorkflowVersion.workspace_id == ws)

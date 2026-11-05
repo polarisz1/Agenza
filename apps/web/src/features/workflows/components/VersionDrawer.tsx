@@ -5,6 +5,7 @@ import { Background, BackgroundVariant, ReactFlow, ReactFlowProvider } from '@xy
 import {
   getWorkflowVersion,
   listWorkflowVersions,
+  publishWorkflow,
   restoreWorkflowVersion,
   type WorkflowResponse,
   type WorkflowVersionDetail,
@@ -17,8 +18,11 @@ import './VersionDrawer.css';
 interface Props {
   open: boolean;
   workflowId: string | null;
+  /** 当前已发布的版本 id（ASYNC-05） */
+  publishedVersionId?: string | null;
   onClose: () => void;
   onRestored: (workflow: WorkflowResponse) => void;
+  onPublished: (workflow: WorkflowResponse) => void;
 }
 
 /** 只读版本预览：复用节点渲染，但不可编辑。 */
@@ -48,7 +52,14 @@ function VersionCanvas({ graph }: { graph: GraphDef }) {
 }
 
 /** 版本历史抽屉（F5/T5.4.4）：列表 / 只读预览 / 恢复。 */
-export default function VersionDrawer({ open, workflowId, onClose, onRestored }: Props) {
+export default function VersionDrawer({
+  open,
+  workflowId,
+  publishedVersionId,
+  onClose,
+  onRestored,
+  onPublished,
+}: Props) {
   const { message, modal } = App.useApp();
   const [versions, setVersions] = useState<WorkflowVersionItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,6 +68,7 @@ export default function VersionDrawer({ open, workflowId, onClose, onRestored }:
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [restoring, setRestoring] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!workflowId) return;
@@ -113,6 +125,21 @@ export default function VersionDrawer({ open, workflowId, onClose, onRestored }:
     });
   };
 
+  const publish = async (item: WorkflowVersionItem) => {
+    if (!workflowId) return;
+    setPublishing(item.id);
+    try {
+      const workflow = await publishWorkflow(workflowId, item.id);
+      message.success(`已发布 v${item.seq}`);
+      onPublished(workflow);
+      await load();
+    } catch (err: any) {
+      message.error(err?.message || '发布失败');
+    } finally {
+      setPublishing(null);
+    }
+  };
+
   return (
     <>
       <Drawer
@@ -141,7 +168,8 @@ export default function VersionDrawer({ open, workflowId, onClose, onRestored }:
               <div className="afe-ver-item" key={item.id}>
                 <div className="afe-ver-head">
                   <span className="afe-ver-seq">v{item.seq}</span>
-                  {index === 0 && <Tag color="green">当前</Tag>}
+                  {index === 0 && <Tag>当前</Tag>}
+                  {item.id === publishedVersionId && <Tag color="green">已发布</Tag>}
                   <span className="afe-ver-time">{formatTime(item.created_at)}</span>
                 </div>
                 <div className="afe-ver-summary">{item.summary || '配置更新'}</div>
@@ -156,6 +184,15 @@ export default function VersionDrawer({ open, workflowId, onClose, onRestored }:
                     onClick={() => restore(item)}
                   >
                     恢复
+                  </Button>
+                  <Button
+                    size="small"
+                    type={item.id === publishedVersionId ? 'default' : 'primary'}
+                    disabled={item.id === publishedVersionId}
+                    loading={publishing === item.id}
+                    onClick={() => void publish(item)}
+                  >
+                    {item.id === publishedVersionId ? '已发布' : '发布此版本'}
                   </Button>
                 </div>
               </div>

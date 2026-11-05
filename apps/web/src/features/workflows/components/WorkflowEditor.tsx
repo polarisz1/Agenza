@@ -33,9 +33,10 @@ import {
   getEditorPreferences,
   getLatestRunNodeOutputs,
   getWorkflow,
+  publishWorkflow,
   runWorkflow,
   testNode,
-  updateWorkflow,
+  unpublishWorkflow,
   validateWorkflow,
   type NodeTestResult,
   type WorkflowResponse,
@@ -85,6 +86,8 @@ function EditorInner() {
   const name = useEditorStore((s) => s.name);
   const description = useEditorStore((s) => s.description);
   const status = useEditorStore((s) => s.status);
+  const publishedVersionId = useEditorStore((s) => s.publishedVersionId);
+  const hasUnpublishedChanges = useEditorStore((s) => s.hasUnpublishedChanges);
   const nodes = useEditorStore((s) => s.nodes);
   const edges = useEditorStore((s) => s.edges);
   const viewport = useEditorStore((s) => s.viewport);
@@ -97,7 +100,6 @@ function EditorInner() {
   const futureCount = useEditorStore((s) => s.future.length);
 
   const setName = useEditorStore((s) => s.setName);
-  const setStatus = useEditorStore((s) => s.setStatus);
   const setViewport = useEditorStore((s) => s.setViewport);
   const select = useEditorStore((s) => s.select);
   const setSelection = useEditorStore((s) => s.setSelection);
@@ -209,6 +211,9 @@ function EditorInner() {
           status: wf.status,
           graph: wf.graph,
           viewport: (wf.viewport ?? null) as Viewport | null,
+          publishedVersionId: wf.published_version_id ?? null,
+          publishedAt: wf.published_at ?? null,
+          hasUnpublishedChanges: wf.has_unpublished_changes ?? false,
         });
         setIssues([]);
         setRunId(null);
@@ -526,11 +531,33 @@ function EditorInner() {
       flushDraft();
       const saved = await saveNow();
       if (!saved) throw new Error('保存失败，无法发布');
-      await updateWorkflow(workflowId, { status: 'ready' });
-      setStatus('ready');
+      const published = await publishWorkflow(workflowId);
+      useEditorStore.getState().setPublishState({
+        publishedVersionId: published.published_version_id ?? null,
+        publishedAt: published.published_at ?? null,
+        hasUnpublishedChanges: published.has_unpublished_changes ?? false,
+      });
       message.success('工作流已发布');
     } catch (err: any) {
       message.error(err?.message || '发布失败');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleUnpublish = async () => {
+    if (!workflowId) return;
+    setPublishing(true);
+    try {
+      const result = await unpublishWorkflow(workflowId);
+      useEditorStore.getState().setPublishState({
+        publishedVersionId: result.published_version_id ?? null,
+        publishedAt: result.published_at ?? null,
+        hasUnpublishedChanges: result.has_unpublished_changes ?? false,
+      });
+      message.success('已取消发布');
+    } catch (err: any) {
+      message.error(err?.message || '取消发布失败');
     } finally {
       setPublishing(false);
     }
@@ -607,12 +634,23 @@ function EditorInner() {
         status: workflow.status,
         graph: workflow.graph,
         viewport: (workflow.viewport ?? null) as Viewport | null,
+        publishedVersionId: workflow.published_version_id ?? null,
+        publishedAt: workflow.published_at ?? null,
+        hasUnpublishedChanges: workflow.has_unpublished_changes ?? false,
       });
       setVersionsOpen(false);
       setIssues([]);
     },
     [loadWorkflow],
   );
+
+  const handleVersionPublished = useCallback((workflow: WorkflowResponse) => {
+    useEditorStore.getState().setPublishState({
+      publishedVersionId: workflow.published_version_id ?? null,
+      publishedAt: workflow.published_at ?? null,
+      hasUnpublishedChanges: workflow.has_unpublished_changes ?? false,
+    });
+  }, []);
 
   // 命令面板的条目随当前工作流状态变化，直接构造（只在面板打开时使用）
   const commands = [
@@ -642,7 +680,13 @@ function EditorInner() {
           </span>
           <span className="afe-statusbar__divider" />
           <span className="afe-statusbar__mode">
-            {status === 'ready' ? 'Ready · 已发布' : 'Draft · 可编辑'}
+            {publishedVersionId
+              ? hasUnpublishedChanges
+                ? 'Published · 有未发布修改'
+                : 'Published · 已发布'
+              : status === 'ready'
+                ? 'Ready · 可运行'
+                : 'Draft · 可编辑'}
           </span>
         </div>
         <div className="afe-statusbar__right">
@@ -724,11 +768,30 @@ function EditorInner() {
           <button
             className="afe-btn afe-btn--publish"
             onClick={() => void handlePublish()}
-            disabled={!workflowId || publishing || status === 'ready'}
+            disabled={
+              !workflowId || publishing || (publishedVersionId !== null && !hasUnpublishedChanges)
+            }
+            title={publishedVersionId ? '发布最新内容' : '发布当前内容'}
           >
             <UploadSimple size={14} />
-            {status === 'ready' ? '已发布' : publishing ? '发布中…' : '发布'}
+            {publishedVersionId && !hasUnpublishedChanges
+              ? '已发布'
+              : publishing
+                ? '发布中…'
+                : hasUnpublishedChanges
+                  ? '发布更新'
+                  : '发布'}
           </button>
+          {publishedVersionId && (
+            <button
+              className="afe-btn"
+              onClick={() => void handleUnpublish()}
+              disabled={publishing}
+              title="仅清除发布标记，画布与版本历史不变"
+            >
+              取消发布
+            </button>
+          )}
         </div>
       </div>
 
@@ -1026,8 +1089,10 @@ function EditorInner() {
       <VersionDrawer
         open={versionsOpen}
         workflowId={workflowId}
+        publishedVersionId={publishedVersionId}
         onClose={() => setVersionsOpen(false)}
         onRestored={handleVersionRestored}
+        onPublished={handleVersionPublished}
       />
     </div>
   );

@@ -37,6 +37,11 @@ export function useAutoSave(workflowId: string | null, delay = AUTO_SAVE_DELAY, 
         viewport: viewport as Record<string, unknown> | undefined,
       });
       useEditorStore.getState().markSaved(revAtStart, saved.status);
+      useEditorStore.getState().setPublishState({
+        publishedVersionId: saved.published_version_id ?? null,
+        publishedAt: saved.published_at ?? null,
+        hasUnpublishedChanges: saved.has_unpublished_changes ?? false,
+      });
       return true;
     } catch (err: any) {
       useEditorStore.getState().markSaveError(err?.message);

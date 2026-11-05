@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+
 from app.api_deps import get_session
 from app.core.exceptions import AppError
 from app.core.response import ERROR_RESPONSES, ApiResponse, DeleteResult, success
@@ -17,14 +20,13 @@ from app.modules.workflows.schemas import (
     WorkflowImportRequest,
     WorkflowImportResult,
     WorkflowListData,
+    WorkflowPublishRequest,
     WorkflowResponse,
     WorkflowUpdate,
     WorkflowVersionDetail,
     WorkflowVersionListData,
 )
 from app.modules.workflows.service import WorkflowService
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
 
 router = APIRouter(responses=ERROR_RESPONSES)
 
@@ -145,6 +147,28 @@ def restore_workflow_version(wf_id: str, version_id: str, session: Session = Dep
     if updated is None:
         raise AppError(404, "Workflow or version not found")
     return success(updated)
+
+
+@router.post("/{wf_id}/publish", response_model=ApiResponse[WorkflowResponse])
+def publish_workflow(
+    wf_id: str,
+    body: WorkflowPublishRequest | None = None,
+    session: Session = Depends(get_session),
+):
+    """发布工作流（ASYNC-05）：默认发布当前图，传 version_id 则发布指定历史版本。"""
+    published = WorkflowService.publish(session, wf_id, body.version_id if body else None)
+    if published is None:
+        raise AppError(404, "Workflow not found")
+    return success(published)
+
+
+@router.post("/{wf_id}/unpublish", response_model=ApiResponse[WorkflowResponse])
+def unpublish_workflow(wf_id: str, session: Session = Depends(get_session)):
+    """取消发布：清空发布标记，当前画布与历史版本不受影响。"""
+    result = WorkflowService.unpublish(session, wf_id)
+    if result is None:
+        raise AppError(404, "Workflow not found")
+    return success(result)
 
 
 @router.post("/{wf_id}/runs", response_model=ApiResponse[RunResponse])

@@ -169,8 +169,8 @@ export default function WorkflowList() {
     });
   };
 
-  const readyCount = items.filter((item) => item.status === 'ready').length;
-  const draftCount = items.length - readyCount;
+  const publishedCount = items.filter((item) => item.published_version_id).length;
+  const draftCount = items.length - publishedCount;
 
   return (
     <div>
@@ -178,7 +178,7 @@ export default function WorkflowList() {
         <div>
           <h1 className="af-wf__title">工作流</h1>
           <div className="af-wf__subtitle">
-            共 {items.length} 个 · 已发布 {readyCount} · 草稿 {draftCount}
+            共 {items.length} 个 · 已发布 {publishedCount} · 未发布 {draftCount}
           </div>
         </div>
         <div className="af-wf__actions">
@@ -215,20 +215,10 @@ export default function WorkflowList() {
         <button type="button" className="af-wf__tab is-active">
           全部 ({items.length})
         </button>
-        <button
-          type="button"
-          className="af-wf__tab"
-          disabled
-          title="按成员筛选即将上线"
-        >
+        <button type="button" className="af-wf__tab" disabled title="按成员筛选即将上线">
           我的
         </button>
-        <button
-          type="button"
-          className="af-wf__tab"
-          disabled
-          title="团队共享筛选即将上线"
-        >
+        <button type="button" className="af-wf__tab" disabled title="团队共享筛选即将上线">
           团队共享
         </button>
         <button type="button" className="af-wf__tab" onClick={() => setGalleryOpen(true)}>
@@ -265,9 +255,7 @@ export default function WorkflowList() {
           <EmptyState
             title={debouncedQ ? '没有匹配的工作流' : '还没有工作流'}
             description={
-              debouncedQ
-                ? '换个关键词，或清除搜索条件。'
-                : '新建一张空白画布，或从模板中心开始。'
+              debouncedQ ? '换个关键词，或清除搜索条件。' : '新建一张空白画布，或从模板中心开始。'
             }
             action={
               debouncedQ ? (
@@ -283,12 +271,17 @@ export default function WorkflowList() {
       ) : (
         <div className="af-wf__grid">
           {items.map((record, index) => {
-            const status =
-              record.status === 'ready' ? (
-                <Pill tone="success">已发布</Pill>
+            const status = record.published_version_id ? (
+              record.has_unpublished_changes ? (
+                <Pill tone="warning">有未发布修改</Pill>
               ) : (
-                <Pill tone="neutral">草稿</Pill>
-              );
+                <Pill tone="success">已发布</Pill>
+              )
+            ) : record.status === 'ready' ? (
+              <Pill tone="neutral">可运行</Pill>
+            ) : (
+              <Pill tone="neutral">草稿</Pill>
+            );
 
             return (
               <Card
@@ -307,10 +300,7 @@ export default function WorkflowList() {
               >
                 <div className="af-wf__card-head">
                   <div className="af-wf__identity">
-                    <span
-                      className="af-wf__icon"
-                      style={CARD_STYLES[index % CARD_STYLES.length]}
-                    >
+                    <span className="af-wf__icon" style={CARD_STYLES[index % CARD_STYLES.length]}>
                       {CARD_ICONS[index % CARD_ICONS.length]}
                     </span>
                     <div className="af-wf__name-wrap">
@@ -348,13 +338,8 @@ export default function WorkflowList() {
                 </div>
 
                 <div className="af-wf__footer">
-                  <span className="af-wf__updated">
-                    更新于 {formatDateTime(record.updated_at)}
-                  </span>
-                  <div
-                    className="af-wf__card-actions"
-                    onClick={(event) => event.stopPropagation()}
-                  >
+                  <span className="af-wf__updated">更新于 {formatDateTime(record.updated_at)}</span>
+                  <div className="af-wf__card-actions" onClick={(event) => event.stopPropagation()}>
                     <IconButton
                       label="打开编辑器"
                       icon={<Play size={14} />}

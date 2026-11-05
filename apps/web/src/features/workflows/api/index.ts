@@ -162,6 +162,18 @@ export async function restoreWorkflowVersion(
   return http.post<WorkflowResponse>(`/api/v1/workflows/${id}/versions/${versionId}/restore`);
 }
 
+/** 发布工作流（ASYNC-05）：不传 versionId 发布当前图，传则发布指定历史版本 */
+export async function publishWorkflow(id: string, versionId?: string): Promise<WorkflowResponse> {
+  return http.post<WorkflowResponse>(`/api/v1/workflows/${id}/publish`, {
+    version_id: versionId ?? null,
+  });
+}
+
+/** 取消发布：只清发布标记，画布与版本历史不变 */
+export async function unpublishWorkflow(id: string): Promise<WorkflowResponse> {
+  return http.post<WorkflowResponse>(`/api/v1/workflows/${id}/unpublish`, {});
+}
+
 /** 导入工作流：confirm=false 预览重名处理，confirm=true 写入 */
 export async function importWorkflows(
   payload: unknown,

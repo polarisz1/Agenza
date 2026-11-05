@@ -193,7 +193,10 @@ export default function Dashboard() {
   }, [load]);
 
   const periodStart = useMemo(() => startOfPeriod(period), [period]);
-  const previousStart = useMemo(() => previousPeriodStart(period, periodStart), [period, periodStart]);
+  const previousStart = useMemo(
+    () => previousPeriodStart(period, periodStart),
+    [period, periodStart],
+  );
 
   const periodRuns = useMemo(
     () =>
@@ -248,8 +251,8 @@ export default function Dashboard() {
     [workflows, periodStart],
   );
 
-  const readyWorkflows = useMemo(
-    () => workflows.filter((workflow) => workflow.status === 'ready').length,
+  const publishedWorkflows = useMemo(
+    () => workflows.filter((workflow) => workflow.published_version_id).length,
     [workflows],
   );
 
@@ -547,7 +550,7 @@ export default function Dashboard() {
           tone: 'warning',
           icon: <SquaresFour size={16} />,
           label: '已发布工作流',
-          title: `${readyWorkflows} 个工作流已发布`,
+          title: `${publishedWorkflows} 个工作流已发布`,
           hint: `共 ${workflows.length} 个工作流`,
           onClick: () => navigate(`${wsPrefix}/workflows`),
         },
@@ -654,7 +657,7 @@ export default function Dashboard() {
           value={
             <>
               {activeWorkflows}
-              <small>/ 已发布 {readyWorkflows}</small>
+              <small>/ 已发布 {publishedWorkflows}</small>
             </>
           }
           hint={`共 ${workflows.length} 个工作流`}
@@ -819,20 +822,12 @@ export default function Dashboard() {
                     className="af-dash__run-row"
                     onClick={() => navigate(`${wsPrefix}/runs/${run.id}`)}
                   >
-                    <Pill
-                      tone={status.tone}
-                      className="af-dash__run-status"
-                      title={status.label}
-                    >
+                    <Pill tone={status.tone} className="af-dash__run-status" title={status.label}>
                       {status.icon}
                     </Pill>
                     <span className="af-dash__run-id">#{run.id.replace(/^r_/, '')}</span>
                     <span className="af-dash__run-name">{run.workflow_name}</span>
-                    <Pill
-                      tone={trigger.tone}
-                      icon={trigger.icon}
-                      className="af-dash__run-trigger"
-                    >
+                    <Pill tone={trigger.tone} icon={trigger.icon} className="af-dash__run-trigger">
                       {trigger.label}
                     </Pill>
                     <span className="af-dash__run-duration">
