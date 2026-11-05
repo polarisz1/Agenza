@@ -16,6 +16,7 @@ dependencies = [
     "python-dotenv>=1.0.1",
     # --- SaaS: PostgreSQL + Auth ---
     "psycopg[binary]>=3.2.0",
+    "asyncpg>=0.30.0",
     "passlib[bcrypt]>=1.7.4",
     # passlib 1.7.4 与 bcrypt>=5.0 不兼容（wrap-bug 检测时对超长测试密码抛 ValueError）
     "bcrypt>=4.0,<5.0",
