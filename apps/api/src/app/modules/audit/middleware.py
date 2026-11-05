@@ -93,6 +93,26 @@ _RULES: tuple[AuditRule, ...] = (
     _rule("POST", r"/api/v1/providers", "provider.create", "provider", id_group=None),
     _rule("PUT", r"/api/v1/providers/(?P<resource_id>[^/]+)", "provider.update", "provider"),
     _rule("DELETE", r"/api/v1/providers/(?P<resource_id>[^/]+)", "provider.delete", "provider"),
+    _rule(
+        "PUT",
+        r"/api/v1/gateway/config",
+        "gateway.config_update",
+        "gateway",
+        id_group=None,
+    ),
+    _rule(
+        "POST",
+        r"/api/v1/gateway/routes",
+        "gateway.route_upsert",
+        "gateway",
+        id_group=None,
+    ),
+    _rule(
+        "DELETE",
+        r"/api/v1/gateway/routes/(?P<resource_id>[^/]+)",
+        "gateway.route_delete",
+        "gateway",
+    ),
     _rule("PUT", r"/api/v1/settings", "settings.update", "settings", id_group=None),
     # 工作空间管理：审计归属取路径里的 workspace，而不是 token 里的当前工作空间
     _rule(

@@ -126,6 +126,7 @@ async def global_exception_handler(request, exc: Exception):
 # ============ Router Registration ============
 from app.modules.audit.router import router as audit_router
 from app.modules.auth.router import router as auth_router
+from app.modules.gateway.router import router as gateway_router
 from app.modules.providers.router import router as providers_router
 from app.modules.runs.router import router as runs_router
 from app.modules.settings.router import router as settings_router
@@ -140,6 +141,10 @@ app.include_router(workflows_router, prefix="/api/v1/workflows", tags=["v1-workf
 app.include_router(runs_router, prefix="/api/v1/runs", tags=["v1-runs"])
 app.include_router(providers_router, prefix="/api/v1/providers", tags=["v1-providers"])
 app.include_router(settings_router, prefix="/api/v1/settings", tags=["v1-settings"])
+app.include_router(gateway_router, prefix="/api/v1", tags=["v1-gateway"])
+
+# 桌面版同样通过 /api/* 访问（gateway 只有 v1 一套路由）
+app.include_router(gateway_router, prefix="/api", tags=["gateway"])
 
 # 原有路由（保留桌面 / Electron 兼容；新前端一律走 /api/v1）
 app.include_router(workflows_router, prefix="/api/workflows", tags=["workflows"])

@@ -29,6 +29,10 @@ class NodeContext(BaseModel):
     available: dict[str, Any] = Field(default_factory=dict)  # node_id → output（全部已完成祖先）
     node_names: dict[str, str] = Field(default_factory=dict)  # node_id → 节点名称
     providers: Any = None  # ProviderRegistry reference
+    # GATE-01：AI Gateway 路由与预算快照（桌面未配置时为 None）
+    model_router: Any = None  # core.providers.router.ModelRouter | None
+    budget_exhausted: bool = False
+    budget_message: str | None = None
     # 增量文本回调（F3 流式）：executor 调用它把 token 片段推给 SSE
     on_delta: Any = None
 

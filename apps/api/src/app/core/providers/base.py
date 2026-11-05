@@ -133,5 +133,13 @@ class ProviderRegistry:
     def get(self, provider_id: str) -> ProviderAdapter | None:
         return self._providers.get(provider_id)
 
+    def usable_ids(self) -> set[str]:
+        """可用于自动路由的服务商 id（排除密钥解不开的占位实现）。"""
+        return {
+            provider_id
+            for provider_id, adapter in self._providers.items()
+            if not isinstance(adapter, UnusableProvider)
+        }
+
     def clear(self) -> None:
         self._providers.clear()

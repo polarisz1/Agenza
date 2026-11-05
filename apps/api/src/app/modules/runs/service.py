@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -149,6 +150,10 @@ class RunService:
             )
 
         providers_registry = build_registry(session)
+        # 延迟导入：gateway.service 依赖 RunService，模块级导入会形成循环
+        from app.modules.gateway.service import GatewayService
+
+        gateway = GatewayService.build_runtime(session, providers_registry)
         manager: RunManager = get_run_manager()
 
         # 节点默认超时取设置页的 default_timeout（评审 S8：设置项要真的生效）
@@ -159,6 +164,7 @@ class RunService:
             graph=graph,
             inputs=inputs or {},
             providers_registry=providers_registry,
+            gateway=gateway,
             default_timeout=float(default_timeout)
             if isinstance(default_timeout, int | float)
             else None,
@@ -294,6 +300,42 @@ class RunService:
                 except Exception:
                     continue
         return outputs
+
+    @staticmethod
+    def usage_by_model(session: Session, since: datetime) -> list[dict]:
+        """按模型聚合 Token / 调用次数 / 成功率 / 延迟（GATE-01 预算与性能统计）。
+
+        只统计真正调用过模型的节点（model 非空），供 gateway 模块做成本换算；
+        跨模块查询走本 service，避免 gateway 直接依赖 runs.repository。
+        """
+        rows = (
+            session.query(
+                NodeRun.model,
+                NodeRun.status,
+                func.count(NodeRun.id),
+                func.sum(NodeRun.tokens_in),
+                func.sum(NodeRun.tokens_out),
+                func.avg(NodeRun.duration_ms),
+            )
+            .filter(
+                NodeRun.model.isnot(None),
+                NodeRun.deleted_at.is_(None),
+                NodeRun.started_at >= since,
+            )
+            .group_by(NodeRun.model, NodeRun.status)
+            .all()
+        )
+        return [
+            {
+                "model": model,
+                "status": status,
+                "calls": calls or 0,
+                "tokens_in": int(tokens_in or 0),
+                "tokens_out": int(tokens_out or 0),
+                "avg_duration_ms": float(avg_duration or 0),
+            }
+            for model, status, calls, tokens_in, tokens_out, avg_duration in rows
+        ]
 
     @staticmethod
     def count(session: Session) -> int:

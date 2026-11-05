@@ -98,7 +98,7 @@ def _upgrade_schema() -> None:
         from importlib import import_module
 
         log.warning("alembic 配置缺失，回退到 create_all 建表（打包时请提供 alembic 目录）")
-        for feature in ("providers", "runs", "settings", "workflows"):
+        for feature in ("gateway", "providers", "runs", "settings", "workflows"):
             import_module(f"app.modules.{feature}.models")
         Base.metadata.create_all(bind=engine)
         return

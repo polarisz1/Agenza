@@ -2699,6 +2699,682 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/gateway/config:
+    get:
+      tags:
+      - v1-gateway
+      - v1-gateway
+      summary: Get Gateway Config
+      operationId: get_gateway_config_api_v1_gateway_config_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_GatewayConfigResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+      - v1-gateway
+      - v1-gateway
+      summary: Update Gateway Config
+      operationId: update_gateway_config_api_v1_gateway_config_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GatewayConfigUpdate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_GatewayConfigResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/gateway/routes:
+    get:
+      tags:
+      - v1-gateway
+      - v1-gateway
+      summary: List Gateway Routes
+      operationId: list_gateway_routes_api_v1_gateway_routes_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_GatewayRouteListData_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - v1-gateway
+      - v1-gateway
+      summary: Upsert Gateway Route
+      description: 按 task_type upsert：同一 workspace 每个任务类型只保留一条策略。
+      operationId: upsert_gateway_route_api_v1_gateway_routes_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GatewayRouteUpsert'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_GatewayRouteItem_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/gateway/routes/{route_id}:
+    delete:
+      tags:
+      - v1-gateway
+      - v1-gateway
+      summary: Delete Gateway Route
+      operationId: delete_gateway_route_api_v1_gateway_routes__route_id__delete
+      parameters:
+      - name: route_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Route Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_DeleteResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/gateway/usage:
+    get:
+      tags:
+      - v1-gateway
+      - v1-gateway
+      summary: Gateway Usage
+      operationId: gateway_usage_api_v1_gateway_usage_get
+      parameters:
+      - name: days
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 365
+          minimum: 1
+          default: 30
+          title: Days
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_GatewayUsageResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/gateway/resolve:
+    get:
+      tags:
+      - v1-gateway
+      - v1-gateway
+      summary: Resolve Model
+      description: 预览当前策略：该任务类型会选中哪个服务商/模型，或是否已被预算停机。
+      operationId: resolve_model_api_v1_gateway_resolve_get
+      parameters:
+      - name: task_type
+        in: query
+        required: false
+        schema:
+          enum:
+          - default
+          - extract
+          - long_text
+          - creative
+          type: string
+          default: default
+          title: Task Type
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_GatewayResolveResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/gateway/config:
+    get:
+      tags:
+      - gateway
+      - v1-gateway
+      summary: Get Gateway Config
+      operationId: get_gateway_config_api_gateway_config_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_GatewayConfigResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+      - gateway
+      - v1-gateway
+      summary: Update Gateway Config
+      operationId: update_gateway_config_api_gateway_config_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GatewayConfigUpdate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_GatewayConfigResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/gateway/routes:
+    get:
+      tags:
+      - gateway
+      - v1-gateway
+      summary: List Gateway Routes
+      operationId: list_gateway_routes_api_gateway_routes_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_GatewayRouteListData_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - gateway
+      - v1-gateway
+      summary: Upsert Gateway Route
+      description: 按 task_type upsert：同一 workspace 每个任务类型只保留一条策略。
+      operationId: upsert_gateway_route_api_gateway_routes_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GatewayRouteUpsert'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_GatewayRouteItem_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/gateway/routes/{route_id}:
+    delete:
+      tags:
+      - gateway
+      - v1-gateway
+      summary: Delete Gateway Route
+      operationId: delete_gateway_route_api_gateway_routes__route_id__delete
+      parameters:
+      - name: route_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Route Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_DeleteResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/gateway/usage:
+    get:
+      tags:
+      - gateway
+      - v1-gateway
+      summary: Gateway Usage
+      operationId: gateway_usage_api_gateway_usage_get
+      parameters:
+      - name: days
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 365
+          minimum: 1
+          default: 30
+          title: Days
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_GatewayUsageResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/gateway/resolve:
+    get:
+      tags:
+      - gateway
+      - v1-gateway
+      summary: Resolve Model
+      description: 预览当前策略：该任务类型会选中哪个服务商/模型，或是否已被预算停机。
+      operationId: resolve_model_api_gateway_resolve_get
+      parameters:
+      - name: task_type
+        in: query
+        required: false
+        schema:
+          enum:
+          - default
+          - extract
+          - long_text
+          - creative
+          type: string
+          default: default
+          title: Task Type
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_GatewayResolveResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/workflows:
     get:
       tags:
@@ -4796,6 +5472,86 @@ components:
       required:
       - data
       title: ApiResponse[DuplicateResult]
+    ApiResponse_GatewayConfigResponse_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/GatewayConfigResponse'
+      type: object
+      required:
+      - data
+      title: ApiResponse[GatewayConfigResponse]
+    ApiResponse_GatewayResolveResponse_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/GatewayResolveResponse'
+      type: object
+      required:
+      - data
+      title: ApiResponse[GatewayResolveResponse]
+    ApiResponse_GatewayRouteItem_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/GatewayRouteItem'
+      type: object
+      required:
+      - data
+      title: ApiResponse[GatewayRouteItem]
+    ApiResponse_GatewayRouteListData_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/GatewayRouteListData'
+      type: object
+      required:
+      - data
+      title: ApiResponse[GatewayRouteListData]
+    ApiResponse_GatewayUsageResponse_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/GatewayUsageResponse'
+      type: object
+      required:
+      - data
+      title: ApiResponse[GatewayUsageResponse]
     ApiResponse_NodeRunDetail_:
       properties:
         code:
@@ -5491,6 +6247,345 @@ components:
       - id
       - name
       title: ExtractNode
+    GatewayConfigResponse:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+        monthly_budget_usd:
+          type: number
+          title: Monthly Budget Usd
+        alert_threshold_pct:
+          type: integer
+          title: Alert Threshold Pct
+        hard_stop:
+          type: boolean
+          title: Hard Stop
+        used_usd:
+          type: number
+          title: Used Usd
+        remaining_usd:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Remaining Usd
+        usage_pct:
+          type: number
+          title: Usage Pct
+          default: 0
+        alert_triggered:
+          type: boolean
+          title: Alert Triggered
+          default: false
+        hard_stopped:
+          type: boolean
+          title: Hard Stopped
+          default: false
+        calls:
+          type: integer
+          title: Calls
+          default: 0
+        tokens_in:
+          type: integer
+          title: Tokens In
+          default: 0
+        tokens_out:
+          type: integer
+          title: Tokens Out
+          default: 0
+        period_start:
+          type: string
+          format: date-time
+          title: Period Start
+        period_end:
+          type: string
+          format: date-time
+          title: Period End
+      type: object
+      required:
+      - enabled
+      - monthly_budget_usd
+      - alert_threshold_pct
+      - hard_stop
+      - used_usd
+      - period_start
+      - period_end
+      title: GatewayConfigResponse
+    GatewayConfigUpdate:
+      properties:
+        enabled:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Enabled
+        monthly_budget_usd:
+          anyOf:
+          - type: number
+            minimum: 0
+          - type: 'null'
+          title: Monthly Budget Usd
+        alert_threshold_pct:
+          anyOf:
+          - type: integer
+            maximum: 100
+            minimum: 1
+          - type: 'null'
+          title: Alert Threshold Pct
+        hard_stop:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Hard Stop
+      type: object
+      title: GatewayConfigUpdate
+    GatewayModelStat:
+      properties:
+        model:
+          type: string
+          title: Model
+        calls:
+          type: integer
+          title: Calls
+        success_rate:
+          type: number
+          title: Success Rate
+        avg_latency_ms:
+          type: integer
+          title: Avg Latency Ms
+        tokens_in:
+          type: integer
+          title: Tokens In
+        tokens_out:
+          type: integer
+          title: Tokens Out
+        cost_usd:
+          type: number
+          title: Cost Usd
+      type: object
+      required:
+      - model
+      - calls
+      - success_rate
+      - avg_latency_ms
+      - tokens_in
+      - tokens_out
+      - cost_usd
+      title: GatewayModelStat
+    GatewayResolveResponse:
+      properties:
+        task_type:
+          type: string
+          enum:
+          - default
+          - extract
+          - long_text
+          - creative
+          title: Task Type
+        provider_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider Id
+        model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+        source:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source
+        budget_exhausted:
+          type: boolean
+          title: Budget Exhausted
+          default: false
+        message:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Message
+      type: object
+      required:
+      - task_type
+      title: GatewayResolveResponse
+      description: 预览：当前策略下某个任务类型会选中谁。
+    GatewayRouteItem:
+      properties:
+        id:
+          type: string
+          title: Id
+        task_type:
+          type: string
+          enum:
+          - default
+          - extract
+          - long_text
+          - creative
+          title: Task Type
+        label:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Label
+        primary_provider_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Primary Provider Id
+        primary_model:
+          type: string
+          title: Primary Model
+        fallback_provider_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fallback Provider Id
+        fallback_model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fallback Model
+        input_price_per_1k:
+          type: number
+          title: Input Price Per 1K
+          default: 0
+        output_price_per_1k:
+          type: number
+          title: Output Price Per 1K
+          default: 0
+        fallback_input_price_per_1k:
+          type: number
+          title: Fallback Input Price Per 1K
+          default: 0
+        fallback_output_price_per_1k:
+          type: number
+          title: Fallback Output Price Per 1K
+          default: 0
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+      type: object
+      required:
+      - id
+      - task_type
+      - primary_model
+      title: GatewayRouteItem
+    GatewayRouteListData:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/GatewayRouteItem'
+          type: array
+          title: Items
+      type: object
+      required:
+      - items
+      title: GatewayRouteListData
+    GatewayRouteUpsert:
+      properties:
+        task_type:
+          type: string
+          enum:
+          - default
+          - extract
+          - long_text
+          - creative
+          title: Task Type
+        label:
+          anyOf:
+          - type: string
+            maxLength: 100
+          - type: 'null'
+          title: Label
+        primary_provider_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Primary Provider Id
+        primary_model:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Primary Model
+        fallback_provider_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fallback Provider Id
+        fallback_model:
+          anyOf:
+          - type: string
+            maxLength: 200
+          - type: 'null'
+          title: Fallback Model
+        input_price_per_1k:
+          type: number
+          minimum: 0
+          title: Input Price Per 1K
+          default: 0
+        output_price_per_1k:
+          type: number
+          minimum: 0
+          title: Output Price Per 1K
+          default: 0
+        fallback_input_price_per_1k:
+          type: number
+          minimum: 0
+          title: Fallback Input Price Per 1K
+          default: 0
+        fallback_output_price_per_1k:
+          type: number
+          minimum: 0
+          title: Fallback Output Price Per 1K
+          default: 0
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+      type: object
+      required:
+      - task_type
+      - primary_model
+      title: GatewayRouteUpsert
+    GatewayUsageResponse:
+      properties:
+        period_start:
+          type: string
+          format: date-time
+          title: Period Start
+        period_end:
+          type: string
+          format: date-time
+          title: Period End
+        calls:
+          type: integer
+          title: Calls
+        tokens_in:
+          type: integer
+          title: Tokens In
+        tokens_out:
+          type: integer
+          title: Tokens Out
+        cost_usd:
+          type: number
+          title: Cost Usd
+        models:
+          items:
+            $ref: '#/components/schemas/GatewayModelStat'
+          type: array
+          title: Models
+      type: object
+      required:
+      - period_start
+      - period_end
+      - calls
+      - tokens_in
+      - tokens_out
+      - cost_usd
+      - models
+      title: GatewayUsageResponse
     GraphDef:
       properties:
         version:

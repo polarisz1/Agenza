@@ -50,6 +50,7 @@ class Scheduler:
         inputs: dict,
         registry: dict[str, NodeExecutor],
         providers_registry: Any,
+        gateway: Any = None,
         on_node_started=None,
         on_node_finished=None,
     ) -> dict[str, NodeResult]:
@@ -97,6 +98,7 @@ class Scheduler:
                             inputs=inputs,
                             registry=registry,
                             providers_registry=providers_registry,
+                            gateway=gateway,
                             on_node_started=on_node_started,
                             on_node_finished=on_node_finished,
                         ),
@@ -165,8 +167,9 @@ class Scheduler:
         inputs: dict,
         registry: dict[str, NodeExecutor],
         providers_registry: Any,
-        on_node_started,
-        on_node_finished,
+        gateway: Any = None,
+        on_node_started=None,
+        on_node_finished=None,
     ) -> None:
         node = node_map[node_id]
         node_type = node.get("type")
@@ -269,6 +272,9 @@ class Scheduler:
             available=_collect_ancestor_outputs(node_id, parent_edges, results),
             node_names=node_names,
             providers=providers_registry,
+            model_router=gateway.router if gateway is not None else None,
+            budget_exhausted=bool(gateway.budget_exhausted) if gateway is not None else False,
+            budget_message=gateway.budget_message if gateway is not None else None,
             on_delta=publish_delta,
         )
 

@@ -435,13 +435,22 @@ class WorkflowService:
         if executor is None:
             raise AppError(422, f"No executor for node type '{node.get('type')}'")
 
+        registry = build_registry(session)
+        # GATE-01：单节点调试同样遵守路由策略与预算硬停机
+        from app.modules.gateway.service import GatewayService
+
+        gateway = GatewayService.build_runtime(session, registry)
+
         ctx = NodeContext(
             node=node,
             run_inputs=inputs or {},
             upstream=merged_upstream,
             available=available,
             node_names={n["id"]: (n.get("name") or n["id"]) for n in graph.get("nodes", [])},
-            providers=build_registry(session),
+            providers=registry,
+            model_router=gateway.router,
+            budget_exhausted=gateway.budget_exhausted,
+            budget_message=gateway.budget_message,
         )
         started = time.perf_counter()
         result = await executor.execute(ctx)

@@ -1,8 +1,8 @@
 # AgentFlow SaaS 转型 · 执行 Backlog
 
 > **来源**: `docs/saas-strategy-2026-11-03.md` 战略评估
-> **版本**: v1.2 · 2026-11-05（INFRA-02 修复 + 多租户隔离回归）
-> **状态**: Sprint 1 地基完成（多租户运行时已打通）；Sprint 2 主体完成；Sprint 3-5 部分/未开始
+> **版本**: v1.7 · 2026-11-05（GATE-01 后端完成）
+> **状态**: Sprint 1 地基完成；Sprint 2 主体完成（ASYNC-04 延后）；Sprint 3 开始（AI Gateway 后端已落地）
 
 ---
 
@@ -12,12 +12,12 @@
 
 | 范围 | ✅ 完成 | 🟡 部分 | 🚧 阻塞 | ⛔ 未开始 | 结论 |
 |---|---:|---:|---:|---:|---|
-| Sprint 1 · 地基搭建 | 34 | 1 | 0 | 0 | 多租户开关已修复，工作流/运行/服务商/设置的 workspace 隔离有回归测试 |
-| Sprint 2 · 前端重构 + 异步化 | 5 | 3 | 0 | 0 | 导航/Dashboard/Celery/Redis SSE 已完成；协作与审计为部分完成 |
-| Sprint 3 · 差异化功能 | 1 | 2 | 0 | 3 | 运行详情四 Tab 已完成；AI Gateway 后端与触发器未开始 |
+| Sprint 1 · 地基搭建 | 35 | 0 | 0 | 0 | 多租户开关与 session 自动过滤均已落地，工作流/运行/服务商/设置的隔离有回归测试 |
+| Sprint 2 · 前端重构 + 异步化 | 7 | 1 | 0 | 0 | 审计与版本发布已补齐；协作状态条按决策延后（无下游依赖） |
+| Sprint 3 · 差异化功能 | 2 | 2 | 0 | 2 | AI Gateway 后端（ModelRouter/预算/统计）已完成；Gateway UI 与触发器待做 |
 | Sprint 4 · 商业化 | 0 | 4 | 0 | 1 | 仅有 Token 汇总与占位 UI；计量/Stripe 未开始 |
 | Sprint 5 · 打磨 + 部署 | 1 | 2 | 0 | 3 | 暗色主题已完成；Docker/部署未开始 |
-| **合计** | **41** | **12** | **0** | **7** | **60 项中约 68% 完成** |
+| **合计** | **45** | **9** | **0** | **6** | **60 项中 75% 完成** |
 
 **关键结论**
 
@@ -26,8 +26,13 @@
 - DB-05 已完成：10 张业务表统一 `created_by` / `updated_by` / `deleted_at`；工作流、服务商、工作区、成员、API Key 删除改为软删除，查询统一过滤 `deleted_at IS NULL`。
 - INFRA-02 已修复：`is_saas_mode()` 改为读 `settings.TENANCY_ENABLED`；`TenantMiddleware` 增加 OPTIONS/静态资源 bypass，并修复 `"/"` 前缀导致全路径放行的 bug；access token 类型校验后 refresh token 不再能当 access token 用。
 - 多租户运行时已回归：`tests/test_tenancy_middleware.py` 覆盖无 token 401、两个 workspace 的工作流/运行/服务商/设置相互不可见、`created_by` 来自 `TenantContext`、请求结束清理 ContextVar。
+- INFRA-03 已落地：`database.py` 注册 `Session.do_orm_execute` 监听，SaaS 模式下自动给业务模型的 ORM SELECT 追加 `workspace_id`（`with_loader_criteria`），Repository 的显式过滤保留作为第一道防线；`user/workspace/workspace_member/api_key` 刻意排除，保证登录与工作空间切换可用，运维跨租户查询用 `execution_options(include_all_workspaces=True)` 绕过。
+- ASYNC-06 已落地：`AuditMiddleware` 统一记录成功的写操作（工作流增删改/复制/恢复、运行发起取消、服务商增删改、设置更新、工作空间与成员管理），自动带 `TenantContext` 的 user/workspace；失败请求与只读请求不落库，审计写入失败不影响主请求。
+- ASYNC-05 已落地：`workflow.published_version_id / published_at` 与 `status`（可运行性）分离，新增 `POST /workflows/{id}/publish`（可指定历史版本）与 `unpublish`；列表/详情返回 `has_unpublished_changes`，编辑器状态条区分 Draft / Ready / Published（有未发布修改），版本抽屉可标记并发布指定版本。
+- ASYNC-04 决策：暂缓到 Sprint 4/5，原因是没有下游依赖、在线状态/编辑锁依赖 Redis TTL 与跨实例广播（Sprint 5 才部署 Redis），提前做会在多实例上线时返工。**代价**：当前同一工作流并发编辑是 last-write-wins，试点期建议约定一个工作流同时只由一人编辑，后续实现 ASYNC-04 时用乐观锁补齐。
+- GATE-01 已落地：新增 `modules/gateway/`（配置 + 路由策略 + 用量统计）与 `core/providers/router.py` 的 `ModelRouter`；`/api/v1/gateway` 提供 config / routes / usage / resolve；运行与单节点调试前按策略自动选模型，预算到硬停机阈值时 LLM/EXTRACT 节点直接失败并给出明确提示。
 - 顺带修复 ADAPT-04 的真实缺陷：`app_setting` 在 PostgreSQL 上主键仍是 `key` 单列（0004 只加了列），SaaS 下不同 workspace 写同名设置会撞唯一约束；新增 `0010_app_setting_composite_pk.py` 改为复合主键。
-- AI Gateway、Prompt Library、账单目前是前端原型占位；Token/费用计量与 Stripe 未接入。
+- AI Gateway 后端已接入真实用量；Gateway 前端页面仍为示例数据（GATE-02），Prompt Library 与账单未接入。
 - Docker / docker-compose / 私有化部署脚本尚未开始。
 
 ### 本次对齐的代码证据
@@ -40,8 +45,12 @@
 | 统一审计字段 | `apps/api/src/app/db/audit.py`、`alembic/versions/0009_audit_fields.py`；10 张业务表列校验通过，软删除测试通过 |
 | 四 Tab 运行详情 | `apps/web/src/features/runs/components/RunDetail.tsx` |
 | 多租户运行时 | `apps/api/src/app/core/tenancy.py`（`is_saas_mode` 读 settings）、`tests/test_tenancy_middleware.py`（4 类隔离断言） |
+| session 自动过滤 | `core/tenancy.py::install_tenant_query_filter`、`db/database.py` 注册；`test_session_auto_filters_workspace` 验证无显式过滤的查询也按 workspace 截断 |
+| 统一审计 | `modules/audit/middleware.py`、`main.py` 注册；`tests/test_audit_middleware.py` 验证动作/操作者/归属 workspace、只读与失败请求不落库 |
+| 工作流发布 | `alembic/versions/0011_workflow_publish.py`（PG 已在 `0011 (head)`）、`workflows/service.py::publish`、`tests/test_workflow_publish.py`；前端 `WorkflowEditor` / `VersionDrawer` / `WorkflowList` / `Dashboard` |
+| AI Gateway 后端 | `core/providers/router.py`、`modules/gateway/*`、`alembic/versions/0012_gateway.py`；`tests/test_gateway.py`（路由/配置/用量/预算硬停机） |
 | app_setting 复合主键 | `apps/api/alembic/versions/0010_app_setting_composite_pk.py`；PG 已在 `0010 (head)` |
-| 未开始 | 仓库内无 `deploy/`、Dockerfile、docker-compose；无 ModelRouter / 预算追踪 |
+| 未开始 | 仓库内无 `deploy/`、Dockerfile、docker-compose；Webhook 触发与 SubWorkflow 未实现 |
 
 ---
 
@@ -75,7 +84,7 @@
 |----|------|------|------|--------|------|
 | INFRA-01 | 创建 `TenantContext`（ContextVar） | `apps/api/src/app/core/tenancy.py` | — | P0 | ✅ |
 | INFRA-02 | 创建 `TenantMiddleware`，从 JWT 提取 workspace_id 注入上下文 | `apps/api/src/app/core/tenancy.py` | INFRA-01 | P0 | ✅ `is_saas_mode()` 改读 `settings.TENANCY_ENABLED`；新增 OPTIONS/静态资源 bypass，修复 `"/"` 前缀放行全路径；校验 access token 类型；回归测试 `tests/test_tenancy_middleware.py` |
-| INFRA-03 | tenant-aware session（查询自动注入 workspace 过滤） | `apps/api/src/app/core/tenancy.py` | DB-02, INFRA-01 | P0 | 🟡 实际由各 Repository 显式过滤，未做 Session 自动注入 |
+| INFRA-03 | tenant-aware session（查询自动注入 workspace 过滤） | `apps/api/src/app/core/tenancy.py` | DB-02, INFRA-01 | P0 | ✅ `Session.do_orm_execute` + `with_loader_criteria` 自动过滤 7 个业务模型；显式过滤保留；`include_all_workspaces=True` 可绕过 |
 | INFRA-04 | 注册 TenantMiddleware + 全局异常 + CORS | `apps/api/src/app/main.py` | INFRA-02 | P0 | ✅ 已注册，SaaS 模式下运行时验证通过 |
 
 ### 1.3 Auth 模块（新增）
@@ -138,9 +147,9 @@
 | ASYNC-01 | 引入 Redis + Celery | Sprint 1 DB | P0 | ✅ `core/celery_app.py` + 依赖已加 |
 | ASYNC-02 | RunManager 适配异步 worker | ASYNC-01 | P0 | ✅ `modules/runs/tasks.py` 投递执行 |
 | ASYNC-03 | EventBus → Redis Pub/Sub | ASYNC-01 | P0 | ✅ `core/engine/event_bus.py` |
-| ASYNC-04 | 协作状态条（锁定/在线成员/变更闪烁） | FE 地基 | P1 | 🟡 已有真实状态条（当前用户+自动保存），无在线成员/锁 |
-| ASYNC-05 | 版本 Review 视图（Draft → Ready → Published） | Sprint 1 ADAPT | P1 | 🟡 有 draft/ready、版本抽屉与发布动作；无独立 Published 状态 |
-| ASYNC-06 | 审计日志模块 + 查询 API | Sprint 1 | P1 | 🟡 模块/API 完成，登录/工作空间/工作流手动记录；无统一中间件 |
+| ASYNC-04 | 协作状态条（锁定/在线成员/变更闪烁） | FE 地基 | P1 | 🟡 已决定暂缓：现有状态条可显示当前用户与自动保存；在线成员/锁依赖 Redis TTL 与跨实例广播，建议随 Sprint 5 的 Redis 部署一起做；无下游任务依赖 |
+| ASYNC-05 | 版本 Review 视图（Draft → Ready → Published） | Sprint 1 ADAPT | P1 | ✅ 发布状态独立字段 + publish/unpublish API；编辑器状态条与版本抽屉支持发布/取消发布/标记已发布版本 |
+| ASYNC-06 | 审计日志模块 + 查询 API | Sprint 1 | P1 | ✅ 模块/API/前端页面 + `AuditMiddleware` 统一记录写操作；失败与只读请求不落库 |
 | FE-10 | 导航结构重设计（顶栏 + 侧栏） | FE 地基 | P0 | ✅ 已按原型分组侧栏 + 顶栏 |
 | FE-11 | Dashboard 概览页 | Sprint 1 | P1 | ✅ 今日焦点/KPI/趋势/Token 分布/热门工作流/最近运行 |
 
@@ -150,7 +159,7 @@
 
 | ID | 任务 | 依赖 | 优先级 | 状态 |
 |----|------|------|--------|------|
-| GATE-01 | AI Gateway：ModelRouter + 路由策略 + 预算追踪 | providers 适配 | P0 | ⛔ 后端未实现 |
+| GATE-01 | AI Gateway：ModelRouter + 路由策略 + 预算追踪 | providers 适配 | P0 | ✅ `modules/gateway/`（config/routes/usage/resolve）+ `core/providers/router.py`；运行与单节点调试按策略路由，预算硬停机拦截 LLM/EXTRACT；迁移 0012 |
 | GATE-02 | AI Gateway UI | GATE-01 | P0 | 🟡 预算/路由/性能页已完成，但数据为示例占位 |
 | GATE-03 | 运行详情四 Tab | runs 模块 | P0 | ✅ 概览/节点执行/成本分析/调试诊断 |
 | GATE-04 | 诊断 Tab：失败分类 + 根因 + 修复建议 | GATE-03 | P1 | 🟡 前端规则分类 + 建议已完成；无自动根因分析 |
@@ -210,9 +219,10 @@ return os.environ.get("TENANCY_ENABLED", "false").lower() in ("1", "true", "yes"
 
 ### 其他建议
 
-- **Sprint 3**：补 `ModelRouter` + 预算追踪后端，用真实数据替换 Gateway 占位；再评估 Webhook 触发与 SubWorkflow。
+- **Sprint 3**：GATE-02 把 Gateway UI 接到 `/api/v1/gateway`（配置/路由/用量/resolve），替换示例数据；再评估 Webhook 触发（TRIGGER-01）与 SubWorkflow（TRIGGER-02）。
 - **Sprint 4**：先做 BILL-01 计量中间件，再接入 Stripe；模板市场从 7 个内置模板扩到 30+。
 - **Sprint 5**：新增 `deploy/`（Dockerfile + docker-compose + nginx），补齐私有化部署与用户手册。
+- **ASYNC-04（延后）**：随 Sprint 5 的 Redis 一起做「在线成员 + 编辑锁」；变更闪烁/在线光标需要按 workflow 的 SSE 通道，单独立项。落地前同一工作流按单人编辑使用，避免 last-write-wins 覆盖。
 - **DB-05**：统一补 `updated_by` / `deleted_at` 与软删查询，避免后续商业化阶段再改表。
 - **POLISH-01**：在 PropertyPanel 增加 Token 估算、变量预览与 JSON Schema 校验。
 

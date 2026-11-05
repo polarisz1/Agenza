@@ -170,12 +170,23 @@ _FILTER_INSTALLED_ATTR = "_agentflow_tenant_filter_installed"
 def _tenant_scoped_models() -> list:
     """延迟导入模型，避免 tenancy ↔ models ↔ database 的循环依赖。"""
     from app.modules.audit.models import AuditLog
+    from app.modules.gateway.models import GatewayConfig, GatewayRoute
     from app.modules.providers.models import Provider
     from app.modules.runs.models import NodeRun, Run
     from app.modules.settings.models import AppSetting
     from app.modules.workflows.models import Workflow, WorkflowVersion
 
-    return [Workflow, WorkflowVersion, Run, NodeRun, Provider, AppSetting, AuditLog]
+    return [
+        Workflow,
+        WorkflowVersion,
+        Run,
+        NodeRun,
+        Provider,
+        AppSetting,
+        AuditLog,
+        GatewayConfig,
+        GatewayRoute,
+    ]
 
 
 def install_tenant_query_filter() -> None:
