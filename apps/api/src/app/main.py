@@ -132,6 +132,7 @@ from app.modules.providers.router import router as providers_router
 from app.modules.runs.router import router as runs_router
 from app.modules.settings.router import router as settings_router
 from app.modules.triggers.router import router as triggers_router
+from app.modules.triggers.router import webhook_router
 from app.modules.workflows.router import router as workflows_router
 from app.modules.workspaces.router import router as workspaces_router
 
@@ -146,6 +147,7 @@ app.include_router(providers_router, prefix="/api/v1/providers", tags=["v1-provi
 app.include_router(settings_router, prefix="/api/v1/settings", tags=["v1-settings"])
 app.include_router(gateway_router, prefix="/api/v1", tags=["v1-gateway"])
 app.include_router(triggers_router, prefix="/api/v1", tags=["v1-triggers"])
+app.include_router(webhook_router, prefix="/api/v1", tags=["v1-webhooks"])
 
 # 桌面版同样通过 /api/* 访问（gateway 只有 v1 一套路由）
 app.include_router(gateway_router, prefix="/api", tags=["gateway"])

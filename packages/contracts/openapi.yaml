@@ -3425,6 +3425,317 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/triggers:
+    get:
+      tags:
+      - v1-triggers
+      - triggers
+      summary: List Triggers
+      operationId: list_triggers_api_v1_triggers_get
+      parameters:
+      - name: workflow_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workflow Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WebhookTriggerListData_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - v1-triggers
+      - triggers
+      summary: Create Trigger
+      operationId: create_trigger_api_v1_triggers_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookTriggerCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WebhookTriggerCreated_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/triggers/{trigger_id}:
+    patch:
+      tags:
+      - v1-triggers
+      - triggers
+      summary: Update Trigger
+      operationId: update_trigger_api_v1_triggers__trigger_id__patch
+      parameters:
+      - name: trigger_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Trigger Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookTriggerUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WebhookTriggerItem_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+      - v1-triggers
+      - triggers
+      summary: Delete Trigger
+      operationId: delete_trigger_api_v1_triggers__trigger_id__delete
+      parameters:
+      - name: trigger_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Trigger Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_DeleteResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/triggers/{trigger_id}/rotate-secret:
+    post:
+      tags:
+      - v1-triggers
+      - triggers
+      summary: Rotate Trigger Secret
+      operationId: rotate_trigger_secret_api_v1_triggers__trigger_id__rotate_secret_post
+      parameters:
+      - name: trigger_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Trigger Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WebhookTriggerCreated_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/webhooks/{trigger_id}:
+    post:
+      tags:
+      - v1-webhooks
+      - webhooks
+      summary: Receive Webhook
+      operationId: receive_webhook_api_v1_webhooks__trigger_id__post
+      parameters:
+      - name: trigger_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Trigger Id
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_TriggerRunResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/gateway/config:
     get:
       tags:
@@ -6538,6 +6849,54 @@ components:
       required:
       - data
       title: ApiResponse[ValidateResult]
+    ApiResponse_WebhookTriggerCreated_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/WebhookTriggerCreated'
+      type: object
+      required:
+      - data
+      title: ApiResponse[WebhookTriggerCreated]
+    ApiResponse_WebhookTriggerItem_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/WebhookTriggerItem'
+      type: object
+      required:
+      - data
+      title: ApiResponse[WebhookTriggerItem]
+    ApiResponse_WebhookTriggerListData_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/WebhookTriggerListData'
+      type: object
+      required:
+      - data
+      title: ApiResponse[WebhookTriggerListData]
     ApiResponse_WorkflowImportResult_:
       properties:
         code:
@@ -8910,6 +9269,156 @@ components:
       - msg
       - type
       title: ValidationError
+    WebhookTriggerCreate:
+      properties:
+        workflow_id:
+          type: string
+          title: Workflow Id
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Name
+        input_mapping:
+          anyOf:
+          - additionalProperties:
+              type: string
+            type: object
+          - type: 'null'
+          title: Input Mapping
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+      type: object
+      required:
+      - workflow_id
+      - name
+      title: WebhookTriggerCreate
+    WebhookTriggerCreated:
+      properties:
+        id:
+          type: string
+          title: Id
+        workflow_id:
+          type: string
+          title: Workflow Id
+        name:
+          type: string
+          title: Name
+        enabled:
+          type: boolean
+          title: Enabled
+        input_mapping:
+          anyOf:
+          - additionalProperties:
+              type: string
+            type: object
+          - type: 'null'
+          title: Input Mapping
+        webhook_path:
+          type: string
+          title: Webhook Path
+        last_triggered_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Triggered At
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        secret:
+          type: string
+          title: Secret
+      type: object
+      required:
+      - id
+      - workflow_id
+      - name
+      - enabled
+      - webhook_path
+      - created_at
+      - secret
+      title: WebhookTriggerCreated
+    WebhookTriggerItem:
+      properties:
+        id:
+          type: string
+          title: Id
+        workflow_id:
+          type: string
+          title: Workflow Id
+        name:
+          type: string
+          title: Name
+        enabled:
+          type: boolean
+          title: Enabled
+        input_mapping:
+          anyOf:
+          - additionalProperties:
+              type: string
+            type: object
+          - type: 'null'
+          title: Input Mapping
+        webhook_path:
+          type: string
+          title: Webhook Path
+        last_triggered_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Triggered At
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - workflow_id
+      - name
+      - enabled
+      - webhook_path
+      - created_at
+      title: WebhookTriggerItem
+    WebhookTriggerListData:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/WebhookTriggerItem'
+          type: array
+          title: Items
+      type: object
+      required:
+      - items
+      title: WebhookTriggerListData
+    WebhookTriggerUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 200
+            minLength: 1
+          - type: 'null'
+          title: Name
+        input_mapping:
+          anyOf:
+          - additionalProperties:
+              type: string
+            type: object
+          - type: 'null'
+          title: Input Mapping
+        enabled:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Enabled
+      type: object
+      title: WebhookTriggerUpdate
     WorkflowCreate:
       properties:
         name:

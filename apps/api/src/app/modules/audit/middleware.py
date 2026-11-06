@@ -169,6 +169,17 @@ _RULES: tuple[AuditRule, ...] = (
         "trigger.http",
         "workflow",
     ),
+    _rule("POST", r"/api/v1/triggers", "trigger.create", "trigger", id_group=None),
+    _rule("PATCH", r"/api/v1/triggers/(?P<resource_id>[^/]+)", "trigger.update", "trigger"),
+    _rule("DELETE", r"/api/v1/triggers/(?P<resource_id>[^/]+)", "trigger.delete", "trigger"),
+    _rule(
+        "POST",
+        r"/api/v1/triggers/(?P<resource_id>[^/]+)/rotate-secret",
+        "trigger.rotate_secret",
+        "trigger",
+    ),
+    # Webhook 投递：resource_id 是触发器；租户上下文由服务层验签后注入
+    _rule("POST", r"/api/v1/webhooks/(?P<resource_id>[^/]+)", "trigger.webhook", "trigger"),
 )
 
 _MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})

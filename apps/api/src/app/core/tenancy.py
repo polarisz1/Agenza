@@ -187,7 +187,7 @@ def _tenant_scoped_models() -> list:
     from app.modules.providers.models import Provider
     from app.modules.runs.models import NodeRun, Run, RunDeepAnalysis
     from app.modules.settings.models import AppSetting
-    from app.modules.triggers.models import TriggerRequest
+    from app.modules.triggers.models import TriggerRequest, WorkflowTrigger
     from app.modules.workflows.models import Workflow, WorkflowVersion
 
     return [
@@ -202,6 +202,7 @@ def _tenant_scoped_models() -> list:
         GatewayConfig,
         GatewayRoute,
         TriggerRequest,
+        WorkflowTrigger,
     ]
 
 

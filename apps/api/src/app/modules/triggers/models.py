@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
 
 from app.core.time import utcnow
 from app.db.audit import AuditMixin
@@ -16,6 +16,37 @@ from app.db.database import Base
 
 def _request_id() -> str:
     return f"trq_{uuid4().hex[:12]}"
+
+
+def _trigger_id() -> str:
+    return f"trg_{uuid4().hex[:12]}"
+
+
+class WorkflowTrigger(AuditMixin, Base):
+    """TRIGGER-01 Phase C：工作流级 Webhook 触发器。
+
+    secret 用 Fernet 加密存储（HMAC 需要原始密钥，不能只存哈希）；
+    明文只在创建/轮换时返回一次。
+    """
+
+    __tablename__ = "workflow_trigger"
+
+    id = Column(String(32), primary_key=True, default=_trigger_id)
+    workspace_id = Column(String(36), ForeignKey("workspace.id"), nullable=False, index=True)
+    workflow_id = Column(String(32), nullable=False, index=True)
+    name = Column(String(200), nullable=False)
+    kind = Column(String(20), default="webhook")
+    secret_enc = Column(Text, nullable=False)
+    # JSON: {"workflow_input_key": "$.payload.path"}；为空表示请求体本身就是 inputs
+    input_mapping = Column(Text, nullable=True)
+    enabled = Column(Boolean, default=True)
+    last_triggered_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    __table_args__ = (
+        Index("ix_workflow_trigger_workspace_workflow", "workspace_id", "workflow_id"),
+    )
 
 
 class TriggerRequest(AuditMixin, Base):
