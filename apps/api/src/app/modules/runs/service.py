@@ -29,6 +29,7 @@ from app.modules.runs.schemas import (
     NodeRunDetail,
     RunCompareResult,
     RunDetail,
+    RunDiagnosisResponse,
     RunListItem,
     RunResponse,
 )
@@ -336,6 +337,16 @@ class RunService:
             }
             for model, status, calls, tokens_in, tokens_out, avg_duration in rows
         ]
+
+    @staticmethod
+    def diagnose(session: Session, run_id: str) -> RunDiagnosisResponse | None:
+        """GATE-04：基于错误文本 + 节点配置做确定性根因分析（不调用模型）。"""
+        from app.modules.runs.diagnosis import build_run_diagnosis
+
+        run = RunRepository.get(session, run_id)
+        if run is None:
+            return None
+        return build_run_diagnosis(run, RunRepository.list_node_runs(session, run_id))
 
     @staticmethod
     def count(session: Session) -> int:

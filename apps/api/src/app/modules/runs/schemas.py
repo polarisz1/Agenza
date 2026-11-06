@@ -93,3 +93,58 @@ class RunCompareResult(BaseModel):
     a: RunDetail
     b: RunDetail
     nodes: list[CompareNode] = []
+
+
+# ── GATE-04：自动根因分析（确定性规则） ─────────────────────────
+
+
+DiagnosisCategory = Literal[
+    "budget",
+    "auth",
+    "model_not_found",
+    "rate_limit",
+    "timeout",
+    "network",
+    "provider",
+    "json_format",
+    "missing_fields",
+    "variable",
+    "script",
+    "upstream",
+    "internal",
+    "unknown",
+]
+
+
+class DiagnosisEvidence(BaseModel):
+    label: str
+    value: str
+
+
+class DiagnosisSuggestion(BaseModel):
+    text: str
+    # 前端可据此决定按钮/跳转：edit_prompt | open_node | retry_node | open_models | open_gateway
+    action: str | None = None
+
+
+class NodeDiagnosis(BaseModel):
+    node_id: str
+    node_name: str
+    node_type: str
+    status: str
+    category: DiagnosisCategory
+    severity: Literal["blocking", "warning"]
+    title: str
+    root_cause: str
+    confidence: float
+    evidence: list[DiagnosisEvidence] = []
+    suggestions: list[DiagnosisSuggestion] = []
+
+
+class RunDiagnosisResponse(BaseModel):
+    run_id: str
+    workflow_id: str
+    status: str
+    generated_at: datetime
+    items: list[NodeDiagnosis] = []
+

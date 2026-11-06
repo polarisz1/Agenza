@@ -7,6 +7,10 @@ import json
 from collections.abc import AsyncIterator
 from datetime import datetime
 
+from fastapi import APIRouter, Depends, Header, Query
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+
 from app.api_deps import get_session
 from app.core.engine.event_bus import get_event_bus
 from app.core.exceptions import AppError
@@ -18,13 +22,11 @@ from app.modules.runs.schemas import (
     RunCompareResult,
     RunCreate,
     RunDetail,
+    RunDiagnosisResponse,
     RunListData,
     RunResponse,
 )
 from app.modules.runs.service import RunService
-from fastapi import APIRouter, Depends, Header, Query
-from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
 
 router = APIRouter(responses=ERROR_RESPONSES)
 
@@ -93,6 +95,15 @@ def get_node_run(run_id: str, node_id: str, session: Session = Depends(get_sessi
     if not nr:
         raise AppError(404, "Node run not found")
     return success(nr)
+
+
+@router.get("/{run_id}/diagnosis", response_model=ApiResponse[RunDiagnosisResponse])
+def diagnose_run(run_id: str, session: Session = Depends(get_session)):
+    """GATE-04：确定性根因分析（不调用模型，失败节点 + 运行级兜底）。"""
+    result = RunService.diagnose(session, run_id)
+    if result is None:
+        raise AppError(404, "Run not found")
+    return success(result)
 
 
 @router.post("/{run_id}/cancel", response_model=ApiResponse[CancelResult])

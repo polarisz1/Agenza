@@ -1940,6 +1940,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/runs/{run_id}/diagnosis:
+    get:
+      tags:
+      - v1-runs
+      summary: Diagnose Run
+      description: GATE-04：确定性根因分析（不调用模型，失败节点 + 运行级兜底）。
+      operationId: diagnose_run_api_v1_runs__run_id__diagnosis_get
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Run Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_RunDiagnosisResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/runs/{run_id}/cancel:
     post:
       tags:
@@ -4607,6 +4658,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/runs/{run_id}/diagnosis:
+    get:
+      tags:
+      - runs
+      summary: Diagnose Run
+      description: GATE-04：确定性根因分析（不调用模型，失败节点 + 运行级兜底）。
+      operationId: diagnose_run_api_runs__run_id__diagnosis_get
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Run Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_RunDiagnosisResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/runs/{run_id}/cancel:
     post:
       tags:
@@ -5680,6 +5782,22 @@ components:
       required:
       - data
       title: ApiResponse[RunDetail]
+    ApiResponse_RunDiagnosisResponse_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/RunDiagnosisResponse'
+      type: object
+      required:
+      - data
+      title: ApiResponse[RunDiagnosisResponse]
     ApiResponse_RunListData_:
       properties:
         code:
@@ -6117,6 +6235,33 @@ components:
           default: true
       type: object
       title: DeleteResult
+    DiagnosisEvidence:
+      properties:
+        label:
+          type: string
+          title: Label
+        value:
+          type: string
+          title: Value
+      type: object
+      required:
+      - label
+      - value
+      title: DiagnosisEvidence
+    DiagnosisSuggestion:
+      properties:
+        text:
+          type: string
+          title: Text
+        action:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Action
+      type: object
+      required:
+      - text
+      title: DiagnosisSuggestion
     DuplicateResult:
       properties:
         id:
@@ -6929,6 +7074,77 @@ components:
       - id
       - name
       title: MergeNode
+    NodeDiagnosis:
+      properties:
+        node_id:
+          type: string
+          title: Node Id
+        node_name:
+          type: string
+          title: Node Name
+        node_type:
+          type: string
+          title: Node Type
+        status:
+          type: string
+          title: Status
+        category:
+          type: string
+          enum:
+          - budget
+          - auth
+          - model_not_found
+          - rate_limit
+          - timeout
+          - network
+          - provider
+          - json_format
+          - missing_fields
+          - variable
+          - script
+          - upstream
+          - internal
+          - unknown
+          title: Category
+        severity:
+          type: string
+          enum:
+          - blocking
+          - warning
+          title: Severity
+        title:
+          type: string
+          title: Title
+        root_cause:
+          type: string
+          title: Root Cause
+        confidence:
+          type: number
+          title: Confidence
+        evidence:
+          items:
+            $ref: '#/components/schemas/DiagnosisEvidence'
+          type: array
+          title: Evidence
+          default: []
+        suggestions:
+          items:
+            $ref: '#/components/schemas/DiagnosisSuggestion'
+          type: array
+          title: Suggestions
+          default: []
+      type: object
+      required:
+      - node_id
+      - node_name
+      - node_type
+      - status
+      - category
+      - severity
+      - title
+      - root_cause
+      - confidence
+      title: NodeDiagnosis
     NodeRunDetail:
       properties:
         id:
@@ -7446,6 +7662,34 @@ components:
       - trigger
       - started_at
       title: RunDetail
+    RunDiagnosisResponse:
+      properties:
+        run_id:
+          type: string
+          title: Run Id
+        workflow_id:
+          type: string
+          title: Workflow Id
+        status:
+          type: string
+          title: Status
+        generated_at:
+          type: string
+          format: date-time
+          title: Generated At
+        items:
+          items:
+            $ref: '#/components/schemas/NodeDiagnosis'
+          type: array
+          title: Items
+          default: []
+      type: object
+      required:
+      - run_id
+      - workflow_id
+      - status
+      - generated_at
+      title: RunDiagnosisResponse
     RunListData:
       properties:
         items:

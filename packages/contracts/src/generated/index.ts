@@ -493,6 +493,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/runs/{run_id}/diagnosis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Diagnose Run
+         * @description GATE-04：确定性根因分析（不调用模型，失败节点 + 运行级兜底）。
+         */
+        get: operations["diagnose_run_api_v1_runs__run_id__diagnosis_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runs/{run_id}/cancel": {
         parameters: {
             query?: never;
@@ -1253,6 +1273,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs/{run_id}/diagnosis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Diagnose Run
+         * @description GATE-04：确定性根因分析（不调用模型，失败节点 + 运行级兜底）。
+         */
+        get: operations["diagnose_run_api_runs__run_id__diagnosis_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs/{run_id}/cancel": {
         parameters: {
             query?: never;
@@ -1786,6 +1826,20 @@ export interface components {
             message: string;
             data: components["schemas"]["RunDetail"];
         };
+        /** ApiResponse[RunDiagnosisResponse] */
+        ApiResponse_RunDiagnosisResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            /**
+             * Message
+             * @default ok
+             */
+            message: string;
+            data: components["schemas"]["RunDiagnosisResponse"];
+        };
         /** ApiResponse[RunListData] */
         ApiResponse_RunListData_: {
             /**
@@ -2123,6 +2177,20 @@ export interface components {
              * @default true
              */
             deleted: boolean;
+        };
+        /** DiagnosisEvidence */
+        DiagnosisEvidence: {
+            /** Label */
+            label: string;
+            /** Value */
+            value: string;
+        };
+        /** DiagnosisSuggestion */
+        DiagnosisSuggestion: {
+            /** Text */
+            text: string;
+            /** Action */
+            action?: string | null;
         };
         /** DuplicateResult */
         DuplicateResult: {
@@ -2716,6 +2784,43 @@ export interface components {
             type: "merge";
             config?: components["schemas"]["MergeConfig"];
         };
+        /** NodeDiagnosis */
+        NodeDiagnosis: {
+            /** Node Id */
+            node_id: string;
+            /** Node Name */
+            node_name: string;
+            /** Node Type */
+            node_type: string;
+            /** Status */
+            status: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "budget" | "auth" | "model_not_found" | "rate_limit" | "timeout" | "network" | "provider" | "json_format" | "missing_fields" | "variable" | "script" | "upstream" | "internal" | "unknown";
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "blocking" | "warning";
+            /** Title */
+            title: string;
+            /** Root Cause */
+            root_cause: string;
+            /** Confidence */
+            confidence: number;
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: components["schemas"]["DiagnosisEvidence"][];
+            /**
+             * Suggestions
+             * @default []
+             */
+            suggestions: components["schemas"]["DiagnosisSuggestion"][];
+        };
         /** NodeRunDetail */
         NodeRunDetail: {
             /** Id */
@@ -3065,6 +3170,25 @@ export interface components {
              * @default []
              */
             nodes: components["schemas"]["NodeRunDetail"][];
+        };
+        /** RunDiagnosisResponse */
+        RunDiagnosisResponse: {
+            /** Run Id */
+            run_id: string;
+            /** Workflow Id */
+            workflow_id: string;
+            /** Status */
+            status: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["NodeDiagnosis"][];
         };
         /** RunListData */
         RunListData: {
@@ -5965,6 +6089,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_NodeRunDetail_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    diagnose_run_api_v1_runs__run_id__diagnosis_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_RunDiagnosisResponse_"];
                 };
             };
             /** @description 业务错误（参数非法 / 状态不允许） */
@@ -9415,6 +9606,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_NodeRunDetail_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    diagnose_run_api_runs__run_id__diagnosis_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_RunDiagnosisResponse_"];
                 };
             };
             /** @description 业务错误（参数非法 / 状态不允许） */
