@@ -7,6 +7,7 @@ import {
   Modal,
   Popconfirm,
   Space,
+  Spin,
   Switch,
   Table,
   Tag,
@@ -31,7 +32,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import EmptyState from '@/shared/components/EmptyState';
 import PageHeader from '@/shared/components/PageHeader';
-import { Card, ComingSoon, SectionHeader, StatCard } from '@/shared/components/ui';
+import { Card, SectionHeader, StatCard } from '@/shared/components/ui';
 import {
   clearRuns,
   exportBackup,
@@ -42,6 +43,7 @@ import {
   updateSettings,
 } from '../api';
 import type { SettingsResponse, SystemInfo, WorkflowImportResult, WorkspaceSummary } from '../api';
+import ApiKeysPanel from './ApiKeysPanel';
 import './AppSettings.css';
 
 type Section = 'overview' | 'workspace' | 'data' | 'system' | 'billing' | 'integrations' | 'danger';
@@ -414,11 +416,31 @@ export default function AppSettings() {
           )}
 
           {section === 'integrations' && (
-            <ComingSoon
-              title="Webhook / API Key 正在建设中"
-              description="这里将支持对外 API Key 管理、Webhook 回调地址与签名校验、SSO / SAML 单点登录。"
-              notes={['API Key', 'Webhook 回调', 'SSO / SAML']}
-            />
+            <Card padded>
+              <SectionHeader
+                title="Webhook / API Key"
+                description="外部系统触发工作流：API Key 用于 HTTP 触发，Webhook 触发器按工作流配置"
+              />
+              {wsId && !workspace ? (
+                <div style={{ padding: 32, textAlign: 'center' }}>
+                  <Spin />
+                </div>
+              ) : (
+                <ApiKeysPanel canManage={!wsId || workspace?.my_role === 'owner'} />
+              )}
+              <Alert
+                type="info"
+                showIcon
+                style={{ marginTop: 16 }}
+                message="Webhook 触发器在工作流编辑器中配置"
+                description="每个触发器有独立 Secret，公网请求需携带 HMAC-SHA256 签名；也可以直接用 API Key 调用 HTTP 触发。"
+                action={
+                  <Button size="small" onClick={() => navigate(`${wsPrefix}/workflows`)}>
+                    前往工作流
+                  </Button>
+                }
+              />
+            </Card>
           )}
 
           {section === 'danger' && (

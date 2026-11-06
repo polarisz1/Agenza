@@ -133,6 +133,10 @@ export const http = {
     return http.post<T>(url, body, { method: 'PUT' });
   },
 
+  patch: async <T>(url: string, body?: unknown): Promise<T> => {
+    return http.post<T>(url, body, { method: 'PATCH' });
+  },
+
   delete: async <T>(url: string): Promise<T> => {
     const authInit = await withAuth({ method: 'DELETE' });
     return request<T>(url, authInit);

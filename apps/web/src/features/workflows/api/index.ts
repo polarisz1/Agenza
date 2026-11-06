@@ -15,6 +15,10 @@ export type WorkflowImportItem = components['schemas']['WorkflowImportItem'];
 export type WorkflowImportResult = components['schemas']['WorkflowImportResult'];
 export type WorkflowVersionItem = components['schemas']['WorkflowVersionItem'];
 export type WorkflowVersionDetail = components['schemas']['WorkflowVersionDetail'];
+export type WebhookTriggerItem = components['schemas']['WebhookTriggerItem'];
+export type WebhookTriggerCreated = components['schemas']['WebhookTriggerCreated'];
+export type WebhookTriggerCreate = components['schemas']['WebhookTriggerCreate'];
+export type WebhookTriggerUpdate = components['schemas']['WebhookTriggerUpdate'];
 
 type WorkflowListData = ApiData<'/api/v1/workflows', 'get'>;
 type RunListData = ApiData<'/api/v1/runs', 'get'>;
@@ -201,4 +205,40 @@ export function toEditorPreferences(settings: { auto_save?: unknown } | null): E
 export async function getEditorPreferences(): Promise<EditorPreferences> {
   const settings = await http.get<components['schemas']['SettingsResponse']>('/api/v1/settings');
   return toEditorPreferences(settings);
+}
+
+// ---- Webhook 触发器（TRIGGER-01 Phase E，编辑器内管理） ----
+
+export async function listWebhookTriggers(workflowId: string): Promise<WebhookTriggerItem[]> {
+  const data = await http.get<ApiData<'/api/v1/triggers', 'get'>>(
+    `/api/v1/triggers?workflow_id=${encodeURIComponent(workflowId)}`,
+  );
+  return data.items ?? [];
+}
+
+/** 创建后 `secret` 只返回一次，前端必须在关闭弹窗后丢弃 */
+export async function createWebhookTrigger(
+  body: WebhookTriggerCreate,
+): Promise<WebhookTriggerCreated> {
+  return http.post<WebhookTriggerCreated>('/api/v1/triggers', body);
+}
+
+export async function updateWebhookTrigger(
+  triggerId: string,
+  body: WebhookTriggerUpdate,
+): Promise<WebhookTriggerItem> {
+  return http.patch<WebhookTriggerItem>(`/api/v1/triggers/${encodeURIComponent(triggerId)}`, body);
+}
+
+export async function rotateWebhookTriggerSecret(
+  triggerId: string,
+): Promise<WebhookTriggerCreated> {
+  return http.post<WebhookTriggerCreated>(
+    `/api/v1/triggers/${encodeURIComponent(triggerId)}/rotate-secret`,
+    {},
+  );
+}
+
+export async function deleteWebhookTrigger(triggerId: string): Promise<void> {
+  await http.delete(`/api/v1/triggers/${encodeURIComponent(triggerId)}`);
 }

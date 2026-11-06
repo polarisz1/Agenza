@@ -1,0 +1,137 @@
+/* AgentFlow · Webhook 触发器抽屉 */
+
+.afe-trig-drawer .ant-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.afe-trig-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.afe-trig-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.afe-trig-count {
+  color: var(--af-text-muted);
+  font-size: 12px;
+}
+
+.afe-trig-loading {
+  padding: 32px 0;
+  text-align: center;
+}
+
+.afe-trig-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.afe-trig-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--af-border);
+  border-radius: 8px;
+  background: var(--af-surface-card);
+}
+
+.afe-trig-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.afe-trig-name {
+  color: var(--af-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.afe-trig-head .ant-switch {
+  margin-left: auto;
+}
+
+.afe-trig-url {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.afe-trig-url code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--af-bg-primary);
+  color: var(--af-text-secondary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.afe-trig-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  color: var(--af-text-muted);
+  font-size: 11px;
+}
+
+.afe-trig-mapping {
+  color: var(--af-text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.afe-trig-mapping code {
+  color: var(--af-text-secondary);
+  word-break: break-all;
+}
+
+.afe-trig-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.afe-trig-field-label {
+  margin-top: 16px;
+  margin-bottom: 6px;
+  color: var(--af-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.afe-trig-help {
+  margin-bottom: 8px;
+  color: var(--af-text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.afe-trig-help code {
+  color: var(--af-text-secondary);
+}
+
+.afe-trig-mapping-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.afe-trig-mapping-row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr auto;
+  gap: 8px;
+  align-items: center;
+}

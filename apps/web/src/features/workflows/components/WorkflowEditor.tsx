@@ -9,6 +9,7 @@ import {
   GitBranch,
   Play,
   UploadSimple,
+  WebhooksLogo,
 } from '@phosphor-icons/react';
 import {
   Background,
@@ -58,6 +59,7 @@ import { useVariables } from '../hooks/useVariables';
 import { nodeTypes } from './nodes';
 import CommandPalette from './CommandPalette';
 import NodeLibrary from './NodeLibrary';
+import TriggerDrawer from './TriggerDrawer';
 import VersionDrawer from './VersionDrawer';
 import PropertyPanel from './PropertyPanel';
 import RunDrawer from './RunDrawer';
@@ -147,6 +149,7 @@ function EditorInner() {
   // F2：命令面板 / 节点搜索 / 右键菜单
   const [palette, setPalette] = useState<'command' | 'node' | null>(null);
   const [versionsOpen, setVersionsOpen] = useState(false);
+  const [triggersOpen, setTriggersOpen] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{
     x: number;
     y: number;
@@ -753,6 +756,15 @@ function EditorInner() {
             <GitBranch size={14} />
             版本
           </button>
+          <button
+            className="afe-btn"
+            onClick={() => setTriggersOpen(true)}
+            disabled={!workflowId}
+            title="管理 Webhook 触发器"
+          >
+            <WebhooksLogo size={14} />
+            触发器
+          </button>
           <button className="afe-btn" onClick={handleExport} disabled={loading}>
             <DownloadSimple size={14} />
             导出
@@ -1084,6 +1096,12 @@ function EditorInner() {
           setPalette(null);
           focusNode(nodeId);
         }}
+      />
+
+      <TriggerDrawer
+        open={triggersOpen}
+        workflowId={workflowId}
+        onClose={() => setTriggersOpen(false)}
       />
 
       <VersionDrawer

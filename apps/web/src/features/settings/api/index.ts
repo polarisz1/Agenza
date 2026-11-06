@@ -1,5 +1,5 @@
 ﻿import { apiUrl, http } from '@/shared/lib/http';
-import type { components } from '@agentflow/contracts';
+import type { ApiData, components } from '@agentflow/contracts';
 
 export type SettingsResponse = components['schemas']['SettingsResponse'];
 export type SettingsUpdate = components['schemas']['SettingsUpdate'];
@@ -7,6 +7,9 @@ export type SystemInfo = components['schemas']['SystemInfo'];
 export type ClearResult = components['schemas']['ClearResult'];
 export type WorkflowImportResult = components['schemas']['WorkflowImportResult'];
 export type WorkspaceSummary = components['schemas']['WorkspaceResponse'];
+export type ApiKeyItem = components['schemas']['ApiKeyItem'];
+export type ApiKeyCreateRequest = components['schemas']['ApiKeyCreateRequest'];
+export type ApiKeyCreateResponse = components['schemas']['ApiKeyCreateResponse'];
 
 export async function getSettings(): Promise<SettingsResponse> {
   return http.get<SettingsResponse>('/api/v1/settings');
@@ -55,4 +58,20 @@ export async function importWorkflows(
   confirm = false,
 ): Promise<WorkflowImportResult> {
   return http.post<WorkflowImportResult>('/api/v1/workflows/import', { payload, confirm });
+}
+
+// ── API Key（外部 HTTP 触发凭据，仅 owner 可管理） ────────────────
+
+export async function listApiKeys(): Promise<ApiKeyItem[]> {
+  const data = await http.get<ApiData<'/api/v1/api-keys', 'get'>>('/api/v1/api-keys');
+  return data.items ?? [];
+}
+
+/** 创建后 `raw_key` 只返回一次，前端必须在关闭弹窗后丢弃 */
+export async function createApiKey(body: ApiKeyCreateRequest): Promise<ApiKeyCreateResponse> {
+  return http.post<ApiKeyCreateResponse>('/api/v1/api-keys', body);
+}
+
+export async function revokeApiKey(keyId: string): Promise<void> {
+  await http.delete(`/api/v1/api-keys/${encodeURIComponent(keyId)}`);
 }
