@@ -1,6 +1,18 @@
 """Run module."""
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text, text
+from uuid import uuid4
+
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 
 from app.core.time import utcnow
 from app.db.audit import AuditMixin
@@ -66,3 +78,29 @@ class NodeRun(AuditMixin, Base):
     duration_ms = Column(Integer, default=0)
 
     __table_args__ = (Index("ix_node_run_workspace_run", "workspace_id", "run_id"),)
+
+
+def _analysis_id() -> str:
+    return f"rda_{uuid4().hex[:12]}"
+
+
+class RunDeepAnalysis(AuditMixin, Base):
+    """GATE-04 Phase 2：按需生成的一次 AI 深度分析结果（每个运行一条，兼作缓存）。"""
+
+    __tablename__ = "run_deep_analysis"
+
+    id = Column(String(32), primary_key=True, default=_analysis_id)
+    workspace_id = Column(String(36), ForeignKey("workspace.id"), nullable=True, index=True)
+    run_id = Column(String(32), nullable=False, index=True)
+    provider_id = Column(String(32), nullable=True)
+    model = Column(String(200), nullable=True)
+    content = Column(Text, nullable=False)
+    tokens_in = Column(Integer, default=0)
+    tokens_out = Column(Integer, default=0)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("run_id", name="uq_run_deep_analysis_run"),
+        Index("ix_run_deep_analysis_workspace_run", "workspace_id", "run_id"),
+    )

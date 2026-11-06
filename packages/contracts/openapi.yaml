@@ -1991,6 +1991,66 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/runs/{run_id}/diagnosis/deep:
+    post:
+      tags:
+      - v1-runs
+      summary: Deep Diagnose Run
+      description: GATE-04 Phase 2：按需 AI 深度分析（预算硬停机 + 结果缓存 + 发送前脱敏）。
+      operationId: deep_diagnose_run_api_v1_runs__run_id__diagnosis_deep_post
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Run Id
+      - name: refresh
+        in: query
+        required: false
+        schema:
+          type: boolean
+          description: 忽略缓存，重新调用模型分析
+          default: false
+          title: Refresh
+        description: 忽略缓存，重新调用模型分析
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_DeepDiagnosisResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/runs/{run_id}/cancel:
     post:
       tags:
@@ -4709,6 +4769,66 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/runs/{run_id}/diagnosis/deep:
+    post:
+      tags:
+      - runs
+      summary: Deep Diagnose Run
+      description: GATE-04 Phase 2：按需 AI 深度分析（预算硬停机 + 结果缓存 + 发送前脱敏）。
+      operationId: deep_diagnose_run_api_runs__run_id__diagnosis_deep_post
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Run Id
+      - name: refresh
+        in: query
+        required: false
+        schema:
+          type: boolean
+          description: 忽略缓存，重新调用模型分析
+          default: false
+          title: Refresh
+        description: 忽略缓存，重新调用模型分析
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_DeepDiagnosisResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/runs/{run_id}/cancel:
     post:
       tags:
@@ -5542,6 +5662,22 @@ components:
       required:
       - data
       title: ApiResponse[CurrentUserResponse]
+    ApiResponse_DeepDiagnosisResponse_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/DeepDiagnosisResponse'
+      type: object
+      required:
+      - data
+      title: ApiResponse[DeepDiagnosisResponse]
     ApiResponse_DeleteResult_:
       properties:
         code:
@@ -6227,6 +6363,55 @@ components:
       - user
       - workspaces
       title: CurrentUserResponse
+    DeepDiagnosisResponse:
+      properties:
+        run_id:
+          type: string
+          title: Run Id
+        workflow_id:
+          type: string
+          title: Workflow Id
+        status:
+          type: string
+          title: Status
+        analysis:
+          type: string
+          title: Analysis
+        provider_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider Id
+        model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+        tokens_in:
+          type: integer
+          title: Tokens In
+          default: 0
+        tokens_out:
+          type: integer
+          title: Tokens Out
+          default: 0
+        cached:
+          type: boolean
+          title: Cached
+          default: false
+        generated_at:
+          type: string
+          format: date-time
+          title: Generated At
+      type: object
+      required:
+      - run_id
+      - workflow_id
+      - status
+      - analysis
+      - generated_at
+      title: DeepDiagnosisResponse
+      description: AI 深度分析结果（GATE-04 Phase 2，按需调用模型）。
     DeleteResult:
       properties:
         deleted:

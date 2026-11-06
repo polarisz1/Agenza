@@ -22,7 +22,7 @@ from app.core.tenancy import get_tenant
 from app.core.time import utcnow
 from app.db.database import SessionLocal
 from app.modules.providers.service import build_registry
-from app.modules.runs.models import NodeRun, Run
+from app.modules.runs.models import NodeRun, Run, RunDeepAnalysis
 from app.modules.runs.repository import RunRepository
 from app.modules.runs.schemas import (
     CompareNode,
@@ -326,7 +326,7 @@ class RunService:
             .group_by(NodeRun.model, NodeRun.status)
             .all()
         )
-        return [
+        result = [
             {
                 "model": model,
                 "status": status,
@@ -337,6 +337,35 @@ class RunService:
             }
             for model, status, calls, tokens_in, tokens_out, avg_duration in rows
         ]
+
+        # GATE-04 Phase 2：AI 深度分析同样消耗 Token，计入预算口径
+        deep_rows = (
+            session.query(
+                RunDeepAnalysis.model,
+                func.count(RunDeepAnalysis.id),
+                func.sum(RunDeepAnalysis.tokens_in),
+                func.sum(RunDeepAnalysis.tokens_out),
+            )
+            .filter(
+                RunDeepAnalysis.model.isnot(None),
+                RunDeepAnalysis.deleted_at.is_(None),
+                RunDeepAnalysis.created_at >= since,
+            )
+            .group_by(RunDeepAnalysis.model)
+            .all()
+        )
+        result.extend(
+            {
+                "model": model,
+                "status": "success",
+                "calls": calls or 0,
+                "tokens_in": int(tokens_in or 0),
+                "tokens_out": int(tokens_out or 0),
+                "avg_duration_ms": 0.0,
+            }
+            for model, calls, tokens_in, tokens_out in deep_rows
+        )
+        return result
 
     @staticmethod
     def diagnose(session: Session, run_id: str) -> RunDiagnosisResponse | None:
@@ -403,9 +432,7 @@ def _to_node_detail(nr: NodeRun) -> NodeRunDetail:
 # ---- Engine callbacks（每次独立 Session，避免复用已关闭的请求级 Session）----
 
 
-def _make_node_started(
-    run_id: str, workspace_id: str | None, triggered_by: str | None = None
-):
+def _make_node_started(run_id: str, workspace_id: str | None, triggered_by: str | None = None):
     async def _on_node_started(node_id: str, node: dict, node_input: dict | None = None) -> None:
         nr_id = f"nr_{uuid.uuid4().hex[:14]}"
         node_type = node.get("type") or "unknown"
@@ -441,9 +468,7 @@ def _make_node_started(
     return _on_node_started
 
 
-def _make_node_finished(
-    run_id: str, workspace_id: str | None, triggered_by: str | None = None
-):
+def _make_node_finished(run_id: str, workspace_id: str | None, triggered_by: str | None = None):
     async def _on_node_finished(
         node_id: str, node: dict, result: NodeResult, duration_ms: int
     ) -> None:

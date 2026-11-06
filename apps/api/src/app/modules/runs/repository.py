@@ -10,7 +10,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.core.tenancy import get_tenant, get_workspace_id
-from app.modules.runs.models import NodeRun, Run
+from app.modules.runs.models import NodeRun, Run, RunDeepAnalysis
 
 
 def _ws_id() -> str | None:
@@ -41,9 +41,7 @@ class RunRepository:
 
     @staticmethod
     def get(session: Session, run_id: str) -> Run | None:
-        q = session.query(Run).filter(
-            Run.id == run_id, Run.deleted_at.is_(None)
-        )
+        q = session.query(Run).filter(Run.id == run_id, Run.deleted_at.is_(None))
         ws = _ws_id()
         if ws is not None:
             q = q.filter(Run.workspace_id == ws)
@@ -101,9 +99,7 @@ class RunRepository:
 
     @staticmethod
     def list_node_runs(session: Session, run_id: str) -> list[NodeRun]:
-        q = session.query(NodeRun).filter(
-            NodeRun.run_id == run_id, NodeRun.deleted_at.is_(None)
-        )
+        q = session.query(NodeRun).filter(NodeRun.run_id == run_id, NodeRun.deleted_at.is_(None))
         ws = _ws_id()
         if ws is not None:
             q = q.filter(NodeRun.workspace_id == ws)
@@ -130,6 +126,9 @@ class RunRepository:
         run_ids = [r.id for r in run_q.all()]
         if run_ids:
             session.query(NodeRun).filter(NodeRun.run_id.in_(run_ids)).delete(
+                synchronize_session=False
+            )
+            session.query(RunDeepAnalysis).filter(RunDeepAnalysis.run_id.in_(run_ids)).delete(
                 synchronize_session=False
             )
         session.query(Run).filter(Run.id.in_(run_ids)).delete(synchronize_session=False)
@@ -168,6 +167,9 @@ class RunRepository:
             session.query(NodeRun).filter(NodeRun.run_id.in_(run_ids)).delete(
                 synchronize_session=False
             )
+            session.query(RunDeepAnalysis).filter(RunDeepAnalysis.run_id.in_(run_ids)).delete(
+                synchronize_session=False
+            )
             session.query(Run).filter(Run.id.in_(run_ids)).delete(synchronize_session=False)
         session.flush()
         return count
@@ -185,5 +187,44 @@ class RunRepository:
             session.query(NodeRun).filter(NodeRun.run_id.in_(actual_ids)).delete(
                 synchronize_session=False
             )
+            session.query(RunDeepAnalysis).filter(RunDeepAnalysis.run_id.in_(actual_ids)).delete(
+                synchronize_session=False
+            )
             session.query(Run).filter(Run.id.in_(actual_ids)).delete(synchronize_session=False)
             session.flush()
+
+
+class RunDeepAnalysisRepository:
+    """AI 深度分析结果的持久化与缓存查询（GATE-04 Phase 2）。"""
+
+    @staticmethod
+    def get_by_run(session: Session, run_id: str) -> RunDeepAnalysis | None:
+        q = session.query(RunDeepAnalysis).filter(
+            RunDeepAnalysis.run_id == run_id,
+            RunDeepAnalysis.deleted_at.is_(None),
+        )
+        ws = _ws_id()
+        if ws is not None:
+            q = q.filter(RunDeepAnalysis.workspace_id == ws)
+        return q.first()
+
+    @staticmethod
+    def upsert(session: Session, run_id: str, fields: dict) -> RunDeepAnalysis:
+        """同一运行只保留一条分析结果；refresh 时覆盖旧结果，避免重复计费。"""
+        obj = RunDeepAnalysisRepository.get_by_run(session, run_id)
+        if obj is None:
+            obj = RunDeepAnalysis(
+                workspace_id=_ws_id(),
+                run_id=run_id,
+                created_by=_user_id(),
+                updated_by=_user_id(),
+                **fields,
+            )
+            session.add(obj)
+        else:
+            for key, value in fields.items():
+                setattr(obj, key, value)
+            obj.updated_by = _user_id()
+        session.flush()
+        session.refresh(obj)
+        return obj

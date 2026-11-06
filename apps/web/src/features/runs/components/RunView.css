@@ -624,6 +624,43 @@
   margin-bottom: 2px;
 }
 
+.rv-diag-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rv-deep {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.rv-deep-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.rv-deep-meta {
+  color: var(--rv-ink-500);
+  font-size: 11px;
+}
+
+.rv-deep-body {
+  margin-top: 8px;
+  color: var(--rv-ink-700);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 @media (max-width: 1100px) {
   .rv-snapshots {
     grid-template-columns: minmax(0, 1fr);

@@ -11,6 +11,7 @@ export type RunCompareResult = components['schemas']['RunCompareResult'];
 export type RunDiagnosis = components['schemas']['RunDiagnosisResponse'];
 export type NodeDiagnosis = components['schemas']['NodeDiagnosis'];
 export type DiagnosisSuggestion = components['schemas']['DiagnosisSuggestion'];
+export type DeepDiagnosis = components['schemas']['DeepDiagnosisResponse'];
 
 type RunListData = ApiData<'/api/v1/runs', 'get'>;
 type WorkflowListData = ApiData<'/api/v1/workflows', 'get'>;
@@ -45,6 +46,12 @@ export async function getRunNode(runId: string, nodeId: string): Promise<RunNode
 /** GATE-04：自动根因分析（后端确定性规则，不调用模型） */
 export async function getRunDiagnosis(runId: string): Promise<RunDiagnosis> {
   return http.get<RunDiagnosis>(`/api/v1/runs/${runId}/diagnosis`);
+}
+
+/** GATE-04 Phase 2：按需 AI 深度分析（预算/缓存/脱敏由后端处理） */
+export async function analyzeRunDiagnosis(runId: string, refresh = false): Promise<DeepDiagnosis> {
+  const query = refresh ? '?refresh=true' : '';
+  return http.post<DeepDiagnosis>(`/api/v1/runs/${runId}/diagnosis/deep${query}`);
 }
 
 export async function cancelRun(id: string): Promise<CancelResult> {

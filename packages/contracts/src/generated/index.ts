@@ -513,6 +513,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/runs/{run_id}/diagnosis/deep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deep Diagnose Run
+         * @description GATE-04 Phase 2：按需 AI 深度分析（预算硬停机 + 结果缓存 + 发送前脱敏）。
+         */
+        post: operations["deep_diagnose_run_api_v1_runs__run_id__diagnosis_deep_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runs/{run_id}/cancel": {
         parameters: {
             query?: never;
@@ -1293,6 +1313,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs/{run_id}/diagnosis/deep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deep Diagnose Run
+         * @description GATE-04 Phase 2：按需 AI 深度分析（预算硬停机 + 结果缓存 + 发送前脱敏）。
+         */
+        post: operations["deep_diagnose_run_api_runs__run_id__diagnosis_deep_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs/{run_id}/cancel": {
         parameters: {
             query?: never;
@@ -1615,6 +1655,20 @@ export interface components {
              */
             message: string;
             data: components["schemas"]["CurrentUserResponse"];
+        };
+        /** ApiResponse[DeepDiagnosisResponse] */
+        ApiResponse_DeepDiagnosisResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            /**
+             * Message
+             * @default ok
+             */
+            message: string;
+            data: components["schemas"]["DeepDiagnosisResponse"];
         };
         /** ApiResponse[DeleteResult] */
         ApiResponse_DeleteResult_: {
@@ -2169,6 +2223,44 @@ export interface components {
             user: components["schemas"]["UserProfile"];
             /** Workspaces */
             workspaces: components["schemas"]["WorkspaceSummary"][];
+        };
+        /**
+         * DeepDiagnosisResponse
+         * @description AI 深度分析结果（GATE-04 Phase 2，按需调用模型）。
+         */
+        DeepDiagnosisResponse: {
+            /** Run Id */
+            run_id: string;
+            /** Workflow Id */
+            workflow_id: string;
+            /** Status */
+            status: string;
+            /** Analysis */
+            analysis: string;
+            /** Provider Id */
+            provider_id?: string | null;
+            /** Model */
+            model?: string | null;
+            /**
+             * Tokens In
+             * @default 0
+             */
+            tokens_in: number;
+            /**
+             * Tokens Out
+             * @default 0
+             */
+            tokens_out: number;
+            /**
+             * Cached
+             * @default false
+             */
+            cached: boolean;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
         };
         /** DeleteResult */
         DeleteResult: {
@@ -6205,6 +6297,76 @@ export interface operations {
             };
         };
     };
+    deep_diagnose_run_api_v1_runs__run_id__diagnosis_deep_post: {
+        parameters: {
+            query?: {
+                /** @description 忽略缓存，重新调用模型分析 */
+                refresh?: boolean;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_DeepDiagnosisResponse_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     cancel_run_api_v1_runs__run_id__cancel_post: {
         parameters: {
             query?: never;
@@ -9673,6 +9835,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_RunDiagnosisResponse_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deep_diagnose_run_api_runs__run_id__diagnosis_deep_post: {
+        parameters: {
+            query?: {
+                /** @description 忽略缓存，重新调用模型分析 */
+                refresh?: boolean;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_DeepDiagnosisResponse_"];
                 };
             };
             /** @description 业务错误（参数非法 / 状态不允许） */

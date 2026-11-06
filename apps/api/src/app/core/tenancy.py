@@ -172,7 +172,7 @@ def _tenant_scoped_models() -> list:
     from app.modules.audit.models import AuditLog
     from app.modules.gateway.models import GatewayConfig, GatewayRoute
     from app.modules.providers.models import Provider
-    from app.modules.runs.models import NodeRun, Run
+    from app.modules.runs.models import NodeRun, Run, RunDeepAnalysis
     from app.modules.settings.models import AppSetting
     from app.modules.workflows.models import Workflow, WorkflowVersion
 
@@ -181,6 +181,7 @@ def _tenant_scoped_models() -> list:
         WorkflowVersion,
         Run,
         NodeRun,
+        RunDeepAnalysis,
         Provider,
         AppSetting,
         AuditLog,

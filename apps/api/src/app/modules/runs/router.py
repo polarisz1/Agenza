@@ -18,6 +18,7 @@ from app.core.response import ERROR_RESPONSES, ApiResponse, CancelResult, succes
 from app.db.database import SessionLocal
 from app.modules.runs.repository import RunRepository
 from app.modules.runs.schemas import (
+    DeepDiagnosisResponse,
     NodeRunDetail,
     RunCompareResult,
     RunCreate,
@@ -103,6 +104,19 @@ def diagnose_run(run_id: str, session: Session = Depends(get_session)):
     result = RunService.diagnose(session, run_id)
     if result is None:
         raise AppError(404, "Run not found")
+    return success(result)
+
+
+@router.post("/{run_id}/diagnosis/deep", response_model=ApiResponse[DeepDiagnosisResponse])
+async def deep_diagnose_run(
+    run_id: str,
+    refresh: bool = Query(default=False, description="忽略缓存，重新调用模型分析"),
+    session: Session = Depends(get_session),
+):
+    """GATE-04 Phase 2：按需 AI 深度分析（预算硬停机 + 结果缓存 + 发送前脱敏）。"""
+    from app.modules.runs.deep_analysis import DeepAnalysisService
+
+    result = await DeepAnalysisService.analyze(session, run_id, refresh=refresh)
     return success(result)
 
 

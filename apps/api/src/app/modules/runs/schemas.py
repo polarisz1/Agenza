@@ -148,3 +148,17 @@ class RunDiagnosisResponse(BaseModel):
     generated_at: datetime
     items: list[NodeDiagnosis] = []
 
+
+class DeepDiagnosisResponse(BaseModel):
+    """AI 深度分析结果（GATE-04 Phase 2，按需调用模型）。"""
+
+    run_id: str
+    workflow_id: str
+    status: str
+    analysis: str
+    provider_id: str | None = None
+    model: str | None = None
+    tokens_in: int = 0
+    tokens_out: int = 0
+    cached: bool = False
+    generated_at: datetime

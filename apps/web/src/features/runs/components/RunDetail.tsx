@@ -1,5 +1,13 @@
 import { Alert, App, Button, Spin } from 'antd';
-import { ArrowLeft, CheckCircle, Coins, Lightbulb, Play, Timer } from '@phosphor-icons/react';
+import {
+  ArrowLeft,
+  CheckCircle,
+  Coins,
+  Lightbulb,
+  Play,
+  Sparkle,
+  Timer,
+} from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -7,8 +15,9 @@ import EmptyState from '@/shared/components/EmptyState';
 import { Card, CodeBlock, Pill, SectionHeader, StatCard, Tabs } from '@/shared/components/ui';
 import type { PillTone, TabItem } from '@/shared/components/ui';
 import { formatClock, formatDateTime } from '@/shared/utils/datetime';
-import { getRun, getRunDiagnosis, listRuns, rerunRun } from '../api';
+import { analyzeRunDiagnosis, getRun, getRunDiagnosis, listRuns, rerunRun } from '../api';
 import type {
+  DeepDiagnosis,
   NodeDiagnosis,
   RunDetail as RunDetailType,
   RunDiagnosis,
@@ -118,6 +127,9 @@ export default function RunDetail() {
   const [diagnosis, setDiagnosis] = useState<RunDiagnosis | null>(null);
   const [diagnosisLoading, setDiagnosisLoading] = useState(false);
   const [diagnosisError, setDiagnosisError] = useState<string | null>(null);
+  const [deepAnalysis, setDeepAnalysis] = useState<DeepDiagnosis | null>(null);
+  const [deepLoading, setDeepLoading] = useState(false);
+  const [deepError, setDeepError] = useState<string | null>(null);
   const currentIdRef = useRef<string | null>(null);
 
   const loadDiagnosis = useCallback(async (runId: string) => {
@@ -143,6 +155,11 @@ export default function RunDetail() {
       setLoadError(null);
       const isFirstLoad = currentIdRef.current !== id;
       currentIdRef.current = id;
+
+      if (isFirstLoad) {
+        setDeepAnalysis(null);
+        setDeepError(null);
+      }
 
       if (data.status !== 'running') {
         void loadDiagnosis(data.id);
@@ -293,6 +310,20 @@ export default function RunDetail() {
       return;
     }
     if (run) nav(`${wsPrefix}/workflows/${run.workflow_id}`);
+  };
+
+  // GATE-04 Phase 2：按需调用模型；refresh=true 表示忽略缓存重新分析
+  const handleDeepAnalysis = async (refresh = false) => {
+    if (!run) return;
+    setDeepLoading(true);
+    setDeepError(null);
+    try {
+      setDeepAnalysis(await analyzeRunDiagnosis(run.id, refresh));
+    } catch (err: any) {
+      setDeepError(err?.message || 'AI 深度分析失败');
+    } finally {
+      setDeepLoading(false);
+    }
   };
 
   if (loading && !run) {
@@ -797,13 +828,24 @@ export default function RunDetail() {
                 : '失败节点、错误信息与建议处理方式'
             }
             extra={
-              diagnosisLoading ? (
-                <Pill tone="neutral">分析中…</Pill>
-              ) : diagnosisCount > 0 ? (
-                <Pill tone="danger">{diagnosisCount} 个待处理问题</Pill>
-              ) : (
-                <Pill tone="success">未发现失败节点</Pill>
-              )
+              <div className="rv-diag-actions">
+                {diagnosisLoading ? (
+                  <Pill tone="neutral">分析中…</Pill>
+                ) : diagnosisCount > 0 ? (
+                  <Pill tone="danger">{diagnosisCount} 个待处理问题</Pill>
+                ) : (
+                  <Pill tone="success">未发现失败节点</Pill>
+                )}
+                <Button
+                  size="small"
+                  icon={<Sparkle size={14} />}
+                  loading={deepLoading}
+                  disabled={run.status === 'running'}
+                  onClick={() => void handleDeepAnalysis(Boolean(deepAnalysis))}
+                >
+                  {deepAnalysis ? '重新分析' : 'AI 深度分析'}
+                </Button>
+              </div>
             }
           />
           {diagnosisError && (
@@ -940,6 +982,29 @@ export default function RunDetail() {
                   </div>
                 );
               })}
+            </div>
+          )}
+          {deepError && (
+            <Alert
+              type="error"
+              showIcon
+              style={{ marginTop: 12 }}
+              message="AI 深度分析失败"
+              description={deepError}
+            />
+          )}
+          {deepAnalysis && (
+            <div className="rv-deep">
+              <div className="rv-deep-head">
+                <strong>AI 深度分析</strong>
+                {deepAnalysis.cached && <Pill tone="neutral">缓存</Pill>}
+                <span className="rv-deep-meta">
+                  {deepAnalysis.model || '未知模型'} ·{' '}
+                  {(deepAnalysis.tokens_in + deepAnalysis.tokens_out).toLocaleString()} tokens ·{' '}
+                  {formatDateTime(deepAnalysis.generated_at)}
+                </span>
+              </div>
+              <div className="rv-deep-body">{deepAnalysis.analysis}</div>
             </div>
           )}
         </Card>
