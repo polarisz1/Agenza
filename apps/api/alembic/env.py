@@ -4,6 +4,7 @@ DB-03：同时支持 SQLite（本地开发 / 桌面版）与 PostgreSQL（SaaS�
 PostgreSQL 下保留原生 UUID / JSONB 能力，并由迁移自行使用
 `CREATE INDEX CONCURRENTLY`（见 app/db/pg.py）。
 """
+
 from logging.config import fileConfig
 from pathlib import Path
 import sys
@@ -24,6 +25,8 @@ from app.modules.workflows import models  # noqa: F401
 from app.modules.runs import models  # noqa: F401
 from app.modules.providers import models  # noqa: F401
 from app.modules.settings import models  # noqa: F401
+from app.modules.triggers import models as trigger_models  # noqa: F401
+from app.modules.gateway import models as gateway_models  # noqa: F401
 
 config = context.config
 

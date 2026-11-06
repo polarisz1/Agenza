@@ -24,19 +24,11 @@ class UserRepository:
 
     @staticmethod
     def get_by_email(session: Session, email: str) -> User | None:
-        return (
-            session.query(User)
-            .filter(User.email == email, User.deleted_at.is_(None))
-            .first()
-        )
+        return session.query(User).filter(User.email == email, User.deleted_at.is_(None)).first()
 
     @staticmethod
     def get_by_id(session: Session, user_id: str) -> User | None:
-        return (
-            session.query(User)
-            .filter(User.id == user_id, User.deleted_at.is_(None))
-            .first()
-        )
+        return session.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
 
     @staticmethod
     def update_login(session: Session, user_id: str) -> None:
@@ -51,7 +43,9 @@ class UserRepository:
 
 class WorkspaceRepository:
     @staticmethod
-    def create(session: Session, *, name: str, owner_id: str, description: str | None = None) -> Workspace:
+    def create(
+        session: Session, *, name: str, owner_id: str, description: str | None = None
+    ) -> Workspace:
         obj = Workspace(
             name=name,
             owner_id=owner_id,
@@ -248,12 +242,16 @@ class ApiKeyRepository:
         )
 
     @staticmethod
-    def get_by_hash(session: Session, key_hash: str) -> ApiKey | None:
+    def get_by_prefix(session: Session, key_prefix: str) -> ApiKey | None:
+        """按公开前缀定位 Key，再在 service 层做摘要常量时间比对。
+
+        bcrypt 带随机盐无法按 hash 等值查询，因此外部 API Key 统一使用
+        `sha256(secret)`（见 AuthService.create_api_key）。
+        """
         return (
             session.query(ApiKey)
             .filter(
-                ApiKey.key_hash == key_hash,
-                ApiKey.enabled.is_(True),
+                ApiKey.key_prefix == key_prefix,
                 ApiKey.deleted_at.is_(None),
             )
             .first()

@@ -2,25 +2,35 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
+import secrets
 from datetime import datetime, timedelta
+
+from passlib.context import CryptContext
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.exceptions import AppError
-from app.modules.auth.models import User
+from app.core.time import utcnow
+from app.modules.auth.models import ApiKey, User
 from app.modules.auth.repository import (
+    ApiKeyRepository,
     UserRepository,
     WorkspaceMemberRepository,
     WorkspaceRepository,
 )
 from app.modules.auth.schemas import (
+    ApiKeyCreateRequest,
+    ApiKeyCreateResponse,
+    ApiKeyItem,
+    ApiKeyListData,
     CurrentUserResponse,
     RegisterRequest,
     TokenResponse,
     UserProfile,
     WorkspaceSummary,
 )
-from passlib.context import CryptContext
-from sqlalchemy.orm import Session
 
 # ── Password Hashing ─────────────────────────────────────────────
 
@@ -36,6 +46,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 # ── JWT ───────────────────────────────────────────────────────────
+
 
 def create_access_token(*, user_id: str, email: str, workspace_id: str, role: str) -> str:
     from jose import jwt
@@ -67,6 +78,7 @@ def create_refresh_token(*, user_id: str) -> str:
 
 
 # ── AuthService ──────────────────────────────────────────────────
+
 
 class AuthService:
     @staticmethod
@@ -218,6 +230,105 @@ class AuthService:
             )
 
         return CurrentUserResponse(user=_to_user_profile(user), workspaces=summaries)
+
+
+# ── External API Keys ─────────────────────────────────────────────
+
+_LAST_USED_THROTTLE = timedelta(seconds=60)
+
+
+def _api_key_digest(secret: str) -> str:
+    """Key 是高熵随机串，用确定性 sha256 便于按前缀查找后做常量时间比对。"""
+    return hashlib.sha256(secret.encode("utf-8")).hexdigest()
+
+
+def _split_api_key(raw: str) -> tuple[str, str] | None:
+    """`af_<key_id>_<secret>` → (key_prefix, secret)。"""
+    parts = (raw or "").strip().split("_", 2)
+    if len(parts) != 3 or parts[0] != "af" or not parts[1] or not parts[2]:
+        return None
+    return f"af_{parts[1]}", parts[2]
+
+
+class ApiKeyService:
+    """工作空间级 API Key：创建 / 列表 / 吊销 / 校验。"""
+
+    @staticmethod
+    def create(
+        session: Session,
+        *,
+        workspace_id: str,
+        user_id: str,
+        body: ApiKeyCreateRequest,
+    ) -> ApiKeyCreateResponse:
+        key_id = secrets.token_hex(6)
+        secret = secrets.token_urlsafe(32)
+        raw_key = f"af_{key_id}_{secret}"
+        prefix = f"af_{key_id}"
+        expires_at = utcnow() + timedelta(days=body.expires_days) if body.expires_days else None
+        obj = ApiKeyRepository.create(
+            session,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            name=body.name,
+            key_hash=_api_key_digest(secret),
+            key_prefix=prefix,
+            expires_at=expires_at,
+        )
+        session.commit()
+        return ApiKeyCreateResponse(
+            id=obj.id,
+            name=obj.name,
+            key_prefix=prefix,
+            raw_key=raw_key,
+            expires_at=obj.expires_at,
+        )
+
+    @staticmethod
+    def list(session: Session, workspace_id: str) -> ApiKeyListData:
+        items = [
+            ApiKeyItem(
+                id=key.id,
+                name=key.name,
+                key_prefix=key.key_prefix,
+                enabled=bool(key.enabled),
+                created_at=key.created_at,
+                last_used_at=key.last_used_at,
+                expires_at=key.expires_at,
+            )
+            for key in ApiKeyRepository.list(session, workspace_id)
+        ]
+        return ApiKeyListData(items=items)
+
+    @staticmethod
+    def revoke(session: Session, workspace_id: str, key_id: str) -> bool:
+        ok = ApiKeyRepository.delete(session, key_id, workspace_id)
+        session.commit()
+        return ok
+
+    @staticmethod
+    def verify(session: Session, raw_key: str) -> tuple[ApiKey, User] | None:
+        """校验外部 API Key；成功时返回 (key, user)，并顺带刷新 last_used_at。"""
+        parsed = _split_api_key(raw_key)
+        if parsed is None:
+            return None
+        prefix, secret = parsed
+        key = ApiKeyRepository.get_by_prefix(session, prefix)
+        if key is None or not key.enabled:
+            return None
+        if not hmac.compare_digest(key.key_hash, _api_key_digest(secret)):
+            return None
+        if key.expires_at is not None and key.expires_at < utcnow():
+            return None
+        user = UserRepository.get_by_id(session, key.user_id)
+        if user is None or not user.is_active:
+            return None
+
+        now = utcnow()
+        if key.last_used_at is None or now - key.last_used_at >= _LAST_USED_THROTTLE:
+            key.last_used_at = now
+            session.flush()
+        return key, user
 
 
 def _to_user_profile(u: User) -> UserProfile:

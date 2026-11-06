@@ -103,20 +103,33 @@ class TenantMiddleware(BaseHTTPMiddleware):
         }
     )
 
+    # 外部触发路径：认证由路由依赖完成（X-API-Key / Webhook 签名），
+    # 这里只负责请求结束时清理租户上下文，避免 ContextVar 泄漏到下一个请求。
+    PUBLIC_TRIGGER_PREFIXES: ClassVar[frozenset[str]] = frozenset(
+        {"/api/v1/triggers/http", "/api/v1/webhooks"}
+    )
+
     def __init__(self, app: ASGIApp):
         super().__init__(app)
 
     async def dispatch(self, request: Request, call_next):
-        if not is_saas_mode():
-            # 桌面版直通
-            return await call_next(request)
-
         # CORS 预检请求不携带 Authorization，必须交给 CORS 中间件处理
         if request.method == "OPTIONS":
             return await call_next(request)
 
-        # Bypass 路径跳过（"/" 必须精确匹配，否则 startswith 会放行所有路径）
         path = request.url.path
+        # 公开触发路径不做 JWT 校验；无论 SaaS 还是桌面模式都要在结束时清理上下文
+        if any(path.startswith(prefix) for prefix in self.PUBLIC_TRIGGER_PREFIXES):
+            try:
+                return await call_next(request)
+            finally:
+                clear_tenant()
+
+        if not is_saas_mode():
+            # 桌面版直通
+            return await call_next(request)
+
+        # Bypass 路径跳过（"/" 必须精确匹配，否则 startswith 会放行所有路径）
         if path == "/" or any(path.startswith(p) for p in self.BYPASS_PATHS):
             return await call_next(request)
 
@@ -174,6 +187,7 @@ def _tenant_scoped_models() -> list:
     from app.modules.providers.models import Provider
     from app.modules.runs.models import NodeRun, Run, RunDeepAnalysis
     from app.modules.settings.models import AppSetting
+    from app.modules.triggers.models import TriggerRequest
     from app.modules.workflows.models import Workflow, WorkflowVersion
 
     return [
@@ -187,6 +201,7 @@ def _tenant_scoped_models() -> list:
         AuditLog,
         GatewayConfig,
         GatewayRoute,
+        TriggerRequest,
     ]
 
 

@@ -43,6 +43,7 @@ def _uuid():
 
 # ── User ───────────────────────────────────────────────────────────
 
+
 class User(AuditMixin, Base):
     __tablename__ = "user"
 
@@ -58,6 +59,7 @@ class User(AuditMixin, Base):
 
 # ── Workspace ─────────────────────────────────────────────────────
 
+
 class Workspace(AuditMixin, Base):
     __tablename__ = "workspace"
 
@@ -70,6 +72,7 @@ class Workspace(AuditMixin, Base):
 
 
 # ── WorkspaceMember ───────────────────────────────────────────────
+
 
 class WorkspaceMember(AuditMixin, Base):
     __tablename__ = "workspace_member"
@@ -88,6 +91,7 @@ class WorkspaceMember(AuditMixin, Base):
 
 # ── ApiKey ─────────────────────────────────────────────────────────
 
+
 class ApiKey(AuditMixin, Base):
     __tablename__ = "api_key"
 
@@ -95,8 +99,10 @@ class ApiKey(AuditMixin, Base):
     workspace_id = Column(String(36), ForeignKey("workspace.id"), nullable=False, index=True)
     user_id = Column(String(36), ForeignKey("user.id"), nullable=False, index=True)
     name = Column(String(200), nullable=False)
-    key_hash = Column(String(255), nullable=False, index=True)  # bcrypt hash of raw key
-    key_prefix = Column(String(12), nullable=False)  # 明文前缀供用户识别
+    # 外部 API Key：只存 sha256(secret)，明文仅在创建时返回一次
+    key_hash = Column(String(255), nullable=False, index=True)
+    # 形态固定为 af_<key_id>：既是可展示前缀，也是定位记录的唯一键
+    key_prefix = Column(String(40), nullable=False, unique=True, index=True)
     enabled = Column(Boolean, default=True)
     last_used_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utcnow)

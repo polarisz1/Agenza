@@ -79,6 +79,27 @@ class RunService:
         inputs: dict,
         trigger: str,
     ) -> RunResponse:
+        run = RunService.prepare_run(session, wf, graph, inputs, trigger)
+        # Celery 可用时 prepare_run 之外只投递；桌面模式同步执行（保持原有行为）
+        if not RunService.dispatch_prepared_run(session, run, graph, inputs):
+            await RunService.execute_prepared_run(session, run, graph, inputs)
+        return _run_response(run)
+
+    @staticmethod
+    def prepare_run(
+        session: Session,
+        wf: Any,
+        graph: dict,
+        inputs: dict,
+        trigger: str = "manual",
+        *,
+        version_id: str | None = None,
+        version_seq: int | None = None,
+    ) -> Run:
+        """校验图与输入并落 Run 记录；供手动运行与外部触发共用。
+
+        外部触发会显式传发布版本，避免运行详情把版本显示成最新草稿版本。
+        """
         # 同一工作流默认串行：已有运行中则拒绝（TBD 多实例并发的默认策略）
         running = RunRepository.list(session, workflow_id=wf.id, status="running", limit=1)
         if running:
@@ -102,7 +123,10 @@ class RunService:
             raise AppError(400, f"Missing required inputs: {', '.join(missing)}")
 
         run_id = f"r_{uuid.uuid4().hex[:10]}"
-        version = WorkflowService.latest_version(session, wf.id)
+        if version_id is None:
+            latest = WorkflowService.latest_version(session, wf.id)
+            if latest is not None:
+                version_id, version_seq = latest[0], latest[1]
         # 提前取 workspace_id：RunRepository.create 会写入；回调里用同一值写 NodeRun
         from app.core.tenancy import get_workspace_id
 
@@ -122,8 +146,8 @@ class RunService:
             status="running",
             trigger=trigger,
             started_at=utcnow(),
-            version_id=version[0] if version else None,
-            version_seq=version[1] if version else None,
+            version_id=version_id,
+            version_seq=version_seq,
         )
         RunRepository.create(session, run)
         # 先把 run 落库：引擎回调走独立的 SessionLocal，看不到未提交的数据。
@@ -133,23 +157,28 @@ class RunService:
         except IntegrityError:
             session.rollback()
             raise AppError(409, "Workflow already has a running run") from None
+        return run
 
-        # SaaS 异步化（Sprint 2）：Celery 启用时只投递任务，立即返回；
-        # 桌面模式（无 broker）走原同步 in-process 逻辑。
-        # 注意：懒加载导入，避免 service ↔ tasks 循环依赖。
+    @staticmethod
+    def dispatch_prepared_run(session: Session, run: Run, graph: dict, inputs: dict) -> bool:
+        """Celery 可用时投递任务并返回 True；否则返回 False 由调用方决定同步/后台执行。"""
+        # 懒加载导入，避免 service ↔ tasks 循环依赖。
         from app.modules.runs.tasks import celery_app, execute_workflow_async
 
-        if celery_app is not None:
-            execute_workflow_async(run_id, wf.id, inputs or {}, ws_id, triggered_by)
-            return RunResponse(
-                id=run.id,
-                workflow_id=run.workflow_id,
-                workflow_name=run.workflow_name,
-                status="running",
-                trigger=run.trigger,
-                started_at=run.started_at,
-            )
+        if celery_app is None:
+            return False
+        execute_workflow_async(
+            run.id,
+            run.workflow_id,
+            inputs or {},
+            run.workspace_id,
+            run.triggered_by,
+        )
+        return True
 
+    @staticmethod
+    async def execute_prepared_run(session: Session, run: Run, graph: dict, inputs: dict) -> None:
+        """在进程内执行已落库的 Run（桌面模式 / 无 Celery 的后台任务）。"""
         providers_registry = build_registry(session)
         # 延迟导入：gateway.service 依赖 RunService，模块级导入会形成循环
         from app.modules.gateway.service import GatewayService
@@ -161,7 +190,7 @@ class RunService:
         default_timeout = SettingsService.get_effective(session, "default_timeout")
 
         await manager.start_run(
-            run_id=run_id,
+            run_id=run.id,
             graph=graph,
             inputs=inputs or {},
             providers_registry=providers_registry,
@@ -169,19 +198,41 @@ class RunService:
             default_timeout=float(default_timeout)
             if isinstance(default_timeout, int | float)
             else None,
-            on_node_started=_make_node_started(run_id, ws_id, triggered_by),
-            on_node_finished=_make_node_finished(run_id, ws_id, triggered_by),
-            on_run_finished=_make_run_finished(run_id, wf.id),
+            on_node_started=_make_node_started(run.id, run.workspace_id, run.triggered_by),
+            on_node_finished=_make_node_finished(run.id, run.workspace_id, run.triggered_by),
+            on_run_finished=_make_run_finished(run.id, run.workflow_id),
         )
 
-        return RunResponse(
-            id=run.id,
-            workflow_id=run.workflow_id,
-            workflow_name=run.workflow_name,
-            status="running",
-            trigger=run.trigger,
-            started_at=run.started_at,
+    @staticmethod
+    async def execute_run_in_background(
+        run_id: str,
+        workflow_id: str,
+        graph: dict,
+        inputs: dict,
+        workspace_id: str,
+        triggered_by: str,
+    ) -> None:
+        """FastAPI BackgroundTasks 入口：独立 Session + 租户上下文执行。"""
+        from uuid import UUID
+
+        from app.core.tenancy import TenantContext, clear_tenant, set_tenant
+
+        set_tenant(
+            TenantContext(
+                workspace_id=UUID(workspace_id),
+                user_id=UUID(triggered_by),
+                user_email="",
+                role="editor",
+            )
         )
+        try:
+            with SessionLocal() as session:
+                run = RunRepository.get(session, run_id)
+                if run is None:
+                    return
+                await RunService.execute_prepared_run(session, run, graph, inputs)
+        finally:
+            clear_tenant()
 
     @staticmethod
     def list(
@@ -426,6 +477,17 @@ def _to_node_detail(nr: NodeRun) -> NodeRunDetail:
         tokens_in=nr.tokens_in or 0,
         tokens_out=nr.tokens_out or 0,
         duration_ms=nr.duration_ms or 0,
+    )
+
+
+def _run_response(run: Run) -> RunResponse:
+    return RunResponse(
+        id=run.id,
+        workflow_id=run.workflow_id,
+        workflow_name=run.workflow_name,
+        status=run.status,
+        trigger=run.trigger,
+        started_at=run.started_at,
     )
 
 

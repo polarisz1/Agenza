@@ -155,6 +155,20 @@ _RULES: tuple[AuditRule, ...] = (
         id_group="workspace_id",
         workspace_group="workspace_id",
     ),
+    _rule("POST", r"/api/v1/api-keys", "api_key.create", "api_key", id_group=None),
+    _rule(
+        "DELETE",
+        r"/api/v1/api-keys/(?P<resource_id>[^/]+)",
+        "api_key.revoke",
+        "api_key",
+    ),
+    # 外部触发：resource_id 是被触发的工作流；workspace/user 由 API Key 依赖注入
+    _rule(
+        "POST",
+        r"/api/v1/triggers/http/(?P<resource_id>[^/]+)",
+        "trigger.http",
+        "workflow",
+    ),
 )
 
 _MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})

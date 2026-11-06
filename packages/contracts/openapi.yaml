@@ -192,6 +192,144 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/api-keys:
+    get:
+      tags:
+      - v1-api-keys
+      - api-keys
+      summary: List Api Keys
+      operationId: list_api_keys_api_v1_api_keys_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ApiKeyListData_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - v1-api-keys
+      - api-keys
+      summary: Create Api Key
+      operationId: create_api_key_api_v1_api_keys_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ApiKeyCreateResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/api-keys/{key_id}:
+    delete:
+      tags:
+      - v1-api-keys
+      - api-keys
+      summary: Revoke Api Key
+      operationId: revoke_api_key_api_v1_api_keys__key_id__delete
+      parameters:
+      - name: key_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Key Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_DeleteResult_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/workspaces:
     get:
       tags:
@@ -3221,6 +3359,72 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/triggers/http/{workflow_id}:
+    post:
+      tags:
+      - v1-triggers
+      - triggers
+      summary: Trigger Http
+      description: 用 API Key 触发已发布工作流：立即返回 202 + run_id。
+      operationId: trigger_http_api_v1_triggers_http__workflow_id__post
+      parameters:
+      - name: workflow_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workflow Id
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Idempotency-Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HttpTriggerRequest'
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_TriggerRunResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/gateway/config:
     get:
       tags:
@@ -5760,6 +5964,132 @@ paths:
               schema: {}
 components:
   schemas:
+    ApiKeyCreateRequest:
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Name
+        expires_days:
+          anyOf:
+          - type: integer
+            maximum: 365
+            minimum: 1
+          - type: 'null'
+          title: Expires Days
+      type: object
+      required:
+      - name
+      title: ApiKeyCreateRequest
+    ApiKeyCreateResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        key_prefix:
+          type: string
+          title: Key Prefix
+        raw_key:
+          type: string
+          title: Raw Key
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expires At
+      type: object
+      required:
+      - id
+      - name
+      - key_prefix
+      - raw_key
+      title: ApiKeyCreateResponse
+    ApiKeyItem:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        key_prefix:
+          type: string
+          title: Key Prefix
+        enabled:
+          type: boolean
+          title: Enabled
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        last_used_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Used At
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expires At
+      type: object
+      required:
+      - id
+      - name
+      - key_prefix
+      - enabled
+      - created_at
+      title: ApiKeyItem
+    ApiKeyListData:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ApiKeyItem'
+          type: array
+          title: Items
+      type: object
+      required:
+      - items
+      title: ApiKeyListData
+    ApiResponse_ApiKeyCreateResponse_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/ApiKeyCreateResponse'
+      type: object
+      required:
+      - data
+      title: ApiResponse[ApiKeyCreateResponse]
+    ApiResponse_ApiKeyListData_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/ApiKeyListData'
+      type: object
+      required:
+      - data
+      title: ApiResponse[ApiKeyListData]
     ApiResponse_CancelResult_:
       properties:
         code:
@@ -6176,6 +6506,22 @@ components:
       required:
       - data
       title: ApiResponse[TokenResponse]
+    ApiResponse_TriggerRunResponse_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/TriggerRunResponse'
+      type: object
+      required:
+      - data
+      title: ApiResponse[TriggerRunResponse]
     ApiResponse_ValidateResult_:
       properties:
         code:
@@ -7269,6 +7615,15 @@ components:
       - id
       - name
       title: HttpNode
+    HttpTriggerRequest:
+      properties:
+        inputs:
+          additionalProperties: true
+          type: object
+          title: Inputs
+      type: object
+      title: HttpTriggerRequest
+      description: HTTP 触发的请求体：inputs 直接映射到工作流输入。
     InputConfig:
       properties:
         enabled:
@@ -8422,6 +8777,35 @@ components:
       - expires_in
       - user
       title: TokenResponse
+    TriggerRunResponse:
+      properties:
+        run_id:
+          type: string
+          title: Run Id
+        workflow_id:
+          type: string
+          title: Workflow Id
+        workflow_name:
+          type: string
+          title: Workflow Name
+        status:
+          type: string
+          title: Status
+        trigger:
+          type: string
+          title: Trigger
+        deduplicated:
+          type: boolean
+          title: Deduplicated
+          default: false
+      type: object
+      required:
+      - run_id
+      - workflow_id
+      - workflow_name
+      - status
+      - trigger
+      title: TriggerRunResponse
     UserProfile:
       properties:
         id:

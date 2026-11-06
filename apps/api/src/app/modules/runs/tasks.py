@@ -41,17 +41,36 @@ if celery_app is not None:
     ) -> None:
         """在 Celery worker 中执行工作流。
 
-        workspace_id 由 API 进程显式传入：worker 进程没有请求级租户上下文，
-        回调里写 NodeRun / Run 时必须带此字段以保证多租户隔离。
+        workspace_id 由 API 进程显式传入：worker 进程没有请求级租户上下文。
+        这里显式设置一次 TenantContext，保证 Provider / Gateway 查询也按租户隔离，
+        并以 Run 的图快照执行（发布版本/重跑与创建时的图保持一致）。
         """
+        from uuid import UUID
+
+        from app.core.tenancy import TenantContext, clear_tenant, set_tenant
+        from app.modules.runs.repository import RunRepository
+
+        if workspace_id:
+            set_tenant(
+                TenantContext(
+                    workspace_id=UUID(workspace_id),
+                    user_id=UUID(triggered_by) if triggered_by else UUID(int=0),
+                    user_email="",
+                    role="editor",
+                )
+            )
         try:
             with SessionLocal() as session:
+                run = RunRepository.get(session, run_id)
                 wf = WorkflowService.get(session, workflow_id)
-                if wf is None:
-                    log.error(f"Workflow {workflow_id} not found for run {run_id}")
+                if run is not None and run.graph_snapshot:
+                    graph = json.loads(run.graph_snapshot)
+                elif wf is not None:
+                    graph = wf.graph.model_dump()
+                else:
+                    log.error(f"Run/Workflow not found for {run_id} / {workflow_id}")
                     return
 
-                graph = wf.graph.model_dump()
                 providers_registry = build_registry(session)
                 default_timeout = SettingsService.get_effective(session, "default_timeout")
 
@@ -85,6 +104,9 @@ if celery_app is not None:
         except Exception:
             log.exception(f"Celery task execute_workflow failed for run {run_id}")
             raise
+        finally:
+            if workspace_id:
+                clear_tenant()
 
 
 def execute_workflow_async(
@@ -98,6 +120,4 @@ def execute_workflow_async(
     if celery_app is None:
         raise RuntimeError("Celery is not enabled (CELERY_BROKER_URL not set)")
     inputs_json = json.dumps(inputs or {}, ensure_ascii=False)
-    execute_workflow_task.delay(
-        run_id, workflow_id, inputs_json, workspace_id, triggered_by
-    )
+    execute_workflow_task.delay(run_id, workflow_id, inputs_json, workspace_id, triggered_by)

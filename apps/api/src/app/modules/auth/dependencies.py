@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from uuid import UUID
+
 from fastapi import Depends, HTTPException, Request
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.api_deps import get_session
 from app.core.config import settings
+from app.core.tenancy import TenantContext, set_tenant
 from app.modules.auth.models import User, Workspace
 from app.modules.auth.repository import UserRepository
+from app.modules.auth.service import ApiKeyService
 
 
 def _decode_access_token(token: str) -> dict:
@@ -106,6 +111,46 @@ def require_role(*roles: str):
         return current
 
     return _check
+
+
+@dataclass(frozen=True)
+class ApiKeyContext:
+    """外部 API Key 解析结果；租户上下文已写入 ContextVar。"""
+
+    key_id: str
+    workspace_id: str
+    user_id: str
+
+
+async def require_api_key(
+    request: Request,
+    session: Session = Depends(get_session),
+) -> ApiKeyContext:
+    """`X-API-Key` 认证，供 HTTP/Webhook 触发使用。
+
+    必须是 async 依赖：ContextVar 在 anyio 线程池里设置不会回传到事件循环，
+    而同步端点是在线程池里执行的，会导致工作空间上下文丢失。
+    清理租户上下文由 `TenantMiddleware` 的公开触发路径分支负责，
+    这样内层 AuditMiddleware 仍能拿到 workspace/user。
+    """
+    raw = request.headers.get("x-api-key", "").strip()
+    if not raw:
+        raise HTTPException(status_code=401, detail="Missing API key")
+
+    result = ApiKeyService.verify(session, raw)
+    if result is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired API key")
+
+    key, user = result
+    set_tenant(
+        TenantContext(
+            workspace_id=UUID(key.workspace_id),
+            user_id=UUID(key.user_id),
+            user_email=user.email,
+            role="editor",
+        )
+    )
+    return ApiKeyContext(key_id=key.id, workspace_id=key.workspace_id, user_id=key.user_id)
 
 
 def optional_auth(
