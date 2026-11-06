@@ -61,7 +61,9 @@ class NodeRun(AuditMixin, Base):
     id = Column(String(32), primary_key=True)
     workspace_id = Column(String(36), ForeignKey("workspace.id"), nullable=True, index=True)
     run_id = Column(String(32), index=True)
-    node_id = Column(String(24))
+    # TRIGGER-02 Phase B：子工作流嵌套节点使用 `<父节点>/<子节点>` 路径，
+    # 加宽到 128 以覆盖最大 5 层嵌套 + 节点 id。
+    node_id = Column(String(128))
     node_type = Column(String(30))
     node_name = Column(String(200))
     status = Column(String(20))

@@ -83,9 +83,13 @@ class SubWorkflowExecutor(BaseExecutor):
             budget_exhausted=ctx.budget_exhausted,
             budget_message=ctx.budget_message,
         )
+        node_path = ctx.node_path or str(ctx.node.get("id") or "")
+        node_name_path = ctx.node_name_path or str(ctx.node.get("name") or node_path)
         nested = Scheduler(
-            run_id=f"{ctx.run_id}/{ctx.node.get('id', '')}",
+            run_id=ctx.run_id,
             concurrency=settings.ENGINE_MAX_CONCURRENCY,
+            node_id_prefix=f"{node_path}/",
+            node_name_prefix=f"{node_name_path} / ",
         )
         results = await nested.run(
             graph=graph,
@@ -93,6 +97,8 @@ class SubWorkflowExecutor(BaseExecutor):
             registry=build_default_registry().all(),
             providers_registry=ctx.providers,
             gateway=gateway,
+            on_node_started=ctx.on_node_started,
+            on_node_finished=ctx.on_node_finished,
             workflow_stack=[*stack, workflow_id],
             subworkflow_loader=ctx.subworkflow_loader,
         )

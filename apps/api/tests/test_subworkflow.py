@@ -40,6 +40,40 @@ def _child_graph(required: bool = True) -> dict:
     }
 
 
+def _failing_child_graph() -> dict:
+    return {
+        "version": 1,
+        "inputs": [{"key": "text", "label": "文本", "type": "text", "required": True}],
+        "nodes": [
+            {
+                "id": "c_in",
+                "type": "input",
+                "name": "输入",
+                "position": {"x": 0, "y": 0},
+                "config": {"key": "text"},
+            },
+            {
+                "id": "c_bad",
+                "type": "python",
+                "name": "失败脚本",
+                "position": {"x": 200, "y": 0},
+                "config": {"script": "raise RuntimeError('child boom')"},
+            },
+            {
+                "id": "c_out",
+                "type": "output",
+                "name": "输出",
+                "position": {"x": 400, "y": 0},
+                "config": {"field": "result", "source": "{{ 失败脚本 }}"},
+            },
+        ],
+        "edges": [
+            {"id": "ce1", "source": "c_in", "target": "c_bad"},
+            {"id": "ce2", "source": "c_bad", "target": "c_out"},
+        ],
+    }
+
+
 def _parent_graph(child_id: str, mapping: dict | None = None) -> dict:
     return {
         "version": 1,
@@ -184,6 +218,17 @@ def test_subworkflow_runs_published_child_with_input_mapping() -> None:
         assert nodes["p_sub"]["output"] == {"result": "hello"}
         assert nodes["p_out"]["output"] == {"result": "hello"}
 
+        # Phase B：子节点以 `父节点/子节点` 路径落库，并带层级名称
+        assert nodes["p_sub/c_in"]["status"] == "success"
+        assert nodes["p_sub/c_out"]["output"] == {"result": "hello"}
+        assert "子流程 /" in nodes["p_sub/c_in"]["node_name"]
+
+        # Phase B：子节点事件进入父 Run 的 SSE 通道
+        with client.stream("GET", f"/api/runs/{started['id']}/events") as resp:
+            body = "".join(resp.iter_text())
+        assert "p_sub/c_in" in body
+        assert "p_sub/c_out" in body
+
     _cleanup([child, parent])
 
 
@@ -238,6 +283,30 @@ def test_subworkflow_detects_self_reference() -> None:
         assert "循环引用" in (nodes["p_sub"]["error"] or "")
 
     _cleanup([workflow_id])
+
+
+def test_subworkflow_failure_is_attributed_to_child_node() -> None:
+    with TestClient(app) as client:
+        child = _create(client, "失败子流程", _failing_child_graph())
+        _publish(client, child)
+        parent = _create(client, "父流程-子节点失败", _parent_graph(child))
+
+        started = _run(client, parent, {"text": "hello"})
+        detail = _wait(client, started["id"])
+        nodes = _nodes(detail)
+
+        assert detail["status"] == "failed", detail
+        assert nodes["p_sub"]["status"] == "failed"
+        assert nodes["p_sub/c_bad"]["status"] == "failed"
+
+        diagnosis = client.get(f"/api/runs/{started['id']}/diagnosis")
+        assert diagnosis.status_code == 200, diagnosis.text
+        ids = [item["node_id"] for item in diagnosis.json()["data"]["items"]]
+        assert "p_sub/c_bad" in ids
+        # 父级 subworkflow 的重复诊断被抑制，只保留更具体的子节点
+        assert "p_sub" not in ids
+
+    _cleanup([child, parent])
 
 
 async def test_subworkflow_depth_limit_guard() -> None:

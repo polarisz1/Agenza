@@ -25,6 +25,8 @@ class Scheduler:
         run_id: str,
         concurrency: int = 4,
         default_timeout: float | None = None,
+        node_id_prefix: str = "",
+        node_name_prefix: str = "",
     ) -> None:
         self.run_id = run_id
         self.semaphore = asyncio.Semaphore(concurrency)
@@ -33,10 +35,22 @@ class Scheduler:
         self._node_tasks: set[asyncio.Task] = set()
         # 节点没配 timeout_s 时用这个值（来自设置页的 default_timeout）
         self.default_timeout = default_timeout or _DEFAULT_NODE_TIMEOUT
+        # TRIGGER-02 Phase B：嵌套执行时给节点 id / 名称加父级前缀，
+        # 让 SSE 与 NodeRun 能落到同一个父 Run 下，并保留层级路径。
+        self.node_id_prefix = node_id_prefix
+        self.node_name_prefix = node_name_prefix
 
     @property
     def cancelled(self) -> bool:
         return self._cancel_event.is_set()
+
+    def _qualified_node_id(self, node_id: str) -> str:
+        return f"{self.node_id_prefix}{node_id}" if self.node_id_prefix else node_id
+
+    def _qualified_node(self, node_id: str, node: dict) -> dict:
+        if not self.node_name_prefix:
+            return node
+        return {**node, "name": f"{self.node_name_prefix}{node.get('name') or node_id}"}
 
     def request_cancel(self) -> None:
         """请求取消：停止调度新节点，并尽快终止正在执行的节点。"""
@@ -180,6 +194,9 @@ class Scheduler:
         node = node_map[node_id]
         node_type = node.get("type")
         config = node.get("config") or {}
+        qualified_id = self._qualified_node_id(node_id)
+        qualified_node = self._qualified_node(node_id, node)
+        qualified_name = qualified_node.get("name") or qualified_id
 
         # 节点被禁用 → 直接跳过
         if config.get("enabled") is False:
@@ -264,8 +281,8 @@ class Scheduler:
                 {
                     "event": "node.delta",
                     "run_id": self.run_id,
-                    "node_id": node_id,
-                    "node_name": node.get("name") or node_id,
+                    "node_id": qualified_id,
+                    "node_name": qualified_name,
                     "node_type": node_type,
                     "text": text,
                 },
@@ -285,14 +302,18 @@ class Scheduler:
             run_id=self.run_id,
             workflow_stack=workflow_stack or [],
             subworkflow_loader=subworkflow_loader,
+            node_path=qualified_id,
+            node_name_path=qualified_name,
+            on_node_started=on_node_started,
+            on_node_finished=on_node_finished,
         )
 
         if on_node_started:
             # 把"节点实际拿到什么"一并交给回调：运行输入 + 直接上游输出（F1/B3）
             await _safe_call(
                 on_node_started,
-                node_id,
-                node,
+                qualified_id,
+                qualified_node,
                 {"inputs": inputs, "upstream": upstream},
             )
 
@@ -301,8 +322,8 @@ class Scheduler:
             {
                 "event": "node.started",
                 "run_id": self.run_id,
-                "node_id": node_id,
-                "node_name": node.get("name") or node_id,
+                "node_id": qualified_id,
+                "node_name": qualified_name,
                 "node_type": node_type,
             },
         )
@@ -372,14 +393,17 @@ class Scheduler:
     ) -> None:
         results[node_id] = result
 
+        qualified_id = self._qualified_node_id(node_id)
+        qualified_node = self._qualified_node(node_id, node)
+
         await self.bus.publish(
             self.run_id,
             {
                 "event": "node.finished",
                 "run_id": self.run_id,
-                "node_id": node_id,
-                "node_name": node.get("name") or node_id,
-                "node_type": node.get("type"),
+                "node_id": qualified_id,
+                "node_name": qualified_node.get("name") or qualified_id,
+                "node_type": qualified_node.get("type"),
                 "status": result.status,
                 "duration_ms": duration_ms,
                 "tokens_in": result.tokens_in,
@@ -390,7 +414,7 @@ class Scheduler:
         )
 
         if on_node_finished:
-            await _safe_call(on_node_finished, node_id, node, result, duration_ms)
+            await _safe_call(on_node_finished, qualified_id, qualified_node, result, duration_ms)
 
 
 def _branch_active(from_port: str | None, prev: NodeResult) -> bool:

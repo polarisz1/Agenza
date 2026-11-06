@@ -360,7 +360,16 @@ def _node_configs(run: Run) -> dict[str, dict]:
 def build_run_diagnosis(run: Run, nodes: list[NodeRun]) -> RunDiagnosisResponse:
     configs = _node_configs(run)
     failed = [node for node in nodes if node.status == "failed"]
-    items = [diagnose_node(node, configs.get(node.node_id, {})) for node in failed]
+    failed_ids = {node.node_id for node in failed}
+    items = []
+    for node in failed:
+        # 子工作流父节点失败时，若子节点已有失败诊断，则只保留更具体的子节点条目，
+        # 避免「子工作流失败 + 子节点失败」重复出现（TRIGGER-02 Phase B）。
+        if node.node_type == "subworkflow" and any(
+            child_id.startswith(f"{node.node_id}/") for child_id in failed_ids
+        ):
+            continue
+        items.append(diagnose_node(node, configs.get(node.node_id, {})))
 
     # 启动即失败等场景没有失败节点：补一条运行级诊断，避免诊断页空白
     if not items and run.status == "failed":

@@ -35,6 +35,13 @@ import type {
 } from '../api';
 import { classifyRunError } from '../errors';
 import { formatDuration, pretty, statusMeta, triggerLabel } from '../meta';
+import {
+  hasNestedChildren,
+  isHiddenByCollapsedGroup,
+  isNestedNodeId,
+  nodeDepth,
+  topLevelNodeId,
+} from '../nodeHierarchy';
 import './RunView.css';
 
 type NodeTab = 'input' | 'output' | 'error';
@@ -130,6 +137,8 @@ export default function RunDetail() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  // Phase B：子工作流节点分组折叠状态（key 为父节点路径）
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [tabs, setTabs] = useState<Record<string, NodeTab>>({});
   const [tab, setTab] = useState<RunTab>('overview');
   const [rerunning, setRerunning] = useState(false);
@@ -284,9 +293,18 @@ export default function RunDetail() {
     [run?.nodes],
   );
 
+  const nodeIds = useMemo(() => (run?.nodes ?? []).map((node) => node.node_id), [run?.nodes]);
+  const visibleNodes = useMemo(
+    () =>
+      (run?.nodes ?? []).filter((node) => !isHiddenByCollapsedGroup(node.node_id, collapsedGroups)),
+    [run?.nodes, collapsedGroups],
+  );
+
   const openNode = (node: RunNodeDetail) => {
     if (!run) return;
-    nav(`${wsPrefix}/workflows/${run.workflow_id}?focus=${encodeURIComponent(node.node_id)}`);
+    // 嵌套节点无法在父画布中直接定位，聚焦它所属的顶层子工作流节点
+    const focus = topLevelNodeId(node.node_id);
+    nav(`${wsPrefix}/workflows/${run.workflow_id}?focus=${encodeURIComponent(focus)}`);
   };
 
   const handleExport = () => {
@@ -593,7 +611,14 @@ export default function RunDetail() {
                   const width = Math.max(2, (duration / timelineMax) * 100);
                   return (
                     <div className="rv-timeline-row" key={node.id}>
-                      <span className="rv-timeline-name" title={node.node_name}>
+                      <span
+                        className="rv-timeline-name"
+                        title={node.node_name}
+                        style={{
+                          paddingLeft: nodeDepth(node.node_id) * 14,
+                        }}
+                      >
+                        {nodeDepth(node.node_id) > 0 ? '↳ ' : ''}
                         {node.node_name}
                       </span>
                       <div className="rv-timeline-track">
@@ -686,7 +711,7 @@ export default function RunDetail() {
               {run.nodes.length === 0 ? (
                 <div className="rv-empty">这次运行没有产生节点记录（可能启动即失败）</div>
               ) : (
-                run.nodes.map((node, index) => {
+                visibleNodes.map((node, index) => {
                   const meta = statusMeta(node.status);
                   const nodeError = classifyRunError(node.error);
                   const isOpen = Boolean(expanded[node.node_id]);
@@ -694,31 +719,59 @@ export default function RunDetail() {
                   const hasInput = node.input !== null && node.input !== undefined;
                   const hasOutput = node.output !== null && node.output !== undefined;
                   const hasError = Boolean(node.error) || node.status === 'failed';
+                  const depth = nodeDepth(node.node_id);
+                  const nested = depth > 0;
+                  const hasChildren = hasNestedChildren(node.node_id, nodeIds);
+                  const groupCollapsed = Boolean(collapsedGroups[node.node_id]);
 
                   return (
                     <div
                       className={`rv-node${node.status === 'failed' ? ' rv-node--failed' : ''}`}
                       key={node.id}
                     >
-                      <button
-                        type="button"
-                        className="rv-node-head"
-                        aria-expanded={isOpen}
-                        onClick={() =>
-                          setExpanded((prev) => ({ ...prev, [node.node_id]: !prev[node.node_id] }))
-                        }
-                      >
-                        <span className="idx">{index + 1}</span>
-                        <span style={{ color: 'inherit' }}>{meta.symbol}</span>
-                        <span className="name">{node.node_name}</span>
-                        <Pill tone={statusTone(node.status)}>{meta.label}</Pill>
-                        <span className="type">{node.node_type}</span>
-                        <span className="meta">
-                          {formatDuration(node.duration_ms)}
-                          {node.error && node.status !== 'failed' ? ` · ${node.error}` : ''}
-                        </span>
-                        <span className="chev">{isOpen ? '▾' : '▸'}</span>
-                      </button>
+                      <div className="rv-node-row" style={{ paddingLeft: depth * 18 }}>
+                        {hasChildren ? (
+                          <button
+                            type="button"
+                            className="rv-node-group"
+                            aria-label={groupCollapsed ? '展开子流程节点' : '折叠子流程节点'}
+                            title={groupCollapsed ? '展开子流程节点' : '折叠子流程节点'}
+                            onClick={() =>
+                              setCollapsedGroups((prev) => ({
+                                ...prev,
+                                [node.node_id]: !prev[node.node_id],
+                              }))
+                            }
+                          >
+                            {groupCollapsed ? '▸' : '▾'}
+                          </button>
+                        ) : (
+                          <span className="rv-node-group-spacer" />
+                        )}
+                        <button
+                          type="button"
+                          className="rv-node-head"
+                          aria-expanded={isOpen}
+                          onClick={() =>
+                            setExpanded((prev) => ({
+                              ...prev,
+                              [node.node_id]: !prev[node.node_id],
+                            }))
+                          }
+                        >
+                          <span className="idx">{index + 1}</span>
+                          <span style={{ color: 'inherit' }}>{meta.symbol}</span>
+                          <span className="name">{node.node_name}</span>
+                          {nested && <span className="rv-node-nested">子流程</span>}
+                          <Pill tone={statusTone(node.status)}>{meta.label}</Pill>
+                          <span className="type">{node.node_type}</span>
+                          <span className="meta">
+                            {formatDuration(node.duration_ms)}
+                            {node.error && node.status !== 'failed' ? ` · ${node.error}` : ''}
+                          </span>
+                          <span className="chev">{isOpen ? '▾' : '▸'}</span>
+                        </button>
+                      </div>
 
                       {isOpen && (
                         <div className="rv-node-body">
@@ -992,6 +1045,7 @@ export default function RunDetail() {
                   >
                     <div className="rv-diag-head">
                       <strong>{item.node_type === 'run' ? '运行级问题' : item.node_name}</strong>
+                      {isNestedNodeId(item.node_id) && <Pill tone="neutral">子流程</Pill>}
                       <Pill tone={item.severity === 'warning' ? 'warning' : 'danger'}>
                         {DIAGNOSIS_CATEGORY_LABEL[item.category] ?? item.category}
                       </Pill>
