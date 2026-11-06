@@ -53,6 +53,8 @@ class Scheduler:
         gateway: Any = None,
         on_node_started=None,
         on_node_finished=None,
+        workflow_stack: list[str] | None = None,
+        subworkflow_loader: Any = None,
     ) -> dict[str, NodeResult]:
         """Execute the entire graph and return node_id → NodeResult map."""
         nodes = graph.get("nodes", [])
@@ -101,6 +103,8 @@ class Scheduler:
                             gateway=gateway,
                             on_node_started=on_node_started,
                             on_node_finished=on_node_finished,
+                            workflow_stack=workflow_stack or [],
+                            subworkflow_loader=subworkflow_loader,
                         ),
                         results=results,
                         on_node_finished=on_node_finished,
@@ -170,6 +174,8 @@ class Scheduler:
         gateway: Any = None,
         on_node_started=None,
         on_node_finished=None,
+        workflow_stack: list[str] | None = None,
+        subworkflow_loader: Any = None,
     ) -> None:
         node = node_map[node_id]
         node_type = node.get("type")
@@ -276,6 +282,9 @@ class Scheduler:
             budget_exhausted=bool(gateway.budget_exhausted) if gateway is not None else False,
             budget_message=gateway.budget_message if gateway is not None else None,
             on_delta=publish_delta,
+            run_id=self.run_id,
+            workflow_stack=workflow_stack or [],
+            subworkflow_loader=subworkflow_loader,
         )
 
         if on_node_started:

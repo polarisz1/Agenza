@@ -7882,6 +7882,7 @@ components:
             - $ref: '#/components/schemas/PythonNode'
             - $ref: '#/components/schemas/ConditionNode'
             - $ref: '#/components/schemas/MergeNode'
+            - $ref: '#/components/schemas/SubWorkflowNode'
             - $ref: '#/components/schemas/OutputNode'
             discriminator:
               propertyName: type
@@ -7894,6 +7895,7 @@ components:
                 merge: '#/components/schemas/MergeNode'
                 output: '#/components/schemas/OutputNode'
                 python: '#/components/schemas/PythonNode'
+                subworkflow: '#/components/schemas/SubWorkflowNode'
           type: array
           title: Nodes
         edges:
@@ -9074,6 +9076,66 @@ components:
         以前是 `data: dict`，OpenAPI 里变成无类型 object，前端只能猜字段名。
 
         现在每个字段都显式声明并带取值约束；未传的字段保持原值。'
+    SubWorkflowConfig:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        retry:
+          type: integer
+          title: Retry
+          default: 0
+        timeout_s:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Timeout S
+        notes:
+          type: string
+          title: Notes
+          default: ''
+        workflow_id:
+          type: string
+          title: Workflow Id
+          default: ''
+        input_mapping:
+          anyOf:
+          - additionalProperties:
+              type: string
+            type: object
+          - type: 'null'
+          title: Input Mapping
+        version_policy:
+          type: string
+          const: published
+          title: Version Policy
+          default: published
+      type: object
+      title: SubWorkflowConfig
+      description: TRIGGER-02 Phase A：引用同 workspace 已发布工作流，作为可复用节点。
+    SubWorkflowNode:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        position:
+          $ref: '#/components/schemas/Position'
+        type:
+          type: string
+          const: subworkflow
+          title: Type
+          default: subworkflow
+        config:
+          $ref: '#/components/schemas/SubWorkflowConfig'
+      type: object
+      required:
+      - id
+      - name
+      title: SubWorkflowNode
     SystemInfo:
       properties:
         app_name:

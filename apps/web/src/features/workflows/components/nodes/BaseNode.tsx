@@ -2,6 +2,7 @@ import { memo } from 'react';
 import type { ReactNode } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import {
+  ApartmentOutlined,
   ApiOutlined,
   BranchesOutlined,
   CodeOutlined,
@@ -32,6 +33,7 @@ const TYPE_ICON: Record<EditorNodeType, ReactNode> = {
   python: <CodeOutlined />,
   condition: <BranchesOutlined />,
   merge: <MergeCellsOutlined />,
+  subworkflow: <ApartmentOutlined />,
   output: <ExportOutlined />,
 };
 
@@ -43,7 +45,7 @@ function formatDuration(ms?: number): string {
 /**
  * 节点卡 v2（F2/T5.2.4）：
  * 类型图标 + 名称 + 状态；主/次两行摘要；运行后显示耗时/token；失败显示错误首行。
- * 8 类节点共用骨架，但主/次摘要由 type 决定（见 types.ts::nodeSummary/nodeDetail）。
+ * 各类型节点共用骨架，但主/次摘要由 type 决定（见 types.ts::nodeSummary/nodeDetail）。
  */
 function BaseNode({ data, selected }: NodeProps<EditorNode>) {
   const meta = NODE_META[data.type];

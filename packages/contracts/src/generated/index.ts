@@ -2970,7 +2970,7 @@ export interface components {
             /** Inputs */
             inputs?: components["schemas"]["WorkflowInputField"][];
             /** Nodes */
-            nodes?: (components["schemas"]["InputNode"] | components["schemas"]["LLMNode"] | components["schemas"]["ExtractNode"] | components["schemas"]["HttpNode"] | components["schemas"]["PythonNode"] | components["schemas"]["ConditionNode"] | components["schemas"]["MergeNode"] | components["schemas"]["OutputNode"])[];
+            nodes?: (components["schemas"]["InputNode"] | components["schemas"]["LLMNode"] | components["schemas"]["ExtractNode"] | components["schemas"]["HttpNode"] | components["schemas"]["PythonNode"] | components["schemas"]["ConditionNode"] | components["schemas"]["MergeNode"] | components["schemas"]["SubWorkflowNode"] | components["schemas"]["OutputNode"])[];
             /** Edges */
             edges?: components["schemas"]["EdgeDef"][];
         };
@@ -3782,6 +3782,58 @@ export interface components {
             default_timeout?: number | null;
             /** Language */
             language?: string | null;
+        };
+        /**
+         * SubWorkflowConfig
+         * @description TRIGGER-02 Phase A：引用同 workspace 已发布工作流，作为可复用节点。
+         */
+        SubWorkflowConfig: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Retry
+             * @default 0
+             */
+            retry: number;
+            /** Timeout S */
+            timeout_s?: number | null;
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /**
+             * Workflow Id
+             * @default
+             */
+            workflow_id: string;
+            /** Input Mapping */
+            input_mapping?: {
+                [key: string]: string;
+            } | null;
+            /**
+             * Version Policy
+             * @default published
+             * @constant
+             */
+            version_policy: "published";
+        };
+        /** SubWorkflowNode */
+        SubWorkflowNode: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            position?: components["schemas"]["Position"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "subworkflow";
+            config?: components["schemas"]["SubWorkflowConfig"];
         };
         /** SystemInfo */
         SystemInfo: {

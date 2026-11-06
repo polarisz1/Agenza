@@ -35,6 +35,11 @@ class NodeContext(BaseModel):
     budget_message: str | None = None
     # 增量文本回调（F3 流式）：executor 调用它把 token 片段推给 SSE
     on_delta: Any = None
+    # TRIGGER-02：当前运行 ID 与已执行的工作流调用栈（用于嵌套/递归保护）
+    run_id: str = ""
+    workflow_stack: list[str] = Field(default_factory=list)
+    # 子工作流加载器：workflow_id → {id, name, version_id, graph}；由 RunService 注入
+    subworkflow_loader: Any = None
 
 
 @runtime_checkable

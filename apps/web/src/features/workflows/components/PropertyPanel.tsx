@@ -3,12 +3,15 @@ import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { App, AutoComplete, Button, Input, Segmented, Switch } from 'antd';
 
-import { CONDITION_OPS, NODE_META, isVariableSafeLabel } from '../types';
+import { CONDITION_OPS, NODE_META, isVariableSafeLabel, type WorkflowInputField } from '../types';
 import {
+  getWorkflowVersion,
   listProviderModels,
   listProviderOptions,
+  listWorkflows,
   type NodeTestResult,
   type ProviderOption,
+  type WorkflowListItem,
 } from '../api';
 import { registerDraftFlusher } from '../hooks/draftBridge';
 import type { VariableItem } from '../hooks/useVariables';
@@ -68,6 +71,12 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
   // F3：当前服务商的可用模型（失败时为空，仍允许手动输入）
   const [models, setModels] = useState<string[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
+  // TRIGGER-02：子工作流选择与输入映射
+  const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
+  const [workflowInputs, setWorkflowInputs] = useState<WorkflowInputField[]>([]);
+  const [subflowError, setSubflowError] = useState<string | null>(null);
+  const [activeMappingKey, setActiveMappingKey] = useState<string | null>(null);
+  const mappingRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const refs = useRef<Record<string, FieldElement | null>>({});
 
   // 用 ref 保住"最新草稿 + 它属于哪个节点"，供切换节点/外部 flush 时立刻提交
@@ -188,6 +197,88 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
 
   const setField = (key: string, value: unknown) => setDraft((prev) => ({ ...prev, [key]: value }));
 
+  const selectedType = selected?.data.type;
+
+  // 子工作流节点：加载可用的工作流列表（只允许选择已发布版本）
+  useEffect(() => {
+    if (selectedType !== 'subworkflow') return;
+    let cancelled = false;
+    listWorkflows()
+      .then((list) => {
+        if (!cancelled) setWorkflows(list);
+      })
+      .catch(() => {
+        if (!cancelled) setWorkflows([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedType]);
+
+  // 选中工作流后读取它的发布版本图，用于渲染输入映射字段
+  const selectedWorkflowId = selectedType === 'subworkflow' ? String(draft.workflow_id || '') : '';
+
+  useEffect(() => {
+    if (!selectedWorkflowId) {
+      setWorkflowInputs([]);
+      setSubflowError(null);
+      return;
+    }
+    const item = workflows.find((wf) => wf.id === selectedWorkflowId);
+    if (!item) {
+      setWorkflowInputs([]);
+      // 列表还没加载完时不误报
+      setSubflowError(workflows.length ? '工作流不存在或不属于当前工作空间' : null);
+      return;
+    }
+    if (!item.published_version_id) {
+      setWorkflowInputs([]);
+      setSubflowError('该工作流尚未发布，无法作为子工作流');
+      return;
+    }
+    let cancelled = false;
+    setSubflowError(null);
+    getWorkflowVersion(item.id, item.published_version_id)
+      .then((version) => {
+        if (!cancelled) setWorkflowInputs(version.graph.inputs ?? []);
+      })
+      .catch((err: any) => {
+        if (!cancelled) {
+          setWorkflowInputs([]);
+          setSubflowError(err?.message || '加载子工作流失败');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedWorkflowId, workflows]);
+
+  const setMapping = (key: string, value: string) => {
+    setDraft((prev) => {
+      const next = { ...((prev.input_mapping as Record<string, string>) || {}) };
+      if (value) next[key] = value;
+      else delete next[key];
+      return { ...prev, input_mapping: next };
+    });
+  };
+
+  const insertMappingToken = (key: string, token: string) => {
+    const el = mappingRefs.current[key];
+    const current = String(((draft.input_mapping as Record<string, string>) || {})[key] ?? '');
+    if (!el) {
+      setMapping(key, current + token);
+      return;
+    }
+    const start = el.selectionStart ?? current.length;
+    const end = el.selectionEnd ?? start;
+    setMapping(key, current.slice(0, start) + token + current.slice(end));
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + token.length;
+      el.setSelectionRange(pos, pos);
+    });
+  };
+
   const register =
     (field: string): FieldRef =>
     (el) => {
@@ -212,7 +303,7 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
     });
   };
 
-  const renderVariables = (field: string) => {
+  const renderVariableChips = (onPick: (token: string) => void) => {
     if (!variables.length) {
       return <div className="afe-hint">暂无可用变量 · 先连上游节点</div>;
     }
@@ -224,8 +315,8 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
             type="button"
             key={v.token}
             className="afe-var-chip"
-            title={`插入「${v.token}」到「${field}」`}
-            onClick={() => insertToken(field, v.token)}
+            title={`插入「${v.token}」`}
+            onClick={() => onPick(v.token)}
           >
             <span className="afe-var-chip-label">{v.nodeLabel}</span>
             {v.field && <span className="afe-var-chip-field">.{v.field}</span>}
@@ -234,6 +325,9 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
       </div>
     );
   };
+
+  const renderVariables = (field: string) =>
+    renderVariableChips((token) => insertToken(field, token));
 
   const handleDebug = async () => {
     if (!selected) return;
@@ -511,14 +605,16 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
                       />
                       {renderVariables('system')}
                     </Field>
-                    <Field label="用户提示" hint="每次运行时实际发送给 LLM 的内容；可以用 {{ 变量 }} 引用上游节点输出">
+                    <Field
+                      label="用户提示"
+                      hint="每次运行时实际发送给 LLM 的内容；可以用 {{ 变量 }} 引用上游节点输出"
+                    >
                       <textarea
                         ref={register('prompt')}
                         className="afe-textarea"
                         rows={4}
                         placeholder={
-                          '请帮我把下面这段内容写成社交媒体文案：\n\n' +
-                          '{{ 上游节点名称.字段名 }}'
+                          '请帮我把下面这段内容写成社交媒体文案：\n\n' + '{{ 上游节点名称.字段名 }}'
                         }
                         value={draft.prompt ?? ''}
                         onChange={(e) => setField('prompt', e.target.value)}
@@ -560,14 +656,15 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
                   </>
                 ) : (
                   <>
-                    <Field label="待抽取内容" hint="可以直接输入文本，也可以用 {{ 上游节点 }} 引用上游输出">
+                    <Field
+                      label="待抽取内容"
+                      hint="可以直接输入文本，也可以用 {{ 上游节点 }} 引用上游输出"
+                    >
                       <textarea
                         ref={register('prompt')}
                         className="afe-textarea"
                         rows={4}
-                        placeholder={
-                          '{{ 上游节点名称 }}\n\n或者直接粘贴需要抽取的原始文本……'
-                        }
+                        placeholder={'{{ 上游节点名称 }}\n\n或者直接粘贴需要抽取的原始文本……'}
                         value={draft.prompt ?? ''}
                         onChange={(e) => setField('prompt', e.target.value)}
                       />
@@ -681,7 +778,10 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
             {selected.data.type === 'condition' && (
               <div className="afe-props-group">
                 <div className="afe-props-group-title">比较</div>
-                <Field label="左值" hint="可以用 {{ 上游节点 }} 引用，也可以直接写固定值（如 true、5）">
+                <Field
+                  label="左值"
+                  hint="可以用 {{ 上游节点 }} 引用，也可以直接写固定值（如 true、5）"
+                >
                   <input
                     ref={register('left')}
                     className="afe-input"
@@ -737,6 +837,82 @@ export default function PropertyPanel({ variables, latestOutputs, onDebug }: Pro
                     onChange={(e) => setField('field', e.target.value)}
                   />
                 </Field>
+              </div>
+            )}
+
+            {/* 子工作流 */}
+            {selected.data.type === 'subworkflow' && (
+              <div className="afe-props-group">
+                <div className="afe-props-group-title">子工作流</div>
+                <Field
+                  label="选择工作流"
+                  hint="运行时读取该工作流的已发布版本；未发布的工作流不可选"
+                >
+                  <select
+                    className="afe-select"
+                    value={draft.workflow_id ?? ''}
+                    onChange={(e) => {
+                      beginHistory();
+                      setField('workflow_id', e.target.value);
+                      setField('input_mapping', {});
+                      setActiveMappingKey(null);
+                    }}
+                  >
+                    <option value="">（未选择）</option>
+                    {workflows.map((wf) => (
+                      <option key={wf.id} value={wf.id} disabled={!wf.published_version_id}>
+                        {wf.name}
+                        {wf.published_version_id ? '' : '（未发布）'}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+
+                {draft.workflow_id && (
+                  <div className="afe-hint">
+                    <Link to={`${wsPrefix}/workflows/${draft.workflow_id}`}>打开子工作流</Link>
+                  </div>
+                )}
+
+                {subflowError && <div className="afe-props-warn">{subflowError}</div>}
+
+                {draft.workflow_id && !subflowError && workflowInputs.length === 0 && (
+                  <div className="afe-hint">该子工作流没有声明输入字段。</div>
+                )}
+
+                {workflowInputs.map((field) => {
+                  const key = String(field.key);
+                  const value = String(
+                    ((draft.input_mapping as Record<string, string>) || {})[key] ?? '',
+                  );
+                  return (
+                    <Field
+                      key={key}
+                      label={`${field.label || key}${field.required ? '（必填）' : ''}`}
+                      hint={`子工作流输入 ${key} · ${field.type}`}
+                    >
+                      <input
+                        ref={(el) => {
+                          mappingRefs.current[key] = el;
+                        }}
+                        className="afe-input"
+                        placeholder="上层变量（如 {{ 输入1.text }}）或固定值"
+                        value={value}
+                        onFocus={() => setActiveMappingKey(key)}
+                        onChange={(e) => setMapping(key, e.target.value)}
+                      />
+                    </Field>
+                  );
+                })}
+
+                {workflowInputs.length > 0 && (
+                  <Field label="插入变量" hint="点击变量插入到当前聚焦的输入框">
+                    {renderVariableChips((token) => {
+                      const key = activeMappingKey ?? String(workflowInputs[0]?.key ?? '');
+                      if (key) insertMappingToken(key, token);
+                    })}
+                  </Field>
+                )}
               </div>
             )}
 

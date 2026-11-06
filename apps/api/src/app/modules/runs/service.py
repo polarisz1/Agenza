@@ -34,6 +34,7 @@ from app.modules.runs.schemas import (
     RunResponse,
 )
 from app.modules.settings.service import SettingsService
+from app.modules.workflows.repository import WorkflowRepository
 from app.modules.workflows.service import WorkflowService
 
 
@@ -201,6 +202,8 @@ class RunService:
             on_node_started=_make_node_started(run.id, run.workspace_id, run.triggered_by),
             on_node_finished=_make_node_finished(run.id, run.workspace_id, run.triggered_by),
             on_run_finished=_make_run_finished(run.id, run.workflow_id),
+            workflow_stack=[run.workflow_id],
+            subworkflow_loader=_make_subworkflow_loader(),
         )
 
     @staticmethod
@@ -492,6 +495,37 @@ def _run_response(run: Run) -> RunResponse:
 
 
 # ---- Engine callbacks（每次独立 Session，避免复用已关闭的请求级 Session）----
+
+
+def _make_subworkflow_loader():
+    """TRIGGER-02：按 workspace 读取子工作流的已发布版本快照。
+
+    executor 不直接依赖 DB/Service；由 RunService 注入这个回调，
+    保持引擎与仓储解耦。当前租户上下文由 RunService 的执行入口保证。
+    """
+
+    def _load(workflow_id: str) -> dict:
+        with SessionLocal() as db:
+            wf = WorkflowService.get(db, workflow_id)
+            if wf is None:
+                raise AppError(404, "子工作流不存在或不属于当前工作空间")
+            if not wf.published_version_id:
+                raise AppError(409, f"子工作流「{wf.name}」尚未发布")
+            version = WorkflowRepository.get_version(db, workflow_id, wf.published_version_id)
+            if version is None:
+                raise AppError(409, f"子工作流「{wf.name}」的发布版本不存在")
+            try:
+                graph = json.loads(version.graph_json)
+            except Exception as exc:
+                raise AppError(409, f"子工作流「{wf.name}」的图快照损坏：{exc}") from exc
+            return {
+                "id": wf.id,
+                "name": wf.name,
+                "version_id": version.id,
+                "graph": graph,
+            }
+
+    return _load
 
 
 def _make_node_started(run_id: str, workspace_id: str | None, triggered_by: str | None = None):

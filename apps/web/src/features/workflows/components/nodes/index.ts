@@ -8,6 +8,7 @@ import HttpNode from './HttpNode';
 import PythonNode from './PythonNode';
 import ConditionNode from './ConditionNode';
 import MergeNode from './MergeNode';
+import SubWorkflowNode from './SubWorkflowNode';
 import OutputNode from './OutputNode';
 
 /**
@@ -26,5 +27,6 @@ export const nodeTypes = {
   python: PythonNode,
   condition: ConditionNode,
   merge: MergeNode,
+  subworkflow: SubWorkflowNode,
   output: OutputNode,
 } satisfies NodeTypes;

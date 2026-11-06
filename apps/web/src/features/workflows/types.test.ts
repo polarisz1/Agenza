@@ -147,3 +147,44 @@ describe('节点卡摘要（v2）', () => {
     expect(nodeSummary(data('output', { field: 'result' }))).toBe('result ← 首个上游');
   });
 });
+
+describe('子工作流节点（TRIGGER-02）', () => {
+  it('未选择时提示，选择后展示工作流 id', () => {
+    const empty = { type: 'subworkflow' as const, label: '子流程1', config: {} };
+    expect(nodeSummary(empty)).toBe('未选择子工作流');
+    expect(nodeDetail(empty)).toBe('请选择已发布工作流');
+
+    const picked = {
+      type: 'subworkflow' as const,
+      label: '子流程1',
+      config: { workflow_id: 'wf_abc' },
+    };
+    expect(nodeSummary(picked)).toBe('已选择子工作流');
+    expect(nodeDetail(picked)).toBe('wf_abc');
+  });
+
+  it('input_mapping 原样往返，反序列化后仍是已知节点', () => {
+    const node: EditorNode = {
+      id: 's',
+      type: 'subworkflow',
+      position: { x: 0, y: 0 },
+      data: {
+        type: 'subworkflow',
+        label: '子流程1',
+        config: {
+          workflow_id: 'wf_abc',
+          input_mapping: { text: '{{ 输入1.text }}' },
+        },
+      },
+    };
+
+    const graph = serializeGraph([node], []);
+    const config = (graph.nodes?.[0] as { config: Record<string, unknown> }).config;
+    expect(config.workflow_id).toBe('wf_abc');
+    expect(config.input_mapping).toEqual({ text: '{{ 输入1.text }}' });
+
+    const back = deserializeGraph(graph);
+    expect(back.nodes[0].data.type).toBe('subworkflow');
+    expect(back.nodes[0].data.unknownType).toBeUndefined();
+  });
+});

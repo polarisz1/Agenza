@@ -49,6 +49,8 @@ class RunManager:
         on_node_started: NodeStartedHook | None = None,
         on_node_finished: NodeFinishedHook | None = None,
         on_run_finished: RunFinishedHook | None = None,
+        workflow_stack: list[str] | None = None,
+        subworkflow_loader: Any = None,
     ) -> asyncio.Task:
         """Kick off a run as a background task and return it."""
         if self.is_running(run_id):
@@ -70,6 +72,8 @@ class RunManager:
                 on_node_started=on_node_started,
                 on_node_finished=on_node_finished,
                 on_run_finished=on_run_finished,
+                workflow_stack=workflow_stack,
+                subworkflow_loader=subworkflow_loader,
             ),
             name=f"run:{run_id}",
         )
@@ -120,6 +124,8 @@ class RunManager:
         on_node_started,
         on_node_finished,
         on_run_finished,
+        workflow_stack: list[str] | None = None,
+        subworkflow_loader: Any = None,
     ) -> None:
         started = time.perf_counter()
         await self._bus.publish(run_id, {"event": "run.started", "run_id": run_id})
@@ -137,6 +143,8 @@ class RunManager:
                 gateway=gateway,
                 on_node_started=on_node_started,
                 on_node_finished=on_node_finished,
+                workflow_stack=workflow_stack,
+                subworkflow_loader=subworkflow_loader,
             )
         except asyncio.CancelledError:
             final_status = "cancelled"

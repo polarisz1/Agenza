@@ -2,7 +2,7 @@ import type { Edge, Node } from '@xyflow/react';
 import type { components } from '@agentflow/contracts';
 
 /**
- * 八类节点：**从后端契约派生**，不在前端手抄。
+ * 节点类型：**从后端契约派生**，不在前端手抄。
  * 后端加/删节点类型时，这里会立刻编译报错（NODE_META / DEFAULT_CONFIG 都要跟着补）。
  */
 export type NodeType = NonNullable<components['schemas']['GraphDef']['nodes']>[number]['type'];
@@ -140,6 +140,16 @@ export const NODE_META: Record<EditorNodeType, NodeMeta> = {
     outputKind: 'json',
     accepts: ['text', 'json', 'bool'],
   },
+  subworkflow: {
+    label: '子工作流',
+    group: '流程控制',
+    desc: '调用已发布工作流',
+    color: '#0ea5e9',
+    hasInput: true,
+    hasOutput: true,
+    outputKind: 'json',
+    accepts: ['text', 'json', 'bool'],
+  },
 };
 
 export const NODE_GROUPS = ['基础', '模型', '工具', '流程控制'] as const;
@@ -210,6 +220,12 @@ export const DEFAULT_CONFIG: Record<NodeType, Record<string, any>> = {
     ...COMMON_CONFIG,
     strategy: 'all',
     field: 'merged',
+  },
+  subworkflow: {
+    ...COMMON_CONFIG,
+    workflow_id: '',
+    input_mapping: {},
+    timeout_s: 300,
   },
   output: {
     ...COMMON_CONFIG,
@@ -286,6 +302,8 @@ function labelPrefix(type: NodeType): string {
       return '条件';
     case 'merge':
       return '合并';
+    case 'subworkflow':
+      return '子流程';
     case 'output':
       return '输出';
   }
@@ -325,6 +343,8 @@ export function nodeSummary(data: NodeData): string {
       }`.trim();
     case 'merge':
       return `${c.strategy === 'any' ? '任一到达' : '全部到达'} → ${c.field || 'merged'}`;
+    case 'subworkflow':
+      return c.workflow_id ? '已选择子工作流' : '未选择子工作流';
     case 'output':
       return `${c.field || 'result'} ← ${c.source || '首个上游'}`;
     default:
@@ -364,6 +384,8 @@ export function nodeDetail(data: NodeData): string {
       return '真 / 假 两个分支';
     case 'merge':
       return `字段 ${c.field || 'merged'}`;
+    case 'subworkflow':
+      return c.workflow_id ? String(c.workflow_id) : '请选择已发布工作流';
     case 'output':
       return `格式 ${c.format || 'text'}`;
     default:

@@ -31,6 +31,7 @@ def build_default_registry() -> ExecutorRegistry:
     from app.core.engine.executors.merge import MergeExecutor
     from app.core.engine.executors.output import OutputExecutor
     from app.core.engine.executors.python import PythonExecutor
+    from app.core.engine.executors.subworkflow import SubWorkflowExecutor
 
     reg = ExecutorRegistry()
     reg.register("input", InputExecutor())
@@ -40,5 +41,6 @@ def build_default_registry() -> ExecutorRegistry:
     reg.register("python", PythonExecutor())
     reg.register("condition", ConditionExecutor())
     reg.register("merge", MergeExecutor())
+    reg.register("subworkflow", SubWorkflowExecutor())
     reg.register("output", OutputExecutor())
     return reg

@@ -12,7 +12,17 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 WorkflowStatus = Literal["draft", "ready"]
-NodeType = Literal["input", "llm", "extract", "http", "python", "condition", "merge", "output"]
+NodeType = Literal[
+    "input",
+    "llm",
+    "extract",
+    "http",
+    "python",
+    "condition",
+    "merge",
+    "subworkflow",
+    "output",
+]
 PortKind = Literal["text", "number", "bool", "json"]
 
 # 未知字段忽略：兼容历史图里已废弃的配置项，不让读取响应 500
@@ -78,6 +88,16 @@ class MergeConfig(NodeCommonConfig):
     field: str = "merged"
 
 
+class SubWorkflowConfig(NodeCommonConfig):
+    """TRIGGER-02 Phase A：引用同 workspace 已发布工作流，作为可复用节点。"""
+
+    workflow_id: str = ""
+    # 子工作流 input key → 父级模板（{{ 节点.字段 }}）或字面量
+    input_mapping: dict[str, str] | None = None
+    # 目前只支持 published；保留字段便于未来固定到具体 version_id
+    version_policy: Literal["published"] = "published"
+
+
 class OutputConfig(NodeCommonConfig):
     field: str = "result"
     source: str = ""
@@ -136,6 +156,11 @@ class MergeNode(_BaseNode):
     config: MergeConfig = Field(default_factory=MergeConfig)
 
 
+class SubWorkflowNode(_BaseNode):
+    type: Literal["subworkflow"] = "subworkflow"
+    config: SubWorkflowConfig = Field(default_factory=SubWorkflowConfig)
+
+
 class OutputNode(_BaseNode):
     type: Literal["output"] = "output"
     config: OutputConfig = Field(default_factory=OutputConfig)
@@ -149,6 +174,7 @@ NodeDef = Annotated[
     | PythonNode
     | ConditionNode
     | MergeNode
+    | SubWorkflowNode
     | OutputNode,
     Field(discriminator="type"),
 ]
