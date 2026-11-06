@@ -1,12 +1,5 @@
 import { Alert, App, Button, Spin } from 'antd';
-import {
-  ArrowLeft,
-  CheckCircle,
-  Coins,
-  Lightbulb,
-  Play,
-  Timer,
-} from '@phosphor-icons/react';
+import { ArrowLeft, CheckCircle, Coins, Lightbulb, Play, Timer } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -14,8 +7,13 @@ import EmptyState from '@/shared/components/EmptyState';
 import { Card, CodeBlock, Pill, SectionHeader, StatCard, Tabs } from '@/shared/components/ui';
 import type { PillTone, TabItem } from '@/shared/components/ui';
 import { formatClock, formatDateTime } from '@/shared/utils/datetime';
-import { getRun, listRuns, rerunRun } from '../api';
-import type { RunDetail as RunDetailType, RunNodeDetail } from '../api';
+import { getRun, getRunDiagnosis, listRuns, rerunRun } from '../api';
+import type {
+  NodeDiagnosis,
+  RunDetail as RunDetailType,
+  RunDiagnosis,
+  RunNodeDetail,
+} from '../api';
 import { classifyRunError } from '../errors';
 import { formatDuration, pretty, statusMeta, triggerLabel } from '../meta';
 import './RunView.css';
@@ -37,6 +35,31 @@ const STATUS_TONE: Record<string, PillTone> = {
   cancelled: 'neutral',
   skipped: 'warning',
   waiting_input: 'warning',
+};
+
+const DIAGNOSIS_CATEGORY_LABEL: Record<string, string> = {
+  budget: '预算超限',
+  auth: '鉴权失败',
+  model_not_found: '模型不可用',
+  rate_limit: '限流',
+  timeout: '超时',
+  network: '网络异常',
+  provider: '服务商错误',
+  json_format: 'JSON 格式',
+  missing_fields: '字段缺失',
+  variable: '变量解析',
+  script: '脚本错误',
+  upstream: '上游数据',
+  internal: '内部错误',
+  unknown: '未知错误',
+};
+
+const DIAGNOSIS_ACTION_LABEL: Record<string, string> = {
+  edit_prompt: '去编辑节点',
+  open_node: '打开节点',
+  retry_node: '重新运行',
+  open_models: '模型配置',
+  open_gateway: 'AI Gateway',
 };
 
 const NODE_COLORS: Record<string, string> = {
@@ -92,7 +115,25 @@ export default function RunDetail() {
   const [tab, setTab] = useState<RunTab>('overview');
   const [rerunning, setRerunning] = useState(false);
   const [comparing, setComparing] = useState(false);
+  const [diagnosis, setDiagnosis] = useState<RunDiagnosis | null>(null);
+  const [diagnosisLoading, setDiagnosisLoading] = useState(false);
+  const [diagnosisError, setDiagnosisError] = useState<string | null>(null);
   const currentIdRef = useRef<string | null>(null);
+
+  const loadDiagnosis = useCallback(async (runId: string) => {
+    setDiagnosisLoading(true);
+    setDiagnosisError(null);
+    setDiagnosis(null);
+    try {
+      setDiagnosis(await getRunDiagnosis(runId));
+    } catch (err: any) {
+      // 接口不可用时退回本地规则分类，诊断页仍可用
+      setDiagnosis(null);
+      setDiagnosisError(err?.message || '自动根因分析暂不可用');
+    } finally {
+      setDiagnosisLoading(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -102,6 +143,12 @@ export default function RunDetail() {
       setLoadError(null);
       const isFirstLoad = currentIdRef.current !== id;
       currentIdRef.current = id;
+
+      if (data.status !== 'running') {
+        void loadDiagnosis(data.id);
+      } else {
+        setDiagnosis(null);
+      }
 
       // 失败节点默认展开（D-14）；首次加载决定初始 tab
       setExpanded((prev) => {
@@ -129,7 +176,7 @@ export default function RunDetail() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, loadDiagnosis]);
 
   useEffect(() => {
     setLoading(true);
@@ -226,6 +273,28 @@ export default function RunDetail() {
     }
   };
 
+  const handleDiagnosisAction = (item: NodeDiagnosis, action: string) => {
+    if (action === 'retry_node') {
+      void handleRerun();
+      return;
+    }
+    if (action === 'open_models') {
+      nav(`${wsPrefix}/settings`);
+      return;
+    }
+    if (action === 'open_gateway') {
+      nav(`${wsPrefix}/gateway`);
+      return;
+    }
+    // open_node / edit_prompt：能定位到节点就聚焦节点，否则回到工作流
+    const node = run?.nodes.find((candidate) => candidate.node_id === item.node_id);
+    if (node) {
+      openNode(node);
+      return;
+    }
+    if (run) nav(`${wsPrefix}/workflows/${run.workflow_id}`);
+  };
+
   if (loading && !run) {
     return (
       <div style={{ padding: 48, textAlign: 'center' }}>
@@ -259,6 +328,8 @@ export default function RunDetail() {
     slowestNode && run.duration_ms
       ? Math.round(((slowestNode.duration_ms || 0) / run.duration_ms) * 100)
       : null;
+  // 后端诊断可用时以后端为准；不可用时回退本地规则（failedNodes）
+  const diagnosisCount = diagnosis ? diagnosis.items.length : failedNodes.length;
 
   return (
     <div className="rv">
@@ -289,7 +360,9 @@ export default function RunDetail() {
           </div>
         </div>
         <div className="rv-actions">
-          <Button onClick={() => nav(`${wsPrefix}/workflows/${run.workflow_id}`)}>打开工作流</Button>
+          <Button onClick={() => nav(`${wsPrefix}/workflows/${run.workflow_id}`)}>
+            打开工作流
+          </Button>
           <Button onClick={handleExport} disabled={run.nodes.length === 0}>
             导出日志
           </Button>
@@ -350,11 +423,7 @@ export default function RunDetail() {
       )}
 
       <div className="rv-tabbar">
-        <Tabs
-          items={RUN_TABS}
-          value={tab}
-          onChange={(key) => setTab(key as RunTab)}
-        />
+        <Tabs items={RUN_TABS} value={tab} onChange={(key) => setTab(key as RunTab)} />
       </div>
 
       {tab === 'overview' && (
@@ -578,7 +647,9 @@ export default function RunDetail() {
                           {nodeTab === 'output' && (
                             <>
                               {node.output === null || node.output === undefined ? (
-                                <div className="rv-hint">这个节点没有输出（失败 / 跳过 / 取消）</div>
+                                <div className="rv-hint">
+                                  这个节点没有输出（失败 / 跳过 / 取消）
+                                </div>
                               ) : (
                                 <pre className="rv-code">{pretty(node.output)}</pre>
                               )}
@@ -720,16 +791,124 @@ export default function RunDetail() {
         <Card padded>
           <SectionHeader
             title="调试诊断"
-            description="失败节点、错误信息与建议处理方式"
+            description={
+              diagnosis
+                ? '后端确定性规则分析（不调用模型）：节点根因、证据与处理建议'
+                : '失败节点、错误信息与建议处理方式'
+            }
             extra={
-              failedNodes.length > 0 ? (
-                <Pill tone="danger">{failedNodes.length} 个失败节点</Pill>
+              diagnosisLoading ? (
+                <Pill tone="neutral">分析中…</Pill>
+              ) : diagnosisCount > 0 ? (
+                <Pill tone="danger">{diagnosisCount} 个待处理问题</Pill>
               ) : (
                 <Pill tone="success">未发现失败节点</Pill>
               )
             }
           />
-          {failedNodes.length === 0 ? (
+          {diagnosisError && (
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginBottom: 12 }}
+              message="自动根因分析不可用，已回退本地规则"
+              description={diagnosisError}
+            />
+          )}
+          {diagnosisLoading && !diagnosis ? (
+            <div style={{ padding: 32, textAlign: 'center' }}>
+              <Spin />
+            </div>
+          ) : diagnosis ? (
+            diagnosis.items.length === 0 ? (
+              <EmptyState
+                title="本次运行没有可诊断的失败节点"
+                description="如果运行结果不符合预期，可以到「节点执行」里逐个查看输入输出。"
+                action={<Button onClick={() => setTab('nodes')}>查看节点执行</Button>}
+              />
+            ) : (
+              <div className="rv-diag-list">
+                {diagnosis.items.map((item) => (
+                  <div
+                    className={`rv-diag-item${item.severity === 'warning' ? ' is-warning' : ''}`}
+                    key={`${item.node_id || 'run'}-${item.category}`}
+                  >
+                    <div className="rv-diag-head">
+                      <strong>{item.node_type === 'run' ? '运行级问题' : item.node_name}</strong>
+                      <Pill tone={item.severity === 'warning' ? 'warning' : 'danger'}>
+                        {DIAGNOSIS_CATEGORY_LABEL[item.category] ?? item.category}
+                      </Pill>
+                      <span className="rv-diag-confidence">
+                        置信度 {Math.round(item.confidence * 100)}%
+                      </span>
+                    </div>
+                    <div className="rv-diag-title">{item.title}</div>
+                    <div className="rv-diag-suggestion">{item.root_cause}</div>
+                    {item.evidence.length > 0 && (
+                      <div className="rv-diag-evidence">
+                        {item.evidence.map((evidence) => (
+                          <div className="rv-diag-ev" key={evidence.label}>
+                            <span className="k">{evidence.label}</span>
+                            <span className="v">{evidence.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {item.suggestions.length > 0 && (
+                      <ul className="rv-diag-advice">
+                        {item.suggestions.map((suggestion) => (
+                          <li key={suggestion.text}>
+                            <span>{suggestion.text}</span>
+                            {suggestion.action && (
+                              <Button
+                                size="small"
+                                type="link"
+                                onClick={() => handleDiagnosisAction(item, suggestion.action!)}
+                              >
+                                {DIAGNOSIS_ACTION_LABEL[suggestion.action] ?? '处理'}
+                              </Button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <div className="rv-error-actions">
+                      {item.node_id && run.nodes.some((node) => node.node_id === item.node_id) && (
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            const node = run.nodes.find(
+                              (candidate) => candidate.node_id === item.node_id,
+                            );
+                            if (node) openNode(node);
+                          }}
+                        >
+                          在编辑器中打开
+                        </Button>
+                      )}
+                      <Button
+                        size="small"
+                        onClick={() =>
+                          copyText(
+                            [
+                              item.title,
+                              item.root_cause,
+                              ...item.evidence.map(
+                                (evidence) => `${evidence.label}: ${evidence.value}`,
+                              ),
+                            ].join('\n'),
+                            message,
+                          )
+                        }
+                      >
+                        复制诊断
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : failedNodes.length === 0 ? (
             <EmptyState
               title="本次运行没有失败节点"
               description="如果运行结果不符合预期，可以到「节点执行」里逐个查看输入输出。"
@@ -746,7 +925,9 @@ export default function RunDetail() {
                       <Pill tone="danger">{info.label}</Pill>
                       <span className="rv-cost-num">{formatDuration(node.duration_ms)}</span>
                     </div>
-                    <div className="rv-diag-error">{node.error || '节点执行失败（未提供错误信息）'}</div>
+                    <div className="rv-diag-error">
+                      {node.error || '节点执行失败（未提供错误信息）'}
+                    </div>
                     <div className="rv-diag-suggestion">{info.suggestion}</div>
                     <div className="rv-error-actions">
                       <Button size="small" onClick={() => openNode(node)}>

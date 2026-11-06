@@ -8,6 +8,9 @@ export type RunResponse = components['schemas']['RunResponse'];
 export type CancelResult = components['schemas']['CancelResult'];
 export type CompareNode = components['schemas']['CompareNode'];
 export type RunCompareResult = components['schemas']['RunCompareResult'];
+export type RunDiagnosis = components['schemas']['RunDiagnosisResponse'];
+export type NodeDiagnosis = components['schemas']['NodeDiagnosis'];
+export type DiagnosisSuggestion = components['schemas']['DiagnosisSuggestion'];
 
 type RunListData = ApiData<'/api/v1/runs', 'get'>;
 type WorkflowListData = ApiData<'/api/v1/workflows', 'get'>;
@@ -37,6 +40,11 @@ export async function getRun(id: string): Promise<RunDetail> {
 
 export async function getRunNode(runId: string, nodeId: string): Promise<RunNodeDetail> {
   return http.get<RunNodeDetail>(`/api/v1/runs/${runId}/nodes/${nodeId}`);
+}
+
+/** GATE-04：自动根因分析（后端确定性规则，不调用模型） */
+export async function getRunDiagnosis(runId: string): Promise<RunDiagnosis> {
+  return http.get<RunDiagnosis>(`/api/v1/runs/${runId}/diagnosis`);
 }
 
 export async function cancelRun(id: string): Promise<CancelResult> {
