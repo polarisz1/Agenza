@@ -8,19 +8,29 @@ import {
   Sparkle,
   Timer,
 } from '@phosphor-icons/react';
+import type { EChartsCoreOption } from 'echarts/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import EChart from '@/shared/components/charts/EChart';
 import EmptyState from '@/shared/components/EmptyState';
 import { Card, CodeBlock, Pill, SectionHeader, StatCard, Tabs } from '@/shared/components/ui';
 import type { PillTone, TabItem } from '@/shared/components/ui';
 import { formatClock, formatDateTime } from '@/shared/utils/datetime';
-import { analyzeRunDiagnosis, getRun, getRunDiagnosis, listRuns, rerunRun } from '../api';
+import {
+  analyzeRunDiagnosis,
+  getRun,
+  getRunDiagnosis,
+  getRunDiagnosisTrends,
+  listRuns,
+  rerunRun,
+} from '../api';
 import type {
   DeepDiagnosis,
   NodeDiagnosis,
   RunDetail as RunDetailType,
   RunDiagnosis,
+  RunDiagnosisTrend,
   RunNodeDetail,
 } from '../api';
 import { classifyRunError } from '../errors';
@@ -130,7 +140,11 @@ export default function RunDetail() {
   const [deepAnalysis, setDeepAnalysis] = useState<DeepDiagnosis | null>(null);
   const [deepLoading, setDeepLoading] = useState(false);
   const [deepError, setDeepError] = useState<string | null>(null);
+  const [trend, setTrend] = useState<RunDiagnosisTrend | null>(null);
+  const [trendLoading, setTrendLoading] = useState(false);
+  const [trendError, setTrendError] = useState<string | null>(null);
   const currentIdRef = useRef<string | null>(null);
+  const trendWorkflowRef = useRef<string | null>(null);
 
   const loadDiagnosis = useCallback(async (runId: string) => {
     setDiagnosisLoading(true);
@@ -199,6 +213,28 @@ export default function RunDetail() {
     setLoading(true);
     void load();
   }, [load]);
+
+  // Phase 3：进入诊断 Tab 时按工作流加载跨运行趋势（同一工作流只拉一次）
+  const loadTrends = useCallback(async (workflowId: string) => {
+    setTrendLoading(true);
+    setTrendError(null);
+    try {
+      setTrend(await getRunDiagnosisTrends({ workflowId, days: 30, top: 5 }));
+    } catch (err: any) {
+      setTrend(null);
+      setTrendError(err?.message || '跨运行趋势加载失败');
+    } finally {
+      setTrendLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab !== 'diagnostics') return;
+    const workflowId = run?.workflow_id;
+    if (!workflowId || trendWorkflowRef.current === workflowId) return;
+    trendWorkflowRef.current = workflowId;
+    void loadTrends(workflowId);
+  }, [tab, run?.workflow_id, loadTrends]);
 
   // 运行中每 2s 刷新，结束后停止
   useEffect(() => {
@@ -325,6 +361,85 @@ export default function RunDetail() {
       setDeepLoading(false);
     }
   };
+
+  const trendOption = useMemo<EChartsCoreOption>(() => {
+    const points = trend?.points ?? [];
+    const percent = (value: number, runs: number) =>
+      runs > 0 ? Math.round(value * 1000) / 10 : null;
+    return {
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: '#1B2336',
+        borderColor: '#334155',
+        textStyle: { color: '#F8FAFC', fontSize: 12 },
+      },
+      legend: {
+        data: ['运行次数', '成功率', '空输出率'],
+        textStyle: { color: '#94A3B8', fontSize: 11 },
+        top: 0,
+        right: 0,
+      },
+      grid: { left: 40, right: 48, top: 32, bottom: 26 },
+      xAxis: {
+        type: 'category',
+        data: points.map((point) => point.date.slice(5)),
+        axisLine: { lineStyle: { color: '#334155' } },
+        axisTick: { show: false },
+        axisLabel: { color: '#94A3B8', fontSize: 11 },
+      },
+      yAxis: [
+        {
+          type: 'value',
+          name: '次数',
+          minInterval: 1,
+          nameTextStyle: { color: '#64748B', fontSize: 10 },
+          splitLine: { lineStyle: { color: '#273248' } },
+          axisLabel: { color: '#94A3B8', fontSize: 11 },
+        },
+        {
+          type: 'value',
+          name: '%',
+          min: 0,
+          max: 100,
+          nameTextStyle: { color: '#64748B', fontSize: 10 },
+          splitLine: { show: false },
+          axisLabel: { color: '#94A3B8', fontSize: 11, formatter: '{value}%' },
+        },
+      ],
+      series: [
+        {
+          name: '运行次数',
+          type: 'bar',
+          data: points.map((point) => point.runs),
+          itemStyle: { color: '#3B82F6', borderRadius: [3, 3, 0, 0] },
+          barWidth: 14,
+        },
+        {
+          name: '成功率',
+          type: 'line',
+          yAxisIndex: 1,
+          data: points.map((point) => percent(point.success_rate, point.runs)),
+          smooth: true,
+          connectNulls: true,
+          lineStyle: { color: '#22C55E', width: 2 },
+          itemStyle: { color: '#22C55E' },
+          symbolSize: 5,
+        },
+        {
+          name: '空输出率',
+          type: 'line',
+          yAxisIndex: 1,
+          data: points.map((point) => percent(point.empty_output_rate, point.runs)),
+          smooth: true,
+          connectNulls: true,
+          lineStyle: { color: '#F59E0B', width: 2, type: 'dashed' },
+          itemStyle: { color: '#F59E0B' },
+          symbolSize: 5,
+        },
+      ],
+    };
+  }, [trend]);
 
   if (loading && !run) {
     return (
@@ -984,6 +1099,85 @@ export default function RunDetail() {
               })}
             </div>
           )}
+          <div className="rv-trends">
+            <div className="rv-trends-head">
+              <strong>跨运行趋势</strong>
+              <span className="rv-deep-meta">
+                近 {trend?.days ?? 30} 天 · 同一工作流 · 空输出率为质量代理指标
+              </span>
+              <Button
+                size="small"
+                type="text"
+                loading={trendLoading}
+                onClick={() => run.workflow_id && void loadTrends(run.workflow_id)}
+              >
+                刷新
+              </Button>
+            </div>
+            {trendError && (
+              <Alert type="warning" showIcon message="跨运行趋势不可用" description={trendError} />
+            )}
+            {trendLoading && !trend ? (
+              <div style={{ padding: 24, textAlign: 'center' }}>
+                <Spin size="small" />
+              </div>
+            ) : trend ? (
+              trend.total_runs === 0 ? (
+                <div className="rv-hint">近 30 天还没有该工作流的已完成运行。</div>
+              ) : (
+                <>
+                  <div className="rv-trend-kpis">
+                    <div className="rv-trend-kpi">
+                      <span>已完成运行</span>
+                      <strong>{trend.total_runs}</strong>
+                    </div>
+                    <div className="rv-trend-kpi">
+                      <span>运行成功率</span>
+                      <strong>{Math.round(trend.success_rate * 1000) / 10}%</strong>
+                    </div>
+                    <div className="rv-trend-kpi">
+                      <span>空输出率</span>
+                      <strong>{Math.round(trend.empty_output_rate * 1000) / 10}%</strong>
+                    </div>
+                    <div className="rv-trend-kpi">
+                      <span>失败运行</span>
+                      <strong>{trend.failed_runs}</strong>
+                    </div>
+                  </div>
+                  <EChart option={trendOption} height={220} />
+                  <div className="rv-trend-top">
+                    <div className="rv-trend-top-head">
+                      同类失败 Top {trend.top_failures.length}
+                    </div>
+                    {trend.top_failures.length === 0 ? (
+                      <div className="rv-hint">窗口内没有失败节点。</div>
+                    ) : (
+                      trend.top_failures.map((item) => (
+                        <div className="rv-trend-top-item" key={item.category}>
+                          <div className="rv-trend-top-main">
+                            <strong>{DIAGNOSIS_CATEGORY_LABEL[item.category] ?? item.title}</strong>
+                            <span className="rv-deep-meta">
+                              {item.count} 次 · 影响 {item.failed_runs} 次运行 · 最近{' '}
+                              {formatDateTime(item.last_seen)}
+                              {item.sample_node_name ? ` · ${item.sample_node_name}` : ''}
+                            </span>
+                          </div>
+                          {item.sample_run_id && (
+                            <Button
+                              size="small"
+                              onClick={() => nav(`${wsPrefix}/runs/${item.sample_run_id}`)}
+                            >
+                              查看最近一次
+                            </Button>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              )
+            ) : null}
+          </div>
           {deepError && (
             <Alert
               type="error"

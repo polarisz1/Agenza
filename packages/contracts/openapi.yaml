@@ -1834,6 +1834,79 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/runs/diagnosis/trends:
+    get:
+      tags:
+      - v1-runs
+      summary: Diagnosis Trends
+      description: GATE-04 Phase 3：同类失败 Top N + 成功率/空输出率趋势（确定性聚合，不调模型）。
+      operationId: diagnosis_trends_api_v1_runs_diagnosis_trends_get
+      parameters:
+      - name: workflow_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 只看某个工作流；不传则统计整个 workspace
+          title: Workflow Id
+        description: 只看某个工作流；不传则统计整个 workspace
+      - name: days
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 90
+          minimum: 1
+          default: 30
+          title: Days
+      - name: top
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 10
+          minimum: 1
+          default: 5
+          title: Top
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_RunDiagnosisTrendResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/runs/{run_id}:
     get:
       tags:
@@ -4612,6 +4685,79 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/runs/diagnosis/trends:
+    get:
+      tags:
+      - runs
+      summary: Diagnosis Trends
+      description: GATE-04 Phase 3：同类失败 Top N + 成功率/空输出率趋势（确定性聚合，不调模型）。
+      operationId: diagnosis_trends_api_runs_diagnosis_trends_get
+      parameters:
+      - name: workflow_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 只看某个工作流；不传则统计整个 workspace
+          title: Workflow Id
+        description: 只看某个工作流；不传则统计整个 workspace
+      - name: days
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 90
+          minimum: 1
+          default: 30
+          title: Days
+      - name: top
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 10
+          minimum: 1
+          default: 5
+          title: Top
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_RunDiagnosisTrendResponse_'
+        '400':
+          description: 业务错误（参数非法 / 状态不允许）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 状态冲突（如同工作流已有运行中实例）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: 服务端未预期错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/runs/{run_id}:
     get:
       tags:
@@ -5934,6 +6080,22 @@ components:
       required:
       - data
       title: ApiResponse[RunDiagnosisResponse]
+    ApiResponse_RunDiagnosisTrendResponse_:
+      properties:
+        code:
+          type: integer
+          title: Code
+          default: 200
+        message:
+          type: string
+          title: Message
+          default: ok
+        data:
+          $ref: '#/components/schemas/RunDiagnosisTrendResponse'
+      type: object
+      required:
+      - data
+      title: ApiResponse[RunDiagnosisTrendResponse]
     ApiResponse_RunListData_:
       properties:
         code:
@@ -6420,6 +6582,58 @@ components:
           default: true
       type: object
       title: DeleteResult
+    DiagnosisCategoryStat:
+      properties:
+        category:
+          type: string
+          enum:
+          - budget
+          - auth
+          - model_not_found
+          - rate_limit
+          - timeout
+          - network
+          - provider
+          - json_format
+          - missing_fields
+          - variable
+          - script
+          - upstream
+          - internal
+          - unknown
+          title: Category
+        title:
+          type: string
+          title: Title
+        count:
+          type: integer
+          title: Count
+        failed_runs:
+          type: integer
+          title: Failed Runs
+        last_seen:
+          type: string
+          format: date-time
+          title: Last Seen
+        sample_run_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sample Run Id
+        sample_node_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sample Node Name
+      type: object
+      required:
+      - category
+      - title
+      - count
+      - failed_runs
+      - last_seen
+      title: DiagnosisCategoryStat
+      description: 跨运行聚合：某类失败在窗口内的出现次数与影响范围。
     DiagnosisEvidence:
       properties:
         label:
@@ -6447,6 +6661,32 @@ components:
       required:
       - text
       title: DiagnosisSuggestion
+    DiagnosisTrendPoint:
+      properties:
+        date:
+          type: string
+          title: Date
+        runs:
+          type: integer
+          title: Runs
+        failed:
+          type: integer
+          title: Failed
+        success_rate:
+          type: number
+          title: Success Rate
+        empty_output_rate:
+          type: number
+          title: Empty Output Rate
+      type: object
+      required:
+      - date
+      - runs
+      - failed
+      - success_rate
+      - empty_output_rate
+      title: DiagnosisTrendPoint
+      description: 按天聚合的运行结果与输出质量代理指标。
     DuplicateResult:
       properties:
         id:
@@ -7875,6 +8115,59 @@ components:
       - status
       - generated_at
       title: RunDiagnosisResponse
+    RunDiagnosisTrendResponse:
+      properties:
+        workflow_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workflow Id
+        days:
+          type: integer
+          title: Days
+        period_start:
+          type: string
+          format: date-time
+          title: Period Start
+        period_end:
+          type: string
+          format: date-time
+          title: Period End
+        total_runs:
+          type: integer
+          title: Total Runs
+        failed_runs:
+          type: integer
+          title: Failed Runs
+        success_rate:
+          type: number
+          title: Success Rate
+        empty_output_rate:
+          type: number
+          title: Empty Output Rate
+        top_failures:
+          items:
+            $ref: '#/components/schemas/DiagnosisCategoryStat'
+          type: array
+          title: Top Failures
+          default: []
+        points:
+          items:
+            $ref: '#/components/schemas/DiagnosisTrendPoint'
+          type: array
+          title: Points
+          default: []
+      type: object
+      required:
+      - days
+      - period_start
+      - period_end
+      - total_runs
+      - failed_runs
+      - success_rate
+      - empty_output_rate
+      title: RunDiagnosisTrendResponse
+      description: GATE-04 Phase 3：跨运行趋势（同类失败 Top N + 输出质量变化）。
     RunListData:
       properties:
         items:

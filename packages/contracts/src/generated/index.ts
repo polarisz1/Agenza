@@ -459,6 +459,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/runs/diagnosis/trends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Diagnosis Trends
+         * @description GATE-04 Phase 3：同类失败 Top N + 成功率/空输出率趋势（确定性聚合，不调模型）。
+         */
+        get: operations["diagnosis_trends_api_v1_runs_diagnosis_trends_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runs/{run_id}": {
         parameters: {
             query?: never;
@@ -1259,6 +1279,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs/diagnosis/trends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Diagnosis Trends
+         * @description GATE-04 Phase 3：同类失败 Top N + 成功率/空输出率趋势（确定性聚合，不调模型）。
+         */
+        get: operations["diagnosis_trends_api_runs_diagnosis_trends_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs/{run_id}": {
         parameters: {
             query?: never;
@@ -1894,6 +1934,20 @@ export interface components {
             message: string;
             data: components["schemas"]["RunDiagnosisResponse"];
         };
+        /** ApiResponse[RunDiagnosisTrendResponse] */
+        ApiResponse_RunDiagnosisTrendResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            /**
+             * Message
+             * @default ok
+             */
+            message: string;
+            data: components["schemas"]["RunDiagnosisTrendResponse"];
+        };
         /** ApiResponse[RunListData] */
         ApiResponse_RunListData_: {
             /**
@@ -2270,6 +2324,32 @@ export interface components {
              */
             deleted: boolean;
         };
+        /**
+         * DiagnosisCategoryStat
+         * @description 跨运行聚合：某类失败在窗口内的出现次数与影响范围。
+         */
+        DiagnosisCategoryStat: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "budget" | "auth" | "model_not_found" | "rate_limit" | "timeout" | "network" | "provider" | "json_format" | "missing_fields" | "variable" | "script" | "upstream" | "internal" | "unknown";
+            /** Title */
+            title: string;
+            /** Count */
+            count: number;
+            /** Failed Runs */
+            failed_runs: number;
+            /**
+             * Last Seen
+             * Format: date-time
+             */
+            last_seen: string;
+            /** Sample Run Id */
+            sample_run_id?: string | null;
+            /** Sample Node Name */
+            sample_node_name?: string | null;
+        };
         /** DiagnosisEvidence */
         DiagnosisEvidence: {
             /** Label */
@@ -2283,6 +2363,22 @@ export interface components {
             text: string;
             /** Action */
             action?: string | null;
+        };
+        /**
+         * DiagnosisTrendPoint
+         * @description 按天聚合的运行结果与输出质量代理指标。
+         */
+        DiagnosisTrendPoint: {
+            /** Date */
+            date: string;
+            /** Runs */
+            runs: number;
+            /** Failed */
+            failed: number;
+            /** Success Rate */
+            success_rate: number;
+            /** Empty Output Rate */
+            empty_output_rate: number;
         };
         /** DuplicateResult */
         DuplicateResult: {
@@ -3281,6 +3377,44 @@ export interface components {
              * @default []
              */
             items: components["schemas"]["NodeDiagnosis"][];
+        };
+        /**
+         * RunDiagnosisTrendResponse
+         * @description GATE-04 Phase 3：跨运行趋势（同类失败 Top N + 输出质量变化）。
+         */
+        RunDiagnosisTrendResponse: {
+            /** Workflow Id */
+            workflow_id?: string | null;
+            /** Days */
+            days: number;
+            /**
+             * Period Start
+             * Format: date-time
+             */
+            period_start: string;
+            /**
+             * Period End
+             * Format: date-time
+             */
+            period_end: string;
+            /** Total Runs */
+            total_runs: number;
+            /** Failed Runs */
+            failed_runs: number;
+            /** Success Rate */
+            success_rate: number;
+            /** Empty Output Rate */
+            empty_output_rate: number;
+            /**
+             * Top Failures
+             * @default []
+             */
+            top_failures: components["schemas"]["DiagnosisCategoryStat"][];
+            /**
+             * Points
+             * @default []
+             */
+            points: components["schemas"]["DiagnosisTrendPoint"][];
         };
         /** RunListData */
         RunListData: {
@@ -6046,6 +6180,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_RunCompareResult_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    diagnosis_trends_api_v1_runs_diagnosis_trends_get: {
+        parameters: {
+            query?: {
+                /** @description 只看某个工作流；不传则统计整个 workspace */
+                workflow_id?: string | null;
+                days?: number;
+                top?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_RunDiagnosisTrendResponse_"];
                 };
             };
             /** @description 业务错误（参数非法 / 状态不允许） */
@@ -9633,6 +9837,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_RunCompareResult_"];
+                };
+            };
+            /** @description 业务错误（参数非法 / 状态不允许） */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 状态冲突（如同工作流已有运行中实例） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description 服务端未预期错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    diagnosis_trends_api_runs_diagnosis_trends_get: {
+        parameters: {
+            query?: {
+                /** @description 只看某个工作流；不传则统计整个 workspace */
+                workflow_id?: string | null;
+                days?: number;
+                top?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_RunDiagnosisTrendResponse_"];
                 };
             };
             /** @description 业务错误（参数非法 / 状态不允许） */

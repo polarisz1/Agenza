@@ -149,6 +149,43 @@ class RunDiagnosisResponse(BaseModel):
     items: list[NodeDiagnosis] = []
 
 
+class DiagnosisCategoryStat(BaseModel):
+    """跨运行聚合：某类失败在窗口内的出现次数与影响范围。"""
+
+    category: DiagnosisCategory
+    title: str
+    count: int
+    failed_runs: int
+    last_seen: datetime
+    sample_run_id: str | None = None
+    sample_node_name: str | None = None
+
+
+class DiagnosisTrendPoint(BaseModel):
+    """按天聚合的运行结果与输出质量代理指标。"""
+
+    date: str
+    runs: int
+    failed: int
+    success_rate: float
+    empty_output_rate: float
+
+
+class RunDiagnosisTrendResponse(BaseModel):
+    """GATE-04 Phase 3：跨运行趋势（同类失败 Top N + 输出质量变化）。"""
+
+    workflow_id: str | None = None
+    days: int
+    period_start: datetime
+    period_end: datetime
+    total_runs: int
+    failed_runs: int
+    success_rate: float
+    empty_output_rate: float
+    top_failures: list[DiagnosisCategoryStat] = []
+    points: list[DiagnosisTrendPoint] = []
+
+
 class DeepDiagnosisResponse(BaseModel):
     """AI 深度分析结果（GATE-04 Phase 2，按需调用模型）。"""
 

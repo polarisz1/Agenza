@@ -12,6 +12,9 @@ export type RunDiagnosis = components['schemas']['RunDiagnosisResponse'];
 export type NodeDiagnosis = components['schemas']['NodeDiagnosis'];
 export type DiagnosisSuggestion = components['schemas']['DiagnosisSuggestion'];
 export type DeepDiagnosis = components['schemas']['DeepDiagnosisResponse'];
+export type RunDiagnosisTrend = components['schemas']['RunDiagnosisTrendResponse'];
+export type DiagnosisCategoryStat = components['schemas']['DiagnosisCategoryStat'];
+export type DiagnosisTrendPoint = components['schemas']['DiagnosisTrendPoint'];
 
 type RunListData = ApiData<'/api/v1/runs', 'get'>;
 type WorkflowListData = ApiData<'/api/v1/workflows', 'get'>;
@@ -46,6 +49,18 @@ export async function getRunNode(runId: string, nodeId: string): Promise<RunNode
 /** GATE-04：自动根因分析（后端确定性规则，不调用模型） */
 export async function getRunDiagnosis(runId: string): Promise<RunDiagnosis> {
   return http.get<RunDiagnosis>(`/api/v1/runs/${runId}/diagnosis`);
+}
+
+/** GATE-04 Phase 3：跨运行趋势（同类失败 Top N + 成功率/空输出率） */
+export async function getRunDiagnosisTrends(
+  params: { workflowId?: string; days?: number; top?: number } = {},
+): Promise<RunDiagnosisTrend> {
+  const search = new URLSearchParams();
+  if (params.workflowId) search.set('workflow_id', params.workflowId);
+  if (params.days) search.set('days', String(params.days));
+  if (params.top) search.set('top', String(params.top));
+  const query = search.toString();
+  return http.get<RunDiagnosisTrend>(`/api/v1/runs/diagnosis/trends${query ? `?${query}` : ''}`);
 }
 
 /** GATE-04 Phase 2：按需 AI 深度分析（预算/缓存/脱敏由后端处理） */

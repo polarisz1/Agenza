@@ -24,6 +24,7 @@ from app.modules.runs.schemas import (
     RunCreate,
     RunDetail,
     RunDiagnosisResponse,
+    RunDiagnosisTrendResponse,
     RunListData,
     RunResponse,
 )
@@ -80,6 +81,21 @@ def compare_runs(
     if len(parts) != 2:
         raise AppError(400, "ids 需要两个运行 id，用逗号分隔")
     return success(RunService.compare(session, parts[0], parts[1]))
+
+
+@router.get("/diagnosis/trends", response_model=ApiResponse[RunDiagnosisTrendResponse])
+def diagnosis_trends(
+    workflow_id: str | None = Query(
+        default=None, description="只看某个工作流；不传则统计整个 workspace"
+    ),
+    days: int = Query(default=30, ge=1, le=90),
+    top: int = Query(default=5, ge=1, le=10),
+    session: Session = Depends(get_session),
+):
+    """GATE-04 Phase 3：同类失败 Top N + 成功率/空输出率趋势（确定性聚合，不调模型）。"""
+    from app.modules.runs.trends import build_diagnosis_trends
+
+    return success(build_diagnosis_trends(session, workflow_id=workflow_id, days=days, top=top))
 
 
 @router.get("/{run_id}", response_model=ApiResponse[RunDetail])
