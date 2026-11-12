@@ -74,7 +74,49 @@ def _failing_child_graph() -> dict:
     }
 
 
-def _parent_graph(child_id: str, mapping: dict | None = None) -> dict:
+def _slow_child_graph() -> dict:
+    return {
+        "version": 1,
+        "inputs": [{"key": "text", "label": "文本", "type": "text", "required": True}],
+        "nodes": [
+            {
+                "id": "c_in",
+                "type": "input",
+                "name": "输入",
+                "position": {"x": 0, "y": 0},
+                "config": {"key": "text"},
+            },
+            {
+                "id": "c_slow",
+                "type": "python",
+                "name": "慢脚本",
+                "position": {"x": 200, "y": 0},
+                "config": {"script": "import time\ntime.sleep(5)\nagentflow_result = 'late'"},
+            },
+            {
+                "id": "c_out",
+                "type": "output",
+                "name": "输出",
+                "position": {"x": 400, "y": 0},
+                "config": {"field": "result", "source": "{{ 慢脚本 }}"},
+            },
+        ],
+        "edges": [
+            {"id": "ce1", "source": "c_in", "target": "c_slow"},
+            {"id": "ce2", "source": "c_slow", "target": "c_out"},
+        ],
+    }
+
+
+def _parent_graph(
+    child_id: str, mapping: dict | None = None, extra_config: dict | None = None
+) -> dict:
+    sub_config: dict = {
+        "workflow_id": child_id,
+        "input_mapping": {"text": "{{ 输入.text }}"} if mapping is None else mapping,
+    }
+    if extra_config:
+        sub_config.update(extra_config)
     return {
         "version": 1,
         "inputs": [{"key": "text", "label": "文本", "type": "text", "required": True}],
@@ -91,10 +133,7 @@ def _parent_graph(child_id: str, mapping: dict | None = None) -> dict:
                 "type": "subworkflow",
                 "name": "子流程",
                 "position": {"x": 200, "y": 0},
-                "config": {
-                    "workflow_id": child_id,
-                    "input_mapping": {"text": "{{ 输入.text }}"} if mapping is None else mapping,
-                },
+                "config": sub_config,
             },
             {
                 "id": "p_out",
@@ -218,16 +257,31 @@ def test_subworkflow_runs_published_child_with_input_mapping() -> None:
         assert nodes["p_sub"]["output"] == {"result": "hello"}
         assert nodes["p_out"]["output"] == {"result": "hello"}
 
-        # Phase B：子节点以 `父节点/子节点` 路径落库，并带层级名称
-        assert nodes["p_sub/c_in"]["status"] == "success"
-        assert nodes["p_sub/c_out"]["output"] == {"result": "hello"}
-        assert "子流程 /" in nodes["p_sub/c_in"]["node_name"]
+        # Phase C：子工作流落独立运行，父子通过 parent_run_id / parent_node_id 关联
+        assert len(detail["children"]) == 1, detail
+        child_run = detail["children"][0]
+        assert child_run["trigger"] == "subworkflow"
+        assert child_run["parent_run_id"] == started["id"]
+        assert child_run["parent_node_id"] == "p_sub"
 
-        # Phase B：子节点事件进入父 Run 的 SSE 通道
-        with client.stream("GET", f"/api/runs/{started['id']}/events") as resp:
-            body = "".join(resp.iter_text())
-        assert "p_sub/c_in" in body
-        assert "p_sub/c_out" in body
+        child_detail = client.get(f"/api/runs/{child_run['id']}").json()["data"]
+        child_nodes = _nodes(child_detail)
+        assert child_detail["status"] == "success"
+        assert {"c_in", "c_out"} <= set(child_nodes)
+        assert child_nodes["c_out"]["output"] == {"result": "hello"}
+
+        # 父运行只保留子工作流节点本身，不再写嵌套路径
+        assert all("/" not in node_id for node_id in nodes)
+
+        # 子运行出现在运行列表
+        listed = client.get(f"/api/runs?workflow_id={child}").json()["data"]["items"]
+        assert any(item["id"] == child_run["id"] for item in listed)
+
+        # 子运行有独立 SSE 通道
+        with client.stream("GET", f"/api/runs/{child_run['id']}/events") as resp:
+            child_body = "".join(resp.iter_text())
+        assert "c_in" in child_body
+        assert "c_out" in child_body
 
     _cleanup([child, parent])
 
@@ -285,6 +339,35 @@ def test_subworkflow_detects_self_reference() -> None:
     _cleanup([workflow_id])
 
 
+def test_subworkflow_cross_run_recursion_is_blocked() -> None:
+    """A→B→A：即使每次都是独立子运行，也必须靠调用链栈拦截。"""
+    with TestClient(app) as client:
+        wf_a = _create(client, "循环 A", _child_graph())
+        wf_b = _create(client, "循环 B", _child_graph())
+        assert (
+            client.put(f"/api/workflows/{wf_a}", json={"graph": _parent_graph(wf_b)}).status_code
+            == 200
+        )
+        assert (
+            client.put(f"/api/workflows/{wf_b}", json={"graph": _parent_graph(wf_a)}).status_code
+            == 200
+        )
+        _publish(client, wf_a)
+        _publish(client, wf_b)
+
+        started = _run(client, wf_a, {"text": "loop"})
+        detail = _wait(client, started["id"])
+
+        assert detail["status"] == "failed", detail
+        assert "循环引用" in (detail["error"] or "")
+        assert len(detail["children"]) == 1
+        child_detail = client.get(f"/api/runs/{detail['children'][0]['id']}").json()["data"]
+        assert child_detail["status"] == "failed"
+        assert "循环引用" in (child_detail["error"] or "")
+
+    _cleanup([wf_a, wf_b])
+
+
 def test_subworkflow_failure_is_attributed_to_child_node() -> None:
     with TestClient(app) as client:
         child = _create(client, "失败子流程", _failing_child_graph())
@@ -297,14 +380,48 @@ def test_subworkflow_failure_is_attributed_to_child_node() -> None:
 
         assert detail["status"] == "failed", detail
         assert nodes["p_sub"]["status"] == "failed"
-        assert nodes["p_sub/c_bad"]["status"] == "failed"
+        assert all("/" not in node_id for node_id in nodes)
+        assert len(detail["children"]) == 1
+
+        child_detail = client.get(f"/api/runs/{detail['children'][0]['id']}").json()["data"]
+        child_nodes = _nodes(child_detail)
+        assert child_detail["status"] == "failed"
+        assert child_nodes["c_bad"]["status"] == "failed"
 
         diagnosis = client.get(f"/api/runs/{started['id']}/diagnosis")
         assert diagnosis.status_code == 200, diagnosis.text
         ids = [item["node_id"] for item in diagnosis.json()["data"]["items"]]
-        assert "p_sub/c_bad" in ids
-        # 父级 subworkflow 的重复诊断被抑制，只保留更具体的子节点
-        assert "p_sub" not in ids
+        assert "p_sub" in ids
+        assert all("/" not in node_id for node_id in ids)
+
+        child_diagnosis = client.get(f"/api/runs/{child_detail['id']}/diagnosis")
+        assert child_diagnosis.status_code == 200, child_diagnosis.text
+        child_ids = [item["node_id"] for item in child_diagnosis.json()["data"]["items"]]
+        assert "c_bad" in child_ids
+
+    _cleanup([child, parent])
+
+
+def test_subworkflow_parent_timeout_cancels_child_run() -> None:
+    with TestClient(app) as client:
+        child = _create(client, "慢子流程", _slow_child_graph())
+        _publish(client, child)
+        parent = _create(
+            client,
+            "父流程-超时",
+            _parent_graph(child, extra_config={"timeout_s": 1}),
+        )
+
+        started = _run(client, parent, {"text": "hello"})
+        detail = _wait(client, started["id"], timeout=10)
+        nodes = _nodes(detail)
+
+        assert detail["status"] == "failed", detail
+        assert "timed out" in (nodes["p_sub"]["error"] or "")
+        assert len(detail["children"]) == 1
+
+        child_detail = client.get(f"/api/runs/{detail['children'][0]['id']}").json()["data"]
+        assert child_detail["status"] == "cancelled"
 
     _cleanup([child, parent])
 
@@ -350,5 +467,6 @@ def test_subworkflow_is_workspace_scoped(monkeypatch) -> None:
 
         assert detail["status"] == "failed", detail
         assert "不存在或不属于当前工作空间" in (nodes["p_sub"]["error"] or "")
+        assert detail["children"] == []
 
     _cleanup(workflow_ids)

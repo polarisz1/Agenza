@@ -521,6 +521,21 @@ export default function RunDetail() {
                 <span>版本 v{run.version_seq}</span>
               </>
             )}
+            {run.parent_run_id && (
+              <>
+                <span>·</span>
+                <span>
+                  子运行 · 父运行{' '}
+                  <button
+                    type="button"
+                    className="rv-link"
+                    onClick={() => nav(`${wsPrefix}/runs/${run.parent_run_id}`)}
+                  >
+                    #{String(run.parent_run_id).replace(/^r_/, '')}
+                  </button>
+                </span>
+              </>
+            )}
           </div>
         </div>
         <div className="rv-actions">
@@ -692,6 +707,31 @@ export default function RunDetail() {
               )}
             </Card>
           </div>
+
+          {run.children.length > 0 && (
+            <Card padded>
+              <SectionHeader
+                title="子运行"
+                description="子工作流作为独立运行执行，可单独查看节点、诊断与成本"
+              />
+              <div className="rv-child-runs">
+                {run.children.map((child) => (
+                  <button
+                    key={child.id}
+                    type="button"
+                    className="rv-child-run"
+                    onClick={() => nav(`${wsPrefix}/runs/${child.id}`)}
+                  >
+                    <span className="name">{child.workflow_name}</span>
+                    <Pill tone={statusTone(child.status)}>{statusMeta(child.status).label}</Pill>
+                    <span className="meta">节点 {child.parent_node_id || '—'}</span>
+                    <span className="meta">{formatDuration(child.duration_ms)}</span>
+                    <span className="chev">›</span>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
       )}
 
@@ -723,6 +763,9 @@ export default function RunDetail() {
                   const nested = depth > 0;
                   const hasChildren = hasNestedChildren(node.node_id, nodeIds);
                   const groupCollapsed = Boolean(collapsedGroups[node.node_id]);
+                  const childRun = run.children.find(
+                    (child) => child.parent_node_id === node.node_id,
+                  );
 
                   return (
                     <div
@@ -775,6 +818,18 @@ export default function RunDetail() {
 
                       {isOpen && (
                         <div className="rv-node-body">
+                          {childRun && (
+                            <div className="rv-child-link">
+                              <Button
+                                size="small"
+                                type="primary"
+                                onClick={() => nav(`${wsPrefix}/runs/${childRun.id}`)}
+                              >
+                                打开子运行
+                              </Button>
+                              <span className="rv-hint">子工作流已作为独立运行执行</span>
+                            </div>
+                          )}
                           <div className="rv-tabs">
                             <button
                               type="button"

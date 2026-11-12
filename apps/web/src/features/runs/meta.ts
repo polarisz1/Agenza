@@ -25,6 +25,8 @@ export const TRIGGER_LABEL: Record<string, string> = {
   manual: '手动',
   debug: '调试',
   scheduled: '定时',
+  api: 'API',
+  subworkflow: '子工作流',
 };
 
 export function triggerLabel(trigger?: string | null): string {

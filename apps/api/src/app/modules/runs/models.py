@@ -40,6 +40,9 @@ class Run(AuditMixin, Base):
     # 本次运行使用的图版本（F5）；老运行没有记录时为 NULL
     version_id = Column(String(24), nullable=True)
     version_seq = Column(Integer, nullable=True)
+    # TRIGGER-02 Phase C：子工作流作为独立运行记录，保留父子关系
+    parent_run_id = Column(String(32), nullable=True, index=True)
+    parent_node_id = Column(String(128), nullable=True)
 
     # 同一工作流同时只允许一个 running 的运行（评审 G6）：
     # SQLite / PostgreSQL 用不同的部分唯一索引，保证语义一致
@@ -48,10 +51,11 @@ class Run(AuditMixin, Base):
             "uq_run_running_per_workflow",
             "workflow_id",
             unique=True,
-            sqlite_where=text("status = 'running'"),
-            postgresql_where=text("status = 'running'"),
+            sqlite_where=text("status = 'running' AND trigger != 'subworkflow'"),
+            postgresql_where=text("status = 'running' AND trigger != 'subworkflow'"),
         ),
         Index("ix_run_workspace_started", "workspace_id", "started_at"),
+        Index("ix_run_parent_started", "parent_run_id", "started_at"),
     )
 
 

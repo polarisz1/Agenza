@@ -40,6 +40,8 @@ class NodeContext(BaseModel):
     workflow_stack: list[str] = Field(default_factory=list)
     # 子工作流加载器：workflow_id → {id, name, version_id, graph}；由 RunService 注入
     subworkflow_loader: Any = None
+    # 子工作流运行器：workflow_id, inputs, parent_node_id → 子运行结果；由 RunService 注入
+    subworkflow_runner: Any = None
     # TRIGGER-02 Phase B：嵌套节点的完整路径与父级落库/事件回调
     node_path: str = ""
     node_name_path: str = ""

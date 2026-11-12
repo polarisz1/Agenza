@@ -146,6 +146,58 @@
   color: #38bdf8;
   font-size: 10px;
 }
+.rv-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--af-brand);
+  font: inherit;
+  cursor: pointer;
+}
+.rv-link:hover {
+  text-decoration: underline;
+}
+.rv-child-runs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rv-child-run {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--rv-line-soft);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rv-child-run:hover {
+  background: var(--af-surface-hover);
+}
+.rv-child-run .name {
+  color: var(--af-text-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.rv-child-run .meta {
+  color: var(--rv-ink-500);
+  font-size: 11px;
+}
+.rv-child-run .chev {
+  margin-left: auto;
+  color: var(--af-text-dim);
+}
+.rv-child-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
 .rv-node-head {
   width: 100%;
   display: flex;

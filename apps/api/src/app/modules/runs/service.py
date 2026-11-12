@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import json
 import uuid
 from datetime import datetime
@@ -96,15 +98,20 @@ class RunService:
         *,
         version_id: str | None = None,
         version_seq: int | None = None,
+        parent_run_id: str | None = None,
+        parent_node_id: str | None = None,
     ) -> Run:
         """校验图与输入并落 Run 记录；供手动运行与外部触发共用。
 
         外部触发会显式传发布版本，避免运行详情把版本显示成最新草稿版本。
+        子工作流运行（parent_run_id 非空）允许与同一工作流的其他运行并发。
         """
         # 同一工作流默认串行：已有运行中则拒绝（TBD 多实例并发的默认策略）
-        running = RunRepository.list(session, workflow_id=wf.id, status="running", limit=1)
-        if running:
-            raise AppError(409, "Workflow already has a running run")
+        # 子运行（trigger=subworkflow）例外，避免同一子流程被多个父流程调用时误报 409。
+        if parent_run_id is None:
+            running = RunRepository.list(session, workflow_id=wf.id, status="running", limit=1)
+            if running:
+                raise AppError(409, "Workflow already has a running run")
 
         if not graph.get("nodes"):
             raise AppError(422, "Workflow is empty")
@@ -149,6 +156,8 @@ class RunService:
             started_at=utcnow(),
             version_id=version_id,
             version_seq=version_seq,
+            parent_run_id=parent_run_id,
+            parent_node_id=parent_node_id,
         )
         RunRepository.create(session, run)
         # 先把 run 落库：引擎回调走独立的 SessionLocal，看不到未提交的数据。
@@ -161,7 +170,13 @@ class RunService:
         return run
 
     @staticmethod
-    def dispatch_prepared_run(session: Session, run: Run, graph: dict, inputs: dict) -> bool:
+    def dispatch_prepared_run(
+        session: Session,
+        run: Run,
+        graph: dict,
+        inputs: dict,
+        workflow_stack: list[str] | None = None,
+    ) -> bool:
         """Celery 可用时投递任务并返回 True；否则返回 False 由调用方决定同步/后台执行。"""
         # 懒加载导入，避免 service ↔ tasks 循环依赖。
         from app.modules.runs.tasks import celery_app, execute_workflow_async
@@ -174,12 +189,22 @@ class RunService:
             inputs or {},
             run.workspace_id,
             run.triggered_by,
+            workflow_stack=workflow_stack,
         )
         return True
 
     @staticmethod
-    async def execute_prepared_run(session: Session, run: Run, graph: dict, inputs: dict) -> None:
-        """在进程内执行已落库的 Run（桌面模式 / 无 Celery 的后台任务）。"""
+    async def execute_prepared_run(
+        session: Session,
+        run: Run,
+        graph: dict,
+        inputs: dict,
+        workflow_stack: list[str] | None = None,
+    ) -> Any:
+        """在进程内执行已落库的 Run（桌面模式 / 无 Celery 的后台任务）。
+
+        返回 asyncio.Task，便于子工作流执行器等待子运行完成；普通调用方可忽略返回值。
+        """
         providers_registry = build_registry(session)
         # 延迟导入：gateway.service 依赖 RunService，模块级导入会形成循环
         from app.modules.gateway.service import GatewayService
@@ -190,7 +215,7 @@ class RunService:
         # 节点默认超时取设置页的 default_timeout（评审 S8：设置项要真的生效）
         default_timeout = SettingsService.get_effective(session, "default_timeout")
 
-        await manager.start_run(
+        return await manager.start_run(
             run_id=run.id,
             graph=graph,
             inputs=inputs or {},
@@ -202,8 +227,9 @@ class RunService:
             on_node_started=_make_node_started(run.id, run.workspace_id, run.triggered_by),
             on_node_finished=_make_node_finished(run.id, run.workspace_id, run.triggered_by),
             on_run_finished=_make_run_finished(run.id, run.workflow_id),
-            workflow_stack=[run.workflow_id],
+            workflow_stack=workflow_stack or [run.workflow_id],
             subworkflow_loader=_make_subworkflow_loader(),
+            subworkflow_runner=_make_subworkflow_runner(run.id),
         )
 
     @staticmethod
@@ -214,6 +240,7 @@ class RunService:
         inputs: dict,
         workspace_id: str,
         triggered_by: str,
+        workflow_stack: list[str] | None = None,
     ) -> None:
         """FastAPI BackgroundTasks 入口：独立 Session + 租户上下文执行。"""
         from uuid import UUID
@@ -233,7 +260,9 @@ class RunService:
                 run = RunRepository.get(session, run_id)
                 if run is None:
                     return
-                await RunService.execute_prepared_run(session, run, graph, inputs)
+                await RunService.execute_prepared_run(
+                    session, run, graph, inputs, workflow_stack=workflow_stack
+                )
         finally:
             clear_tenant()
 
@@ -254,20 +283,7 @@ class RunService:
             started_after=started_after,
             started_before=started_before,
         )
-        return [
-            RunListItem(
-                id=r.id,
-                workflow_id=r.workflow_id,
-                workflow_name=r.workflow_name,
-                status=r.status,
-                trigger=r.trigger,
-                started_at=r.started_at,
-                finished_at=r.finished_at,
-                duration_ms=r.duration_ms,
-                total_tokens=r.total_tokens or 0,
-            )
-            for r in runs
-        ]
+        return [_run_list_item(r) for r in runs]
 
     @staticmethod
     def get(session: Session, run_id: str) -> RunDetail | None:
@@ -297,7 +313,12 @@ class RunService:
             inputs=inputs,
             version_id=run.version_id,
             version_seq=run.version_seq,
+            parent_run_id=run.parent_run_id,
+            parent_node_id=run.parent_node_id,
             nodes=[_to_node_detail(nr) for nr in nodes],
+            children=[
+                _run_list_item(child) for child in RunRepository.list_children(session, run_id)
+            ],
         )
 
     @staticmethod
@@ -483,6 +504,22 @@ def _to_node_detail(nr: NodeRun) -> NodeRunDetail:
     )
 
 
+def _run_list_item(run: Run) -> RunListItem:
+    return RunListItem(
+        id=run.id,
+        workflow_id=run.workflow_id,
+        workflow_name=run.workflow_name,
+        status=run.status,
+        trigger=run.trigger,
+        started_at=run.started_at,
+        finished_at=run.finished_at,
+        duration_ms=run.duration_ms,
+        total_tokens=run.total_tokens or 0,
+        parent_run_id=run.parent_run_id,
+        parent_node_id=run.parent_node_id,
+    )
+
+
 def _run_response(run: Run) -> RunResponse:
     return RunResponse(
         id=run.id,
@@ -491,6 +528,8 @@ def _run_response(run: Run) -> RunResponse:
         status=run.status,
         trigger=run.trigger,
         started_at=run.started_at,
+        parent_run_id=run.parent_run_id,
+        parent_node_id=run.parent_node_id,
     )
 
 
@@ -526,6 +565,137 @@ def _make_subworkflow_loader():
             }
 
     return _load
+
+
+_CHILD_POLL_SECONDS = 0.2
+
+
+def _workflow_stack_for(parent_run_id: str, child_workflow_id: str) -> list[str]:
+    """沿 parent_run_id 还原调用链，供子运行内的递归/深度保护使用。"""
+    stack: list[str] = []
+    seen: set[str] = set()
+    current: str | None = parent_run_id
+    while current and current not in seen and len(stack) < 16:
+        seen.add(current)
+        with SessionLocal() as db:
+            run = RunRepository.get(db, current)
+        if run is None:
+            break
+        stack.append(run.workflow_id)
+        current = run.parent_run_id
+    stack.reverse()
+    stack.append(child_workflow_id)
+    return stack
+
+
+def _make_subworkflow_runner(parent_run_id: str):
+    """TRIGGER-02 Phase C：把子工作流执行成独立 Run，并等待其完成。
+
+    子运行会出现在运行列表、诊断与趋势中；父节点通过 parent_node_id 关联。
+    Celery 可用时投递后轮询子运行状态；否则在进程内 await 子运行任务。
+    """
+
+    async def _run(workflow_id: str, inputs: dict, parent_node_id: str) -> dict:
+        with SessionLocal() as db:
+            wf = WorkflowService.get(db, workflow_id)
+            if wf is None:
+                raise AppError(404, "子工作流不存在或不属于当前工作空间")
+            if not wf.published_version_id:
+                raise AppError(409, f"子工作流「{wf.name}」尚未发布")
+            version = WorkflowRepository.get_version(db, workflow_id, wf.published_version_id)
+            if version is None:
+                raise AppError(409, f"子工作流「{wf.name}」的发布版本不存在")
+            try:
+                graph = json.loads(version.graph_json)
+            except Exception as exc:
+                raise AppError(409, f"子工作流「{wf.name}」的图快照损坏：{exc}") from exc
+
+            stack = _workflow_stack_for(parent_run_id, workflow_id)
+            child_run = RunService.prepare_run(
+                db,
+                wf,
+                graph,
+                inputs,
+                "subworkflow",
+                version_id=version.id,
+                version_seq=version.seq,
+                parent_run_id=parent_run_id,
+                parent_node_id=parent_node_id,
+            )
+            dispatched = RunService.dispatch_prepared_run(
+                db, child_run, graph, inputs, workflow_stack=stack
+            )
+            child_run_id = child_run.id
+            child_name = wf.name
+
+        task = None
+        if not dispatched:
+            with SessionLocal() as db:
+                child = RunRepository.get(db, child_run_id)
+                if child is None:
+                    raise AppError(409, "子运行创建失败")
+                task = await RunService.execute_prepared_run(
+                    db, child, graph, inputs, workflow_stack=stack
+                )
+            try:
+                if task is not None:
+                    await task
+                # 子运行的 _execute 会吞掉 CancelledError 并正常结束；如果父任务正在被取消
+                # （节点超时 / 取消），这里必须重新抛出，避免把"子运行已取消"当普通失败返回。
+                current = asyncio.current_task()
+                if current is not None and current.cancelling():
+                    raise asyncio.CancelledError
+            except asyncio.CancelledError:
+                # 父运行超时 / 取消：尽力取消同进程内的子运行
+                if task is not None and not task.done():
+                    task.cancel()
+                raise
+        else:
+            try:
+                status = "running"
+                while status == "running":
+                    await asyncio.sleep(_CHILD_POLL_SECONDS)
+                    with SessionLocal() as db:
+                        child = RunRepository.get(db, child_run_id)
+                        if child is None:
+                            raise AppError(409, "子运行记录丢失")
+                        status = child.status
+            except asyncio.CancelledError:
+                # 跨进程取消暂无可靠通道，尽力在当前进程取消
+                with contextlib.suppress(Exception):
+                    await asyncio.shield(get_run_manager().cancel_run(child_run_id))
+                raise
+
+        with SessionLocal() as db:
+            detail = RunService.get(db, child_run_id)
+        if detail is None:
+            raise AppError(409, "子运行记录丢失")
+
+        outputs: dict = {}
+        tokens_in = 0
+        tokens_out = 0
+        for node in detail.nodes:
+            tokens_in += node.tokens_in or 0
+            tokens_out += node.tokens_out or 0
+            if (
+                node.node_type == "output"
+                and node.status == "success"
+                and isinstance(node.output, dict)
+            ):
+                outputs.update(node.output)
+
+        return {
+            "run_id": child_run_id,
+            "workflow_id": workflow_id,
+            "workflow_name": child_name,
+            "status": detail.status,
+            "error": detail.error,
+            "output": outputs or None,
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
+        }
+
+    return _run
 
 
 def _make_node_started(run_id: str, workspace_id: str | None, triggered_by: str | None = None):

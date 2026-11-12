@@ -71,6 +71,14 @@ class RunRepository:
         return q.order_by(Run.started_at.desc()).limit(limit).all()
 
     @staticmethod
+    def list_children(session: Session, parent_run_id: str, limit: int = 100) -> list[Run]:
+        q = session.query(Run).filter(Run.parent_run_id == parent_run_id, Run.deleted_at.is_(None))
+        ws = _ws_id()
+        if ws is not None:
+            q = q.filter(Run.workspace_id == ws)
+        return q.order_by(Run.started_at.asc()).limit(limit).all()
+
+    @staticmethod
     def update(session: Session, run_id: str, **fields) -> Run | None:
         obj = RunRepository.get(session, run_id)
         if obj is None:

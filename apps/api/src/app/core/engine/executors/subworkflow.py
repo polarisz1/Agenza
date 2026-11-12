@@ -1,22 +1,18 @@
-"""TRIGGER-02 Phase A：子工作流执行器（内联执行）。
+"""TRIGGER-02 子工作流执行器（Phase C：独立子运行）。
 
 把同 workspace 的已发布工作流当作节点执行：
 - 只读取 `published_version_id` 对应的版本快照，保证结果可复现；
-- 在父 Run 内创建嵌套 Scheduler，不新建独立 Run（规避 running 唯一索引）；
+- 通过注入的 runner 创建独立子运行，子运行拥有自己的节点记录 / 诊断 / 趋势；
 - 通过调用栈检测自引用/循环，并限制最大嵌套深度；
-- 子节点 Token 汇总到父节点，父取消/超时通过任务取消自然传导。
+- 子运行 Token 汇总到父节点，父取消/超时通过任务取消自然传导。
 """
 
 from __future__ import annotations
 
 import inspect
-from types import SimpleNamespace
 
-from app.core.config import settings
 from app.core.engine.contexts import NodeContext, NodeResult
 from app.core.engine.executors.base import BaseExecutor
-from app.core.engine.registry import build_default_registry
-from app.core.engine.scheduler import Scheduler
 from app.core.engine.validators import validate_graph
 from app.core.exceptions import AppError
 
@@ -77,60 +73,37 @@ class SubWorkflowExecutor(BaseExecutor):
         if missing:
             return _fail(f"子工作流「{name}」缺少必填输入：{'、'.join(missing)}")
 
-        # 嵌套 Scheduler 只接收网关快照：父级已解析好的模型路由与预算状态
-        gateway = SimpleNamespace(
-            router=ctx.model_router,
-            budget_exhausted=ctx.budget_exhausted,
-            budget_message=ctx.budget_message,
-        )
+        if ctx.subworkflow_runner is None:
+            return _fail("子工作流运行器未配置，无法执行")
+
         node_path = ctx.node_path or str(ctx.node.get("id") or "")
-        node_name_path = ctx.node_name_path or str(ctx.node.get("name") or node_path)
-        nested = Scheduler(
-            run_id=ctx.run_id,
-            concurrency=settings.ENGINE_MAX_CONCURRENCY,
-            node_id_prefix=f"{node_path}/",
-            node_name_prefix=f"{node_name_path} / ",
-        )
-        results = await nested.run(
-            graph=graph,
-            inputs=child_inputs,
-            registry=build_default_registry().all(),
-            providers_registry=ctx.providers,
-            gateway=gateway,
-            on_node_started=ctx.on_node_started,
-            on_node_finished=ctx.on_node_finished,
-            workflow_stack=[*stack, workflow_id],
-            subworkflow_loader=ctx.subworkflow_loader,
-        )
+        try:
+            outcome = ctx.subworkflow_runner(workflow_id, child_inputs, node_path)
+            if inspect.isawaitable(outcome):
+                outcome = await outcome
+        except AppError as exc:
+            return _fail(exc.message)
+        except Exception as exc:
+            return _fail(f"执行子工作流失败：{exc}")
 
-        tokens_in = sum(result.tokens_in for result in results.values())
-        tokens_out = sum(result.tokens_out for result in results.values())
+        outcome = outcome or {}
+        child_run_id = outcome.get("run_id")
+        tokens_in = int(outcome.get("tokens_in") or 0)
+        tokens_out = int(outcome.get("tokens_out") or 0)
 
-        failed = [result for result in results.values() if result.status == "failed"]
-        if failed:
-            detail = next((result.error for result in failed if result.error), "未知错误")
+        if outcome.get("status") != "success":
+            detail = outcome.get("error") or "未知错误"
+            suffix = f"（子运行 {child_run_id}）" if child_run_id else ""
             return NodeResult(
                 status="failed",
-                error=f"子工作流「{name}」失败：{detail}",
+                error=f"子工作流「{name}」失败：{detail}{suffix}",
                 tokens_in=tokens_in,
                 tokens_out=tokens_out,
             )
 
-        outputs: dict = {}
-        for node in nodes:
-            if node.get("type") != "output":
-                continue
-            result = results.get(node.get("id"))
-            if (
-                result is not None
-                and result.status == "success"
-                and isinstance(result.output, dict)
-            ):
-                outputs.update(result.output)
-
         return NodeResult(
             status="success",
-            output=outputs or None,
+            output=outcome.get("output"),
             tokens_in=tokens_in,
             tokens_out=tokens_out,
         )

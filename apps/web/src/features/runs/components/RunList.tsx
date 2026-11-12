@@ -48,6 +48,7 @@ const TRIGGER_META: Record<string, { label: string; tone: PillTone; icon: ReactN
   scheduled: { label: '定时', tone: 'neutral', icon: <Clock size={10} /> },
   debug: { label: '调试', tone: 'violet', icon: <Lightning size={10} /> },
   api: { label: 'Webhook', tone: 'warning', icon: <Lightning size={10} /> },
+  subworkflow: { label: '子工作流', tone: 'neutral', icon: <Lightning size={10} /> },
 };
 
 function durationText(ms?: number | null): string {
@@ -174,7 +175,8 @@ export default function RunList() {
         <div>
           <h1 className="af-rl__title">运行记录</h1>
           <div className="af-rl__subtitle">
-            共 {items.length} 次 · 成功率 {successRate === null ? '—' : `${successRate.toFixed(1)}%`}
+            共 {items.length} 次 · 成功率{' '}
+            {successRate === null ? '—' : `${successRate.toFixed(1)}%`}
           </div>
         </div>
         <div className="af-rl__actions">
@@ -202,7 +204,11 @@ export default function RunList() {
           >
             对比选中{selected.length ? `（${selected.length}）` : ''}
           </Button>
-          <IconButton label="刷新" icon={<ArrowClockwise size={16} />} onClick={() => void load()} />
+          <IconButton
+            label="刷新"
+            icon={<ArrowClockwise size={16} />}
+            onClick={() => void load()}
+          />
           <Button
             type="primary"
             icon={<DownloadSimple size={14} />}

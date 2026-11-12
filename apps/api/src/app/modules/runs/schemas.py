@@ -33,6 +33,9 @@ class RunResponse(BaseModel):
     # 本次运行使用的图版本（F5）；老运行没有记录
     version_id: str | None = None
     version_seq: int | None = None
+    # TRIGGER-02 Phase C：子工作流运行的父运行与父节点
+    parent_run_id: str | None = None
+    parent_node_id: str | None = None
 
 
 class RunListItem(BaseModel):
@@ -45,6 +48,8 @@ class RunListItem(BaseModel):
     finished_at: datetime | None = None
     duration_ms: int | None = None
     total_tokens: int = 0
+    parent_run_id: str | None = None
+    parent_node_id: str | None = None
 
 
 class RunCreate(BaseModel):
@@ -77,6 +82,8 @@ class RunDetail(RunResponse):
     # 这次运行实际使用的输入（F1：运行详情右侧需要回看）
     inputs: dict = {}
     nodes: list[NodeRunDetail] = []
+    # Phase C：本运行直接创建的子运行（按 parent_node_id 对应子工作流节点）
+    children: list[RunListItem] = []
 
 
 class CompareNode(BaseModel):

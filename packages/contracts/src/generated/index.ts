@@ -3610,6 +3610,10 @@ export interface components {
             version_id?: string | null;
             /** Version Seq */
             version_seq?: number | null;
+            /** Parent Run Id */
+            parent_run_id?: string | null;
+            /** Parent Node Id */
+            parent_node_id?: string | null;
             /**
              * Inputs
              * @default {}
@@ -3622,6 +3626,11 @@ export interface components {
              * @default []
              */
             nodes: components["schemas"]["NodeRunDetail"][];
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["RunListItem"][];
         };
         /** RunDiagnosisResponse */
         RunDiagnosisResponse: {
@@ -3714,6 +3723,10 @@ export interface components {
              * @default 0
              */
             total_tokens: number;
+            /** Parent Run Id */
+            parent_run_id?: string | null;
+            /** Parent Node Id */
+            parent_node_id?: string | null;
         };
         /** RunResponse */
         RunResponse: {
@@ -3750,6 +3763,10 @@ export interface components {
             version_id?: string | null;
             /** Version Seq */
             version_seq?: number | null;
+            /** Parent Run Id */
+            parent_run_id?: string | null;
+            /** Parent Node Id */
+            parent_node_id?: string | null;
         };
         /** SettingsResponse */
         SettingsResponse: {

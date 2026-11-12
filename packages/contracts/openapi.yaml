@@ -8783,6 +8783,16 @@ components:
           - type: integer
           - type: 'null'
           title: Version Seq
+        parent_run_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Parent Run Id
+        parent_node_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Parent Node Id
         inputs:
           additionalProperties: true
           type: object
@@ -8793,6 +8803,12 @@ components:
             $ref: '#/components/schemas/NodeRunDetail'
           type: array
           title: Nodes
+          default: []
+        children:
+          items:
+            $ref: '#/components/schemas/RunListItem'
+          type: array
+          title: Children
           default: []
       type: object
       required:
@@ -8937,6 +8953,16 @@ components:
           type: integer
           title: Total Tokens
           default: 0
+        parent_run_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Parent Run Id
+        parent_node_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Parent Node Id
       type: object
       required:
       - id
@@ -9003,6 +9029,16 @@ components:
           - type: integer
           - type: 'null'
           title: Version Seq
+        parent_run_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Parent Run Id
+        parent_node_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Parent Node Id
       type: object
       required:
       - id

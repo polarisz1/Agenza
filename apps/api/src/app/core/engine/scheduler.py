@@ -69,6 +69,7 @@ class Scheduler:
         on_node_finished=None,
         workflow_stack: list[str] | None = None,
         subworkflow_loader: Any = None,
+        subworkflow_runner: Any = None,
     ) -> dict[str, NodeResult]:
         """Execute the entire graph and return node_id → NodeResult map."""
         nodes = graph.get("nodes", [])
@@ -119,6 +120,7 @@ class Scheduler:
                             on_node_finished=on_node_finished,
                             workflow_stack=workflow_stack or [],
                             subworkflow_loader=subworkflow_loader,
+                            subworkflow_runner=subworkflow_runner,
                         ),
                         results=results,
                         on_node_finished=on_node_finished,
@@ -190,6 +192,7 @@ class Scheduler:
         on_node_finished=None,
         workflow_stack: list[str] | None = None,
         subworkflow_loader: Any = None,
+        subworkflow_runner: Any = None,
     ) -> None:
         node = node_map[node_id]
         node_type = node.get("type")
@@ -302,6 +305,7 @@ class Scheduler:
             run_id=self.run_id,
             workflow_stack=workflow_stack or [],
             subworkflow_loader=subworkflow_loader,
+            subworkflow_runner=subworkflow_runner,
             node_path=qualified_id,
             node_name_path=qualified_name,
             on_node_started=on_node_started,
