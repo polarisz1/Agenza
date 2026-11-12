@@ -1,4 +1,4 @@
-# AGENTS.md · AgentFlow（SaaS 版）
+# AGENTS.md · AgentFlow（开源自托管版）
 
 > **本文件是 AI 协作时的最高优先级约定。修改前请先阅读并遵守以下约束。**
 > 违反任何硬性约束视为错误提交，必须在首次 commit 前修复。
@@ -7,18 +7,18 @@
 
 ## 0. 项目方向
 
-**AgentFlow 已从「单用户本地桌面应用」转型为「多租户 Web SaaS + 可选私有化部署」。**
+**AgentFlow 是一个个人维护的开源、自托管 AI 工作流编排平台。商业化 SaaS 目标已暂停，多租户 / 多工作空间能力保留为可选的部署模式。**
 
 | 项 | 现状 |
 |---|---|
-| 产品形态 | SaaS Web（主）+ 企业私有化（docker-compose）+ Community 单用户桌面（保留但不再演进） |
-| 当前阶段 | Sprint 1「地基搭建」：PostgreSQL 切换、多租户、Auth、Workspace |
-| 规划来源 | `docs/saas-strategy-2026-11-03.md`、`docs/saas-product-design-2026-11-03.md`、`docs/saas-backlog-2026-11-03.md` |
+| 产品形态 | 自托管 Web（Docker Compose，单容器 + PostgreSQL）；可选多用户工作空间；旧桌面壳保留但不再演进 |
+| 当前阶段 | 开源发布与自托管体验完善：License / README / Docker 部署 / 首用户初始化 |
+| 规划来源 | `README.md`（当前定位与路线图）；`docs/saas-*.md` 仅作历史设计参考 |
 
-> `docs/` 下 v0.1/v0.2 时代的产品与规划文档已删除，不再作为依据。历史评审证据
+> `docs/` 下 SaaS 战略、产品设计与 Sprint 清单已归档，不再作为当前开发依据。历史评审证据
 > （`code-review-*.md`）、性能基线、依赖审计、Provider 验收矩阵继续保留。
 
-**规划优先级**：本文件（硬约束）> `saas-backlog`（任务级执行清单）> `saas-product-design`（产品设计）> `saas-strategy`（战略背景）。
+**规划优先级**：本文件（硬约束）> `README.md`（当前定位与路线图）> `docs/` 历史设计。
 
 ---
 
@@ -30,8 +30,8 @@ AgentFlow/
 │   ├── web/          # React 前端 → apps/web/src/features/<feature>/
 │   └── api/          # FastAPI 后端 → apps/api/src/app/modules/<feature>/
 ├── packages/contracts/  # OpenAPI 契约 → 单一事实源
-├── deploy/           # Docker / docker-compose / nginx（Sprint 5 新增）
-├── electron/         # 可选桌面壳（Community 版），不承载 SaaS 功能
+├── deploy/           # Docker Compose 环境变量示例
+├── electron/         # 旧桌面壳，保留但不再演进
 ├── pyinstaller/      # 冻结：仅为旧桌面安装包保留，不再新增适配
 ├── tools/scripts/    # 辅助脚本
 └── docs/             # 规划与工程记录
@@ -59,9 +59,9 @@ apps/api/src/app/modules/<feature>/
 - ❌ **禁止**跨 feature 直接 import 对方的 `repository.py`（只能通过 `service.py` 抽象）
 - ✅ 横切关注点（DB session、配置、日志、执行引擎、服务商适配、多租户）统一放 `src/app/core/`
 
-### 2.2 多租户隔离（SaaS 核心，**禁止违反**）
+### 2.2 工作空间隔离（多用户模式核心，**禁止违反**）
 
-- 所有业务表**必须**有 `workspace_id`；`nullable=True` 仅用于兼容桌面旧库，SaaS 模式下新写入不得为空
+- 所有业务表**必须**有 `workspace_id`；`nullable=True` 仅用于兼容桌面旧库，多用户模式下新写入不得为空
 - 所有 Repository 查询**必须**显式带 `workspace_id` 过滤；新增查询不允许返回跨 workspace 数据
 - 租户上下文**只能**来自 `app/core/tenancy.py` 的 `TenantContext` / `get_workspace_id()`
 - ❌ **禁止**信任请求 body / query / path 里用户自报的 `workspace_id` 作为授权依据
@@ -70,17 +70,17 @@ apps/api/src/app/modules/<feature>/
 
 > 当前状态：`workspace_id` 列已加到 workflows / runs / providers / settings / auth 模型，
 > `TenantMiddleware` 已注册；Repository 层的过滤属于 `ADAPT-01~04` 待完成项。
-> 改任何模块前先看 backlog 该条目是否已完成，避免重复实现或写出未过滤查询。
+> 改任何模块前先看 README 路线图或当前任务说明，避免重复实现或写出未过滤查询。
 
 ### 2.3 路由与版本
 
-- SaaS 新路由统一 `/api/v1/<resource>`（auth、workspaces 已按此落地）
+- 新路由统一 `/api/v1/<resource>`（auth、workspaces 已按此落地）
 - 旧 `/api/*` 仅作桌面兼容保留，**新功能禁止**再加旧前缀
 - 所有新 router 必须在 `apps/api/src/app/main.py` 注册
 
 ### 2.4 数据库与迁移
 
-- SaaS 生产库为 **PostgreSQL**；SQLite 仅用于本地开发与桌面 Community 版
+- 自托管生产库为 **PostgreSQL**；SQLite 仅用于本地开发与旧桌面版
 - 统一入口 `apps/api/src/app/db/database.py`，通过环境变量 `DATABASE_URL` 切换
   （`psycopg[binary]` 已引入；backlog 里的 `core/database.py` 属于旧路径，以现路径为准）
 - 所有 schema 变更**必须**写 alembic 迁移；❌ **禁止**用 `create_all()` 兜底在建表路径上新增结构
@@ -98,10 +98,10 @@ apps/api/src/app/modules/<feature>/
 - `validators.py` — 图校验器
 - `executors/` — 节点执行器
 
-**SaaS 追加约束：**
+**生产部署追加约束：**
 - 引擎不直接调模型，统一走 `core/providers/`；AI Gateway 的 `ModelRouter` 只能加在 providers **之上**，
   executors 不得 import 具体 SDK 或硬编码模型名
-- 异步化（Sprint 2）：API 进程只做任务投递，长任务交给 Celery worker；❌ **禁止**在请求线程里阻塞执行工作流
+- 异步化：多实例部署时 API 进程只做任务投递，长任务交给 Celery worker；❌ **禁止**在请求线程里阻塞执行工作流
 - EventBus 迁 Redis Pub/Sub 后，多实例 SSE 广播不得依赖进程内内存
 
 ### 2.6 安全基线
@@ -181,10 +181,10 @@ pnpm contracts:compat     # 破坏性变更检测
 | Monorepo | pnpm workspace + Turborepo | JS 侧 workspace；Python 侧 uv 独立 |
 | 前端 | Vite 5 + React 18 + TS + React Router v6 + Zustand + @xyflow/react + Ant Design 5 | |
 | 后端 | Python 3.12 + FastAPI + Pydantic v2 + SQLAlchemy 2.0 | uv 管理，Ruff 检查 |
-| 数据库 | **PostgreSQL**（SaaS/私有化）；SQLite（本地开发） | 通过 `DATABASE_URL` 切换 |
+| 数据库 | **PostgreSQL**（自托管生产）；SQLite（本地开发） | 通过 `DATABASE_URL` 切换 |
 | 鉴权 | JWT（python-jose）+ bcrypt（passlib） | access + refresh |
-| 异步 | Redis + Celery | Sprint 2 引入 |
-| 部署 | Docker + docker-compose + Nginx | Sprint 5 |
+| 异步 | Redis + Celery（可选，多实例时启用） | 单实例默认进程内执行 |
+| 部署 | Docker + docker-compose | 已提供根目录 `Dockerfile` / `docker-compose.yml` |
 | 桌面壳 | Electron（仅 Community） | contextIsolation=true、nodeIntegration=false、sandbox=true |
 | 代码规范 | 前端 ESLint + Prettier，后端 Ruff | 根目录 .editorconfig 统一 |
 
@@ -195,13 +195,13 @@ pnpm contracts:compat     # 破坏性变更检测
 ### 后端
 - [ ] 在 `apps/api/src/app/modules/<feature>/` 建标准六件套（含 `dependencies.py` 按需）
 - [ ] 模型带 `workspace_id` + 审计字段，Repository 全部查询带 workspace 过滤
-- [ ] 在 `main.py` 注册 router，SaaS 路由用 `/api/v1` 前缀
+- [ ] 在 `main.py` 注册 router，新路由用 `/api/v1` 前缀
 - [ ] 写 alembic 迁移（`alembic revision --autogenerate`），并在 PostgreSQL 上实跑一次
 - [ ] 跑 `pnpm contracts:generate && pnpm contracts:check`
 
 ### 前端
 - [ ] 在 `apps/web/src/features/<feature>/` 建目录：`api/`、`components/`、`hooks/`、`types.ts`、`index.tsx`
-- [ ] 在 `apps/web/src/router/index.tsx` 注册路由（SaaS 页面挂在 `/workspaces/:wsId/...` 下）
+- [ ] 在 `apps/web/src/router/index.tsx` 注册路由（多用户页面挂在 `/workspaces/:wsId/...` 下）
 - [ ] 所有 API 类型从 `@agentflow/contracts` 导入
 - [ ] 需要登录/权限的页面接入 `AuthGuard` 与角色校验
 
@@ -222,7 +222,7 @@ pnpm dev          # 后端 127.0.0.1:8000 + 前端 localhost:5174
 pnpm dev:api
 pnpm dev:web
 
-# SaaS 多租户模式（本地验证）
+# 多用户模式（本地验证）
 # 在 apps/api/.env 设置：TENANCY_ENABLED=true、JWT_SECRET=<随机值>、DATABASE_URL=<pg url>
 
 # 契约层
@@ -232,8 +232,9 @@ pnpm contracts:generate / build / check / compat
 pnpm check        # lint + ruff + 类型 + pytest + 前端单测 + 契约漂移 + 兼容性
 pnpm build
 
-# 部署（Sprint 5 落地后）
-docker compose up -d
+# 自托管部署（PostgreSQL + 单容器）
+cp deploy/.env.example .env   # 修改 POSTGRES_PASSWORD / JWT_SECRET
+docker compose up -d --build
 ```
 
 ---

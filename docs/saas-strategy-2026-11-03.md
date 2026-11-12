@@ -1,5 +1,7 @@
 # AgentFlow SaaS 商业化战略评估
 
+> **已归档（2026-11-12）**：商业化目标已暂停，项目转为个人开源自托管。本文保留为历史设计参考，不再作为当前规划依据；当前定位与路线图见 [`README.md`](../README.md)。
+
 > **作者**：PM 战略评估（基于 discovery-process / JTBD / product-strategy-session / prioritization-advisor / roadmap-planning / user-story 综合框架）
 > **日期**：2026-11-03
 > **版本**：v1.0（PM 评估稿）

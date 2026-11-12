@@ -131,6 +131,8 @@ class Settings(BaseSettings):
     # ---- SaaS: Multi-tenant ----
     # 默认 False：Community / 桌面版无需登录；SaaS 部署在 apps/api/.env 显式设为 true
     TENANCY_ENABLED: bool = False
+    # 自托管：首个用户始终允许注册；之后是否开放注册由该开关控制
+    ALLOW_REGISTRATION: bool = True
     JWT_SECRET: str = ""  # set via env in SaaS; auto-generated for desktop
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days

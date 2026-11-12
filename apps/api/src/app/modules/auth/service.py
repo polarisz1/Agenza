@@ -84,6 +84,10 @@ class AuthService:
     @staticmethod
     def register(session: Session, body: RegisterRequest) -> TokenResponse:
         """注册 + 可选自动创建工作空间 + 自动登录返回 Token。"""
+        # 自托管安全默认：首个用户可注册，之后由 ALLOW_REGISTRATION 控制
+        if not settings.ALLOW_REGISTRATION and session.query(User).count() > 0:
+            raise AppError(403, "注册已关闭，请使用已有账号登录")
+
         existing = UserRepository.get_by_email(session, body.email)
         if existing:
             raise AppError(409, "该邮箱已注册")

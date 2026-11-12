@@ -1,8 +1,10 @@
 # AgentFlow SaaS 转型 · 执行 Backlog
 
+> **已归档（2026-11-12）**：商业化目标已暂停，项目转为个人开源自托管。本文保留为历史执行记录，不再作为当前规划依据；当前定位与路线图见 [`README.md`](../README.md)。
+
 > **来源**: `docs/saas-strategy-2026-11-03.md` 战略评估
-> **版本**: v2.9 · 2026-11-06（TRIGGER-02 Phase B：嵌套节点可观测性）
-> **状态**: Sprint 1 地基完成；Sprint 2 主体完成（ASYNC-04 延后）；Sprint 3 AI Gateway、诊断 Tab、HTTP/Webhook 触发、子工作流 Phase A/B 完成
+> **版本**: v3.0 · 2026-11-06（TRIGGER-02 Phase C：子工作流独立运行记录）
+> **状态**: Sprint 1 地基完成；Sprint 2 主体完成（ASYNC-04 延后）；Sprint 3 AI Gateway、诊断 Tab、HTTP/Webhook 触发、子工作流 A/B/C 完成
 
 ---
 
@@ -14,10 +16,10 @@
 |---|---:|---:|---:|---:|---|
 | Sprint 1 · 地基搭建 | 35 | 0 | 0 | 0 | 多租户开关与 session 自动过滤均已落地，工作流/运行/服务商/设置的隔离有回归测试 |
 | Sprint 2 · 前端重构 + 异步化 | 7 | 1 | 0 | 0 | 审计与版本发布已补齐；协作状态条按决策延后（无下游依赖） |
-| Sprint 3 · 差异化功能 | 4 | 2 | 0 | 0 | AI Gateway、诊断 Tab、HTTP/Webhook 触发完成；子工作流 Phase A/B 完成，C 待做 |
+| Sprint 3 · 差异化功能 | 5 | 1 | 0 | 0 | AI Gateway、诊断 Tab、HTTP/Webhook 触发、子工作流完成 |
 | Sprint 4 · 商业化 | 0 | 4 | 0 | 1 | 仅有 Token 汇总与占位 UI；计量/Stripe 未开始 |
 | Sprint 5 · 打磨 + 部署 | 1 | 2 | 0 | 3 | 暗色主题已完成；Docker/部署未开始 |
-| **合计** | **47** | **9** | **0** | **4** | **60 项中约 78% 完成** |
+| **合计** | **48** | **8** | **0** | **4** | **60 项中约 80% 完成** |
 
 **关键结论**
 
@@ -40,7 +42,8 @@
 - TRIGGER-01 Phase C 已落地：新增 `workflow_trigger` 工作流级 Webhook（每触发器独立 `whsec_` secret，Fernet 加密存储，创建/轮换时只返回一次明文）与管理 API（`/api/v1/triggers` 创建/列表/更新/删除/轮换）；公网入口 `POST /api/v1/webhooks/{trigger_id}` 使用 `X-AgentFlow-Timestamp` + `X-AgentFlow-Signature` 的 HMAC-SHA256 验签（±5 分钟时间窗）、1MB 体积上限、JSONPath 输入映射、`X-Idempotency-Key`/`X-GitHub-Delivery` 幂等与 `last_triggered_at` 记录；验签通过后注入租户上下文，仍只触发已发布版本。迁移 `0015_webhook_trigger.py`。
 - TRIGGER-01 Phase E 已落地：设置中心「Webhook / API Key」区接入真实 API Key 管理（仅 owner：列表 / 创建一次明文 / 吊销 / HTTP 触发 curl 示例）；工作流编辑器新增「触发器」抽屉（列表 / 创建含 JSONPath 输入映射 / 启停 / 轮换 Secret 一次展示 / 删除 / 复制 Webhook URL 与 HMAC curl / 最近触发时间）。前端类型全部来自 `@agentflow/contracts`。
 - TRIGGER-02 Phase A 已落地：新增 `subworkflow` 节点与 `SubWorkflowExecutor`，只读取同 workspace 的已发布版本快照；父 Run 内嵌套 Scheduler 执行，子 Token 汇总到父节点，父取消/超时自然传导；通过 `workflow_stack` 检测自引用/循环并限制最大深度 5；前端节点库、属性面板（工作流选择 / 输入映射 / 打开子工作流）已接入。
-- TRIGGER-02 Phase B 已落地：嵌套节点以 `<父节点>/<子节点>` 路径写入 `node_run`，SSE 事件进入父 Run 通道并带层级名称；`node_run.node_id` 扩宽到 128（迁移 0016）；运行详情按层级缩进、支持子流程分组折叠，诊断优先定位到具体子节点并抑制父级重复条目。
+- TRIGGER-02 Phase B 已落地：嵌套节点以 `<父节点>/<子节点>` 路径写入 `node_run`，SSE 事件进入父 Run 通道并带层级名称；`node_run.node_id` 扩宽到 128（迁移 0016）；运行详情按层级缩进、支持子流程分组折叠，诊断优先定位到具体子节点并抑制父级重复条目。Phase C 后新运行改为独立子运行，Phase B 的层级视图保留用于历史运行。
+- TRIGGER-02 Phase C 已落地：子工作流改为独立 `Run`（trigger=`subworkflow`，`parent_run_id` / `parent_node_id` 关联父运行与节点），子运行拥有自己的节点记录、SSE、诊断、成本与趋势；父运行详情展示子运行卡片并可直接跳转；迁移 0017 放宽 running 唯一索引，子运行允许同一工作流并发，手动/API/调试运行仍串行；调用链栈随父子运行传递，跨运行 A→B→A 递归可被拦截。
 - 顺带修复 ADAPT-04 的真实缺陷：`app_setting` 在 PostgreSQL 上主键仍是 `key` 单列（0004 只加了列），SaaS 下不同 workspace 写同名设置会撞唯一约束；新增 `0010_app_setting_composite_pk.py` 改为复合主键。
 - AI Gateway 前后端均已接入真实数据；Prompt Library 与账单仍未接入。
 - Docker / docker-compose / 私有化部署脚本尚未开始。
@@ -67,9 +70,9 @@
 | API Key + HTTP 触发（TRIGGER-01 A/B） | `modules/auth`（ApiKeyService + `/api/v1/api-keys`）、`modules/triggers/*`、`POST /api/v1/triggers/http/{workflow_id}`、`alembic/versions/0014_trigger_api.py`；`tests/test_api_keys.py`、`tests/test_http_trigger.py`（发布门禁 / 202 / 幂等 / 租户隔离） |
 | Webhook 触发器（TRIGGER-01 C） | `workflow_trigger`、`/api/v1/triggers` 管理、`POST /api/v1/webhooks/{trigger_id}`、`alembic/versions/0015_webhook_trigger.py`；`tests/test_webhook_trigger.py`（验签 / 时间窗 / 映射 / 幂等 / 禁用 / 轮换） |
 | 前端密钥/触发器管理（TRIGGER-01 E） | `features/settings/components/ApiKeysPanel.tsx`（列表 / 创建一次明文 / 吊销 / HTTP curl）、`features/workflows/components/TriggerDrawer.tsx`（创建 / 启停 / 轮换 / 删除 / 复制 URL 与 curl / 最近触发）；`shared/lib/http.ts` 增加 `patch` |
-| 子工作流（TRIGGER-02 A/B） | `workflows/schemas.py::SubWorkflowConfig`、`core/engine/executors/subworkflow.py`、`core/engine/contexts.py` + `scheduler.py` + `manager.py`（loader / workflow_stack / 节点前缀回调）、`runs/service.py::_make_subworkflow_loader`、`alembic/versions/0016_node_run_node_id_width.py`；前端 `types.ts` / `nodes/SubWorkflowNode.tsx` / `PropertyPanel.tsx` / `runs/nodeHierarchy.ts` / `RunDetail.tsx`；`tests/test_subworkflow.py`（发布门禁 / 映射 / 递归 / 深度 / 租户 / 嵌套节点 / SSE / 诊断） |
+| 子工作流（TRIGGER-02 A/B/C） | `workflows/schemas.py::SubWorkflowConfig`、`core/engine/executors/subworkflow.py`、`core/engine/contexts.py` + `scheduler.py` + `manager.py`（loader / runner / workflow_stack / 节点前缀回调）、`runs/service.py::_make_subworkflow_loader` / `_make_subworkflow_runner`、`alembic/versions/0016_node_run_node_id_width.py` + `0017_subworkflow_run_parent.py`；前端 `types.ts` / `nodes/SubWorkflowNode.tsx` / `PropertyPanel.tsx` / `runs/nodeHierarchy.ts` / `RunDetail.tsx`；`tests/test_subworkflow.py`（发布门禁 / 映射 / 递归 / 深度 / 租户 / 子运行 / SSE / 诊断 / 超时取消） |
 | app_setting 复合主键 | `apps/api/alembic/versions/0010_app_setting_composite_pk.py`；PG 已在 `0010 (head)` |
-| 未开始 | 仓库内无 `deploy/`、Dockerfile、docker-compose；SubWorkflow Phase C（独立子运行记录）未实现 |
+| 未开始 | 仓库内无 `deploy/`、Dockerfile、docker-compose |
 
 ---
 
@@ -183,7 +186,7 @@
 | GATE-03 | 运行详情四 Tab | runs 模块 | P0 | ✅ 概览/节点执行/成本分析/调试诊断 |
 | GATE-04 | 诊断 Tab：失败分类 + 根因 + 修复建议 | GATE-03 | P1 | ✅ 确定性规则 + 前端诊断 Tab；Phase 2 按需 AI 深度分析（预算 402 / 缓存 / 脱敏 / 迁移 0013）；Phase 3 跨运行趋势（同类失败 Top N / 成功率 / 空输出率） |
 | TRIGGER-01 | HTTP / Webhook 触发 API | Sprint 2 ASYNC | P1 | 🟡 Phase A/B/C/E 完成：API Key + HTTP 触发 + Webhook（HMAC/时间窗/映射/幂等/轮换）+ 前端管理；Phase D 生产 Celery 收尾待做 |
-| TRIGGER-02 | 子工作流 / SubWorkflow 节点 | 引擎改造 | P1 | 🟡 Phase A/B 完成：内联执行 + 发布门禁 + 输入映射 + 递归/深度/Token + 嵌套节点可观测性；Phase C（独立运行记录）待做 |
+| TRIGGER-02 | 子工作流 / SubWorkflow 节点 | 引擎改造 | P1 | ✅ Phase A/B/C 完成：内联执行 → 嵌套可观测 → 独立子运行（父运行关联、运行列表/诊断/趋势、递归与超时取消） |
 
 ### GATE-04 后续增强（未纳入验收，P2）
 
@@ -202,7 +205,7 @@
 - [ ] 触发并发策略：同一工作流已有运行中时当前返回 409，后续按需要增加排队/去重策略。
 - [ ] 幂等竞态加固：极端并发下先占位 trigger_request 再创建 run，彻底避免重复 run。
 
-### TRIGGER-02 子工作流 / SubWorkflow（Phase A/B 已落地，C 待做）
+### TRIGGER-02 子工作流 / SubWorkflow（Phase A/B/C 已落地）
 
 **目标**：把同 workspace 的已发布工作流封装为可复用节点，父工作流通过显式输入/输出映射调用，减少重复编排，让复杂流程可以拆成稳定模块。
 
@@ -287,24 +290,25 @@ class SubWorkflowConfig(NodeCommonConfig):
 - [x] 迁移 `0016_node_run_node_id_width.py`：`node_run.node_id` String(24) → String(128)（覆盖 5 层嵌套）。
 - [x] 运行详情按层级缩进展示子节点，支持子流程分组展开/折叠；诊断优先定位到子节点并抑制父级重复条目。
 
-**Phase C · 独立运行记录（按需）**
+**Phase C · 独立运行记录（已落地）**
 
-- [ ] `run` 增加 `parent_run_id` / `parent_node_id`，`trigger` 增加 `subworkflow`。
-- [ ] 调整 `uq_run_running_per_workflow`：当前全局唯一会让同一子工作流被并发调用时 409，需按父运行隔离或移除子运行约束（评估对现有手动串行策略的影响）。
-- [ ] 子运行进入运行列表、诊断与趋势；Celery 多实例下父子状态同步。
+- [x] `run` 增加 `parent_run_id` / `parent_node_id`，子运行 `trigger=subworkflow`。
+- [x] 调整 `uq_run_running_per_workflow`：唯一索引排除 `trigger='subworkflow'`，子运行允许同一工作流并发，手动/API/调试运行仍串行（迁移 0017）。
+- [x] 子运行进入运行列表、诊断与趋势；父运行详情返回 `children` 并支持跳转；Celery 模式由父进程轮询子运行状态，跨实例取消为尽力而为。
 
 #### 关键约束与风险
 
 | 约束 | 影响 | 处理 |
 |---|---|---|
-| `uq_run_running_per_workflow` 全局唯一 | 独立子运行模型并发调用同一子工作流会 409 | Phase A 内联规避；Phase C 再评估索引 |
-| `NodeContext` 无 DB Session | executor 无法直接读取子工作流 | 注入 `subworkflow_loader` 回调，保持引擎与仓储解耦 |
+| `uq_run_running_per_workflow` 全局唯一 | 独立子运行模型并发调用同一子工作流会 409 | Phase C 已改为排除 `trigger='subworkflow'` |
+| `NodeContext` 无 DB Session | executor 无法直接读取/执行子工作流 | 注入 `subworkflow_loader` / `subworkflow_runner` 回调，保持引擎与仓储解耦 |
 | `node_run.node_id` String(24) | 嵌套前缀后可能超长 | Phase B 已迁移到 128 |
 | 校验器无法静态推断子输出字段 | 跨工作流变量校验会误报或漏报 | `node_output_fields` 返回 `None`；运行时校验输入/输出 |
 | `core/engine/` 属 AGENTS §8 保护目录 | 改动需影响评估 | commit message 注明引擎边界与回归范围 |
-| 多租户隔离 | 不能引用其他 workspace 的工作流 | loader 按 `workspace_id` 过滤，跨租户 404 |
-| 递归/循环引用 | 无限执行、栈溢出 | 运行时调用栈 + 深度上限；保存时可选静态告警 |
+| 多租户隔离 | 不能引用其他 workspace 的工作流 | loader / runner 按 `workspace_id` 过滤，跨租户 404 |
+| 递归/循环引用 | 无限执行、栈溢出 | 运行时调用栈 + 深度上限；跨子运行沿 `parent_run_id` 还原调用链 |
 | 运行中编辑子工作流 | 结果不可复现 | 只读 `published_version_id` 快照，忽略草稿 |
+| 父子 Token 重复统计 | 父运行汇总子 Token，子运行也有 total_tokens | BILL-01 计量汇总时只统计根运行（`parent_run_id IS NULL`）或按 run 去重 |
 
 #### 验收清单
 
@@ -315,27 +319,32 @@ class SubWorkflowConfig(NodeCommonConfig):
 - [x] 子输出可被下游 `{{ 子工作流节点.字段 }}` 引用。
 - [x] 自引用、A→B→A、深度超限被拦截。
 - [x] 子工作流失败 → 父运行 failed，错误包含子工作流名称与原因。
-- [x] 父取消/超时能终止子执行；Token 汇总正确（依赖 asyncio 取消传播与嵌套 Token 累加）。
+- [x] 父取消/超时能终止子执行；Token 汇总正确（子运行 Token 累加到父节点）。
 - [x] 子工作流内部条件分支/禁用节点行为与独立运行一致（复用同一 Scheduler）。
-- [x] Phase B 后运行详情可展开/折叠子节点，SSE 与诊断可定位到具体子节点。
+- [x] Phase B 后运行详情可展开/折叠子节点，SSE 与诊断可定位到具体子节点（历史运行）。
+- [x] Phase C：子运行出现在运行列表，父运行详情返回 `children` 并可跳转；子运行显示父运行面包屑与 `trigger=子工作流`。
+- [x] Phase C：同一子工作流可被多个父运行并发调用；跨运行 A→B→A 递归被调用链栈拦截。
+- [x] Phase C：父节点超时会取消子运行，子运行状态落为 `cancelled`。
 
 #### 测试计划
 
-- 后端 `tests/test_subworkflow.py` 已覆盖：发布门禁、缺必填输入、跨租户、自引用、深度上限、输入映射、嵌套 NodeRun 路径、父 Run SSE、子节点失败诊断。
-- 待补用例：Token 汇总（含 LLM 节点）、取消传播、子图条件分支 / 禁用节点。
+- 后端 `tests/test_subworkflow.py` 已覆盖：发布门禁、缺必填输入、跨租户、自引用、跨运行 A→B→A、深度上限、输入映射、独立子运行、父子关联、运行列表、子运行 SSE、父子诊断、父超时取消子运行。
+- 待补用例：Token 汇总（含 LLM 节点）、子图条件分支 / 禁用节点。
 - 前端 `features/workflows/types.test.ts`：新增节点的 meta/default/summary 与 `input_mapping` 往返；`features/runs/nodeHierarchy.test.ts`：层级/折叠纯函数。
-- 契约漂移：`pnpm contracts:check`；后端全量 `pytest`（241 passed）、前端 `vitest`（84 passed）。
+- 契约漂移：`pnpm contracts:check` / `contracts:compat`；后端全量 `pytest`（243 passed）、前端 `vitest`（84 passed）。
 
 #### 现状与前置条件
 
-- ✅ 已具备：`subworkflow` 节点契约、子工作流 loader、嵌套执行与递归/深度保护、嵌套 NodeRun/SSE 可观测性、运行详情层级展示与折叠、前端节点注册与输入映射 UI、契约生成链。
+- ✅ 已具备：`subworkflow` 节点契约、子工作流 loader / runner、独立子运行与父子关联、跨运行递归/深度保护、运行列表/诊断/趋势、运行详情子运行卡片与跳转、前端节点注册与输入映射 UI、契约生成链。
 - ✅ 已复用：发布版本与版本快照（ASYNC-05）、Kahn 调度、变量解析、取消/超时/重试、Token 统计、租户上下文。
-- ⛔ 尚缺：Phase C（`parent_run_id`、独立子运行记录、`uq_run_running_per_workflow` 策略调整）。
+- ✅ Phase B 的嵌套 NodeRun 层级视图保留用于历史运行；Phase C 后新运行以独立子运行呈现。
 
-#### 已确认口径（Phase A/B 实现）
+#### 已确认口径（Phase A/B/C 实现）
 
 1. 只允许引用**已发布版本**（与 TRIGGER-01 一致，保证可复现）。
-2. Phase A 子节点内部暂不落库；Phase B 已补齐嵌套 NodeRun 与 SSE，无需再改执行模型。
+2. Phase A 子节点内部暂不落库；Phase B 补齐嵌套 NodeRun；Phase C 改为独立子运行，父运行只保留 subworkflow 节点并关联子运行。
+3. 子运行允许同一工作流并发；手动 / API / 调试运行仍保持单实例串行。
+4. 父子 Token 会重复出现在两条运行记录中，后续 BILL-01 计量需只统计根运行或按 run 去重。
 
 ---
 
@@ -390,7 +399,7 @@ return os.environ.get("TENANCY_ENABLED", "false").lower() in ("1", "true", "yes"
 
 ### 其他建议
 
-- **Sprint 3**：TRIGGER-01 的 HTTP 触发、Webhook 与前端管理均已完成，剩余 Phase D 生产 Celery 收尾；TRIGGER-02 Phase A/B（子工作流内联执行 + 嵌套可观测性）已完成，Phase C 独立运行记录按需推进。
+- **Sprint 3**：TRIGGER-01 的 HTTP 触发、Webhook 与前端管理均已完成，剩余 Phase D 生产 Celery 收尾；TRIGGER-02 子工作流 A/B/C 全部完成（可复用节点 + 独立子运行），可转入 Sprint 4 商业化或 SubWorkflow 后续增强。
 - **Sprint 4**：先做 BILL-01 计量中间件，再接入 Stripe；模板市场从 7 个内置模板扩到 30+。
 - **Sprint 5**：新增 `deploy/`（Dockerfile + docker-compose + nginx），补齐私有化部署与用户手册。
 - **ASYNC-04（延后）**：随 Sprint 5 的 Redis 一起做「在线成员 + 编辑锁」；变更闪烁/在线光标需要按 workflow 的 SSE 通道，单独立项。落地前同一工作流按单人编辑使用，避免 last-write-wins 覆盖。
