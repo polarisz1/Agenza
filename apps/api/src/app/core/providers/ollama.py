@@ -6,6 +6,7 @@ import contextlib
 import json
 
 import httpx
+
 from app.core.net import trust_env_for
 from app.core.providers.base import (
     ChatResult,

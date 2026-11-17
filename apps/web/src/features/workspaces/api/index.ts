@@ -23,7 +23,10 @@ export async function getWorkspace(wsId: string): Promise<WorkspaceResponse> {
 }
 
 /** 更新工作空间 */
-export async function updateWorkspace(wsId: string, body: WorkspaceUpdate): Promise<WorkspaceResponse> {
+export async function updateWorkspace(
+  wsId: string,
+  body: WorkspaceUpdate,
+): Promise<WorkspaceResponse> {
   return http.put<WorkspaceResponse>(`/api/v1/workspaces/${wsId}`, body);
 }
 

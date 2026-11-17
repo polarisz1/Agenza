@@ -26,9 +26,7 @@ class SettingsRepository:
     @staticmethod
     def get(session: Session, key: str) -> AppSetting | None:
         ws = _ws_id()
-        q = session.query(AppSetting).filter(
-            AppSetting.key == key, AppSetting.deleted_at.is_(None)
-        )
+        q = session.query(AppSetting).filter(AppSetting.key == key, AppSetting.deleted_at.is_(None))
         if ws is not None:
             q = q.filter(AppSetting.workspace_id == ws)
         else:

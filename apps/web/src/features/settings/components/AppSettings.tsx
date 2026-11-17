@@ -328,10 +328,7 @@ export default function AppSettings() {
                 <Form.Item name="default_timeout" label="默认超时（秒）">
                   <InputNumber min={5} max={3600} style={{ width: 200 }} />
                 </Form.Item>
-                <Form.Item
-                  name="retention_per_workflow"
-                  label="每个工作流保留运行条数"
-                >
+                <Form.Item name="retention_per_workflow" label="每个工作流保留运行条数">
                   <InputNumber min={20} max={5000} style={{ width: 200 }} />
                 </Form.Item>
                 <Button type="primary" htmlType="submit">

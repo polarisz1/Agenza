@@ -21,8 +21,7 @@ export const theme: ThemeConfig = {
     colorTextTertiary: '#94A3B8',
     colorTextQuaternary: '#64748B',
     borderRadius: 8,
-    fontFamily:
-      "'IBM Plex Sans Variable', 'IBM Plex Sans', system-ui, -apple-system, sans-serif",
+    fontFamily: "'IBM Plex Sans Variable', 'IBM Plex Sans', system-ui, -apple-system, sans-serif",
   },
   components: {
     Layout: {

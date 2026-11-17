@@ -60,7 +60,12 @@ export const useAuthStore = create<AuthState>()(
       },
 
       register: async (email, password, name, workspaceName) => {
-        const resp = await authApi.register({ email, password, name, workspace_name: workspaceName });
+        const resp = await authApi.register({
+          email,
+          password,
+          name,
+          workspace_name: workspaceName,
+        });
         set({
           accessToken: resp.access_token,
           refreshToken: resp.refresh_token,

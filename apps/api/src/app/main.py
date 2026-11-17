@@ -44,7 +44,7 @@ app = FastAPI(
     description=(
         "Agenza - "
         + (
-            "Enterprise AI workflow orchestration"
+            "Self-hosted AI workflow orchestration"
             if settings.TENANCY_ENABLED
             else "Single-user local AI workflow orchestration"
         )

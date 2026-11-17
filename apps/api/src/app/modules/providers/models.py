@@ -21,6 +21,4 @@ class Provider(AuditMixin, Base):
     enabled = Column(Boolean, default=True)
     created_at = Column(DateTime, nullable=True)
 
-    __table_args__ = (
-        Index("ix_provider_workspace_enabled", "workspace_id", "enabled"),
-    )
+    __table_args__ = (Index("ix_provider_workspace_enabled", "workspace_id", "enabled"),)

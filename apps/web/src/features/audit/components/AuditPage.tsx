@@ -135,7 +135,10 @@ export default function AuditPage() {
                     <span>
                       {record.resource_type}
                       {record.resource_id ? (
-                        <span className="af-mono" style={{ color: 'var(--af-text-dim)', marginLeft: 6 }}>
+                        <span
+                          className="af-mono"
+                          style={{ color: 'var(--af-text-dim)', marginLeft: 6 }}
+                        >
                           {record.resource_id}
                         </span>
                       ) : null}

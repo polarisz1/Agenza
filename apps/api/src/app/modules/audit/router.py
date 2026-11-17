@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from fastapi import APIRouter, Depends, Query
+
 from app.db.database import get_db
 from app.modules.audit.repository import AuditRepository
 from app.modules.audit.schemas import AuditLogItem, AuditLogListResponse
-from fastapi import APIRouter, Depends, Query
 
 router = APIRouter(prefix="/audit-logs", tags=["v1-audit-logs"])
 

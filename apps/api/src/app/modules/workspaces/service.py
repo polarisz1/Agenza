@@ -149,7 +149,9 @@ class WorkspaceService:
     # ── 成员管理 ──────────────────────────────────────────────
 
     @staticmethod
-    def list_members(session: Session, workspace_id: str, user_id: str) -> list[WorkspaceMemberItem]:
+    def list_members(
+        session: Session, workspace_id: str, user_id: str
+    ) -> list[WorkspaceMemberItem]:
         ws = WorkspaceRepository.get(session, workspace_id)
         if ws is None:
             raise AppError(404, "工作空间不存在")
@@ -215,10 +217,13 @@ class WorkspaceService:
             name=user.name,
             avatar_url=user.avatar_url,
             role=body.role,
-            joined_at=session.query(WorkspaceMember).filter(
+            joined_at=session.query(WorkspaceMember)
+            .filter(
                 WorkspaceMember.workspace_id == workspace_id,
                 WorkspaceMember.user_id == user.id,
-            ).one().joined_at,
+            )
+            .one()
+            .joined_at,
             invited_by_name=UserRepository.get_by_id(session, inviter_id).name,
         )
 

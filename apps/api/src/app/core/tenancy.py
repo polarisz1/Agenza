@@ -157,7 +157,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
 def _decode_jwt_tenant(token: str) -> TenantContext:
     """从 JWT 解码租户信息（避免 Tenancy ↔ Auth 循环依赖，延迟 import）。"""
-    from jose import jwt
+    import jwt
 
     from app.core.config import settings
 

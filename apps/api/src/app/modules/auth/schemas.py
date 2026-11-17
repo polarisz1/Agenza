@@ -12,6 +12,7 @@ UserRole = Literal["owner", "editor", "viewer", "operator"]
 
 # ── Register / Login ──────────────────────────────────────────────
 
+
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=100)
@@ -39,6 +40,7 @@ class RefreshRequest(BaseModel):
 
 
 # ── User Profile ──────────────────────────────────────────────────
+
 
 class UserProfile(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -72,6 +74,7 @@ class CurrentUserResponse(BaseModel):
 
 # ── Workspace Member ──────────────────────────────────────────────
 
+
 class MemberItem(BaseModel):
     user_id: str
     email: str
@@ -96,6 +99,7 @@ class UpdateMemberRoleRequest(BaseModel):
 
 
 # ── ApiKey ─────────────────────────────────────────────────────────
+
 
 class ApiKeyCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)

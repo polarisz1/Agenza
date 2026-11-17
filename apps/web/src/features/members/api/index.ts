@@ -9,7 +9,7 @@ type MemberListPayload = WorkspaceMemberItem[] | { items: WorkspaceMemberItem[] 
 
 export async function listMembers(wsId: string): Promise<WorkspaceMemberItem[]> {
   const data = await http.get<MemberListPayload>(`/api/v1/workspaces/${wsId}/members`);
-  return Array.isArray(data) ? data : data.items ?? [];
+  return Array.isArray(data) ? data : (data.items ?? []);
 }
 
 export async function inviteMember(

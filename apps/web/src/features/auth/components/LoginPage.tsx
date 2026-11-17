@@ -32,12 +32,7 @@ export default function LoginPage() {
 
   return (
     <AuthShell title="登录 Agenza" subtitle="自托管 AI 工作流编排平台">
-      <Form<LoginForm>
-        layout="vertical"
-        onFinish={onFinish}
-        autoComplete="off"
-        size="large"
-      >
+      <Form<LoginForm> layout="vertical" onFinish={onFinish} autoComplete="off" size="large">
         <Form.Item
           label="邮箱"
           name="email"
@@ -49,11 +44,7 @@ export default function LoginPage() {
           <Input placeholder="you@example.com" />
         </Form.Item>
 
-        <Form.Item
-          label="密码"
-          name="password"
-          rules={[{ required: true, message: '请输入密码' }]}
-        >
+        <Form.Item label="密码" name="password" rules={[{ required: true, message: '请输入密码' }]}>
           <Input.Password placeholder="••••••••" />
         </Form.Item>
 

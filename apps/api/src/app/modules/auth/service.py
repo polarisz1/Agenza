@@ -49,7 +49,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_access_token(*, user_id: str, email: str, workspace_id: str, role: str) -> str:
-    from jose import jwt
+    import jwt
 
     expire = datetime.utcnow() + timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
     payload = {
@@ -65,7 +65,7 @@ def create_access_token(*, user_id: str, email: str, workspace_id: str, role: st
 
 
 def create_refresh_token(*, user_id: str) -> str:
-    from jose import jwt
+    import jwt
 
     expire = datetime.utcnow() + timedelta(days=settings.JWT_REFRESH_EXPIRE_DAYS)
     payload = {
@@ -172,7 +172,7 @@ class AuthService:
 
     @staticmethod
     def refresh(session: Session, refresh_token: str) -> TokenResponse:
-        from jose import jwt
+        import jwt
 
         try:
             payload = jwt.decode(

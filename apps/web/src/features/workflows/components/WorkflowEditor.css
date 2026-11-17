@@ -16,8 +16,8 @@
   --afe-warn: #f59e0b;
   --afe-danger: #ef4444;
   --afe-info: #06b6d4;
-  --afe-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, 'Cascadia Mono', Consolas,
-    monospace;
+  --afe-mono:
+    'JetBrains Mono Variable', ui-monospace, SFMono-Regular, 'Cascadia Mono', Consolas, monospace;
 
   height: calc(100vh - 104px);
   display: flex;

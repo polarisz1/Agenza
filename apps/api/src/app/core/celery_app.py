@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import os
 
-from app.core.config import settings
 from celery import Celery
+
+from app.core.config import settings
 
 # 仅在配置了 broker 时启用 Celery
 celery_app: Celery | None = None

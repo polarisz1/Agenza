@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
 from app.api_deps import get_session
 from app.core.response import ERROR_RESPONSES, ApiResponse, DeleteResult, success
 from app.modules.auth.dependencies import get_current_user
@@ -16,8 +19,6 @@ from app.modules.workspaces.schemas import (
     WorkspaceUpdate,
 )
 from app.modules.workspaces.service import WorkspaceService
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/workspaces", responses=ERROR_RESPONSES, tags=["workspaces"])
 
@@ -92,9 +93,7 @@ def invite_member(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    result = WorkspaceService.invite_member(
-        session, workspace_id, body, inviter_id=current_user.id
-    )
+    result = WorkspaceService.invite_member(session, workspace_id, body, inviter_id=current_user.id)
     return success(result)
 
 
@@ -122,7 +121,5 @@ def remove_member(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    WorkspaceService.remove_member(
-        session, workspace_id, user_id, operator_id=current_user.id
-    )
+    WorkspaceService.remove_member(session, workspace_id, user_id, operator_id=current_user.id)
     return success({"deleted": True})

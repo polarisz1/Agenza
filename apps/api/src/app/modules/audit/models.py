@@ -28,6 +28,4 @@ class AuditLog(Base):
         DateTime(timezone=True), server_default=func.now(), index=True
     )
 
-    __table_args__ = (
-        Index("ix_audit_log_workspace_created", "workspace_id", "created_at"),
-    )
+    __table_args__ = (Index("ix_audit_log_workspace_created", "workspace_id", "created_at"),)

@@ -20,7 +20,7 @@ dependencies = [
     "passlib[bcrypt]>=1.7.4",
     # passlib 1.7.4 与 bcrypt>=5.0 不兼容（wrap-bug 检测时对超长测试密码抛 ValueError）
     "bcrypt>=4.0,<5.0",
-    "python-jose[cryptography]>=3.3.0",
+    "pyjwt>=2.9.0",
     "python-multipart>=0.0.9",
     "email-validator>=2.2.0",
     # --- SaaS: Async queue + cache ---
@@ -43,6 +43,13 @@ agenza-api = "app.run:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv]
+# 传递依赖的安全下限：不做直接依赖，但强制解析到已修复版本
+constraint-dependencies = [
+    "dnspython>=2.9.2",
+    "opentelemetry-api>=1.45.2",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/app"]

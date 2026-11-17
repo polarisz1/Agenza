@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from app.core.tenancy import get_workspace_id
-from app.modules.audit.models import AuditLog
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
+
+from app.core.tenancy import get_workspace_id
+from app.modules.audit.models import AuditLog
 
 
 def _ws_id() -> str | None:

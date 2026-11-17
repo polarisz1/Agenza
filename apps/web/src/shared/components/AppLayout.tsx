@@ -338,10 +338,7 @@ export default function AppLayout() {
             onBlur={() => window.setTimeout(() => setSearchOpen(false), 120)}
           />
           {searchOpen && searchQuery.trim() && (
-            <div
-              className="af-search__panel"
-              onMouseDown={(event) => event.preventDefault()}
-            >
+            <div className="af-search__panel" onMouseDown={(event) => event.preventDefault()}>
               {searchLoading ? (
                 <div className="af-search__empty">搜索中…</div>
               ) : searchResults.length === 0 ? (

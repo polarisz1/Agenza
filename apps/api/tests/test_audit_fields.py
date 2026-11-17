@@ -46,9 +46,7 @@ def test_all_business_tables_have_audit_columns() -> None:
 
 def test_workflow_delete_is_soft_delete() -> None:
     with TestClient(app) as client:
-        created = client.post(
-            "/api/workflows", json={"name": "软删除用例", "graph": GRAPH}
-        )
+        created = client.post("/api/workflows", json={"name": "软删除用例", "graph": GRAPH})
         assert created.status_code == 200, created.text
         wf_id = created.json()["data"]["id"]
 

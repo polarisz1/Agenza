@@ -86,11 +86,7 @@ async function withAuth(init?: RequestInit): Promise<RequestInit> {
 }
 
 /** 执行请求，处理 401 刷新重试 */
-async function request<T>(
-  url: string,
-  init: RequestInit,
-  retried = false,
-): Promise<T> {
+async function request<T>(url: string, init: RequestInit, retried = false): Promise<T> {
   const resp = await fetch(serviceBase() + url, init);
 
   if (resp.status === 401 && !isRefreshRequest(url) && !retried) {

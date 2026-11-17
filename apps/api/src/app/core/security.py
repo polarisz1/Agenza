@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.core.config import settings
 from cryptography.fernet import Fernet, InvalidToken
+
+from app.core.config import settings
 
 
 class KeyDecryptError(RuntimeError):

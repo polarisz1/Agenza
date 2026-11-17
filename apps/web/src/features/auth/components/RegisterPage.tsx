@@ -34,22 +34,9 @@ export default function RegisterPage() {
   };
 
   return (
-    <AuthShell
-      title="创建账号"
-      subtitle="加入 Agenza，开始构建 AI 工作流"
-      wide
-    >
-      <Form<RegisterForm>
-        layout="vertical"
-        onFinish={onFinish}
-        autoComplete="off"
-        size="large"
-      >
-        <Form.Item
-          label="姓名"
-          name="name"
-          rules={[{ required: true, message: '请输入姓名' }]}
-        >
+    <AuthShell title="创建账号" subtitle="加入 Agenza，开始构建 AI 工作流" wide>
+      <Form<RegisterForm> layout="vertical" onFinish={onFinish} autoComplete="off" size="large">
+        <Form.Item label="姓名" name="name" rules={[{ required: true, message: '请输入姓名' }]}>
           <Input placeholder="你的名字" />
         </Form.Item>
 

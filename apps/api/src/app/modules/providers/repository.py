@@ -38,9 +38,7 @@ class ProviderRepository:
 
     @staticmethod
     def get(session: Session, pid: str) -> Provider | None:
-        q = session.query(Provider).filter(
-            Provider.id == pid, Provider.deleted_at.is_(None)
-        )
+        q = session.query(Provider).filter(Provider.id == pid, Provider.deleted_at.is_(None))
         ws = _ws_id()
         if ws is not None:
             q = q.filter(Provider.workspace_id == ws)

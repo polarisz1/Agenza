@@ -5,8 +5,9 @@ from __future__ import annotations
 import re
 import sys
 
-from app.core.config import settings
 from loguru import logger
+
+from app.core.config import settings
 
 # 日志脱敏：拦截常见密钥形态（OpenAI sk- / Authorization Bearer）
 _SECRET_PATTERNS = (

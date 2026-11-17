@@ -3,6 +3,4 @@ import Dashboard from './components/Dashboard';
 
 export default Dashboard;
 
-export const dashboardRoutes: RouteObject[] = [
-  { index: true, element: <Dashboard /> },
-];
+export const dashboardRoutes: RouteObject[] = [{ index: true, element: <Dashboard /> }];

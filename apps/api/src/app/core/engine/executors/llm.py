@@ -35,9 +35,7 @@ class LLMExecutor(BaseExecutor):
 
         # GATE-01：显式开启自动路由时，由 ModelRouter 决定 provider/model
         if config.get("routing") == "auto" and ctx.model_router is not None:
-            choice = ctx.model_router.select(
-                _route_task_type(ctx.node.get("type"), config)
-            )
+            choice = ctx.model_router.select(_route_task_type(ctx.node.get("type"), config))
             if choice is None:
                 return NodeResult(
                     status="failed",
