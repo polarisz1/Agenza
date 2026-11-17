@@ -1,4 +1,4 @@
-# AGENTS.md · AgentFlow（开源自托管版）
+# AGENTS.md · Agenza（开源自托管版）
 
 > **本文件是 AI 协作时的最高优先级约定。修改前请先阅读并遵守以下约束。**
 > 违反任何硬性约束视为错误提交，必须在首次 commit 前修复。
@@ -7,7 +7,7 @@
 
 ## 0. 项目方向
 
-**AgentFlow 是一个个人维护的开源、自托管 AI 工作流编排平台。商业化 SaaS 目标已暂停，多租户 / 多工作空间能力保留为可选的部署模式。**
+**Agenza 是一个个人维护的开源、自托管 AI 工作流编排平台。商业化 SaaS 目标已暂停，多租户 / 多工作空间能力保留为可选的部署模式。**
 
 | 项 | 现状 |
 |---|---|
@@ -25,7 +25,7 @@
 ## 1. 目录结构（硬性约束）
 
 ```
-AgentFlow/
+Agenza/
 ├── apps/
 │   ├── web/          # React 前端 → apps/web/src/features/<feature>/
 │   └── api/          # FastAPI 后端 → apps/api/src/app/modules/<feature>/
@@ -125,7 +125,7 @@ apps/api/src/app/modules/<feature>/
 apps/web/src/features/<feature>/
 ├── components/       # 仅本 feature 使用的组件
 ├── hooks/            # 仅本 feature 使用的 hooks
-├── api/              # 本 feature 的 API 调用（类型从 @agentflow/contracts 导入）
+├── api/              # 本 feature 的 API 调用（类型从 @agenza/contracts 导入）
 ├── types.ts          # 本 feature 内部类型（不对外暴露）
 └── index.tsx         # 入口，导出 Route 对象
 ```
@@ -133,7 +133,7 @@ apps/web/src/features/<feature>/
 **禁令：**
 - ❌ 业务组件放进 `src/shared/`（shared 只放跨 feature 通用 UI、hooks、工具）
 - ❌ feature 之间直接 import 对方的 `api/` 或 `components/`
-- ❌ 手写 API 类型（全部从 `@agentflow/contracts` 导入）
+- ❌ 手写 API 类型（全部从 `@agenza/contracts` 导入）
 
 ### 3.2 Shared 边界
 
@@ -168,7 +168,7 @@ pnpm contracts:compat     # 破坏性变更检测
 
 **禁令：**
 - ❌ 手写 `packages/contracts/src/generated/`（每次 build 会覆盖）
-- ❌ 手写前端 API interface（`import type { Xxx } from '@agentflow/contracts'`）
+- ❌ 手写前端 API interface（`import type { Xxx } from '@agenza/contracts'`）
 - ❌ 后端手写 `openapi.yaml`（Pydantic schema 为真源）
 - 新增 `/api/v1/*` 路由后必须重新生成契约，否则前端类型缺失
 
@@ -202,7 +202,7 @@ pnpm contracts:compat     # 破坏性变更检测
 ### 前端
 - [ ] 在 `apps/web/src/features/<feature>/` 建目录：`api/`、`components/`、`hooks/`、`types.ts`、`index.tsx`
 - [ ] 在 `apps/web/src/router/index.tsx` 注册路由（多用户页面挂在 `/workspaces/:wsId/...` 下）
-- [ ] 所有 API 类型从 `@agentflow/contracts` 导入
+- [ ] 所有 API 类型从 `@agenza/contracts` 导入
 - [ ] 需要登录/权限的页面接入 `AuthGuard` 与角色校验
 
 ### 禁止

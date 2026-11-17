@@ -1,181 +1,166 @@
-# AgentFlow
+# Agenza
 
-[![CI](https://github.com/polarisz1/AgentFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/polarisz1/AgentFlow/actions/workflows/ci.yml)
+[![CI](https://github.com/polarisz1/Agenza/actions/workflows/ci.yml/badge.svg)](https://github.com/polarisz1/Agenza/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-可视化 AI 工作流编排平台：在画布上拖拽节点、连线、逐节点调试，运行过程与每一步的输入 / 输出 / 耗时 / Token 都可见。支持子工作流复用、Webhook / API Key 触发、多工作空间与审计。
+Agenza 是一个自托管的 AI 工作流编排平台。你把 LLM、HTTP、Python 脚本、条件分支这些节点用 DAG 串起来，Agenza 负责调度执行，并把每一步的输入、输出、耗时、Token、失败原因完整地呈现出来。
 
-> **项目定位**：个人维护的开源、自托管项目。商业化 SaaS 目标已暂停，代码中的多租户能力保留，可作为自托管多用户或单用户部署使用。
+不同于聊天机器人搭建工具，Agenza 的核心设计是「过程可观测」——节点级输入快照、变量解析结果、运行对比 diff、规则驱动的失败根因分类——让你在工作流跑挂的时候不用盯着一堆日志猜。
 
-- 前端：React 18 + Vite 5 + TypeScript + Ant Design 5 + @xyflow/react
-- 后端：FastAPI + Pydantic v2 + SQLAlchemy 2.0 + PostgreSQL（本地开发可切 SQLite）
-- 引擎：自研 DAG 调度，支持并发、条件分支、重试、超时、取消、Token 统计与子工作流
-- 契约：后端 Pydantic → OpenAPI → 前端 TypeScript 类型（单一事实源）
-- 许可证：[MIT](LICENSE)
+> 商业 SaaS 目标已暂停，当前按个人开源自托管项目维护。多用户 / 多工作空间能力保留为可选部署模式。
 
-## 功能
+---
 
-- **可视化编排**：输入、LLM、结构化提取、HTTP、Python 脚本、条件、合并、子工作流、输出
-- **可观测运行**：节点时间线、输入 / 输出快照、耗时、Token、SSE 实时事件、运行诊断
-- **版本与发布**：工作流草稿 / 版本快照 / 发布；子工作流只读取已发布版本，结果可复现
-- **子工作流**：把已发布工作流作为节点复用；独立子运行，可单独查看节点、诊断与成本
-- **模型接入**：OpenAI 兼容、Ollama、Anthropic 兼容；Provider 密钥加密存储
-- **AI Gateway**：模型路由与 Token 预算（按工作空间配置）
-- **触发方式**：手动 / 调试 / HTTP（`X-API-Key`）/ Webhook（HMAC-SHA256 签名）
-- **协作与安全**：JWT + bcrypt、工作空间隔离、成员角色、审计日志、API Key 仅存哈希
-- **界面**：中文 UI、暗色主题、模板与命令面板
+## 核心能力
 
-## 快速部署（Docker Compose）
+- **可视化 DAG 编辑器**：基于 @xyflow/react，节点拖拽、连线、属性面板配置；节点类型通过注册表扩展，新增类型只需注册组件与配置项。
+- **自研 DAG 执行引擎**：Kahn 拓扑分层调度 + 信号量并发闸门；节点级超时、指数退避重试、取消传播；上游失败标记 skipped 而非整体停摆。
+- **9 类节点**：输入 / LLM / 结构化抽取 / HTTP / Python 脚本 / 条件分支 / 合并 / 子工作流 / 输出。Python 脚本在独立子进程中执行，有路径白名单。
+- **子工作流复用**：子工作流作为独立 Run 落库，父子通过 `parent_run_id` 关联；调用链栈拦截跨运行递归（最大深度 5）；同一子流程允许并发调用。
+- **运行可观测性**：SSE 增量推送节点状态；运行详情四 Tab（概览 / 节点 / 成本 / 诊断）；规则驱动的失败根因分类（12 类常见错误），可选 AI 深度分析带脱敏和缓存。
+- **AI Gateway**：模型路由策略、预算告警、硬停机、按月用量统计；执行器不直接依赖厂商 SDK，统一经 Provider 层调用。
+- **触发器**：API Key（只存哈希，明文仅创建时返回一次）+ HTTP 触发；工作流级 Webhook（HMAC-SHA256 验签、时间窗 ±5 分钟、JSONPath 输入映射、幂等）。只允许触发已发布版本。
+- **多工作空间隔离**：JWT + owner/editor/viewer 角色；租户上下文只来自服务端解出的 token，Repository 显式过滤 + SQLAlchemy ORM 自动注入构成双保险；Celery worker 显式传递租户上下文。
+- **契约驱动**：Pydantic v2 为唯一事实源 → 导出 OpenAPI → 生成前端 TypeScript 类型，CI 校验契约漂移与破坏性变更。
+- **诊断与复盘**：跨运行趋势按工作流聚合，给出同类失败 Top N、每日成功率、空输出率；重跑整个 Run 或单独重跑某节点。
 
-前置：Docker 24+ 与 Docker Compose v2。
+---
+
+## 快速开始（Docker Compose）
+
+前置条件：Docker 20.10+。
 
 ```bash
-git clone https://github.com/polarisz1/AgentFlow.git
-cd AgentFlow
-
 cp deploy/.env.example .env
-# 编辑 .env：至少修改 POSTGRES_PASSWORD 与 JWT_SECRET
-# JWT_SECRET 可用：openssl rand -hex 32
-
+# 编辑 .env：至少改 POSTGRES_PASSWORD 和 JWT_SECRET
 docker compose up -d --build
 ```
 
-打开 <http://localhost:8000>：
+启动后访问 `http://localhost:8000`，首个注册的用户会自动创建默认工作空间并成为 owner。之后是否开放注册由 `ALLOW_REGISTRATION` 控制（默认 `false`）。
 
-1. **首个注册用户会创建默认工作空间并成为 owner**；
-2. 之后 `ALLOW_REGISTRATION=false` 会关闭公开注册；
-3. 在「模型配置」中添加服务商（OpenAI 兼容 / Ollama / Anthropic 兼容），否则 LLM 节点会提示未配置。
+数据持久化：PostgreSQL 在 `agenza-pgdata` 卷，应用主密钥与 SQLite 回退库在 `agenza-data` 卷（容器内 `/data`）。
 
-常用命令：
+### 配置速查
 
-```bash
-docker compose logs -f app     # 查看日志
-docker compose restart app     # 重启应用
-docker compose down            # 停止（保留数据卷）
-docker compose down -v         # 停止并删除数据（谨慎）
+| 变量 | 说明 | 默认 |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL 连接串；留空则使用 SQLite `data/agenza.db` | 空 |
+| `JWT_SECRET` | JWT 签名密钥，生产必须显式配置 | 空（桌面模式自动生成） |
+| `ALLOW_REGISTRATION` | 是否开放注册（首个用户始终允许） | `false` |
+| `TENANCY_ENABLED` | 是否启用多租户模式（多工作空间隔离） | `true`（compose） |
+| `CORS_ORIGINS` | 跨域来源数组；生产建议空数组 `[]` 做同源部署 | `["http://localhost:5174"]` |
+| `ENGINE_MAX_CONCURRENCY` | 节点并发上限 | `4` |
+| `DEFAULT_TIMEOUT` | 节点级超时秒数 | `120` |
+| `RUN_RETENTION` | 每工作流保留的运行记录条数 | `200` |
+
+---
+
+## 架构
+
+```
+┌────────────────────────────────── apps/web ──────────────────────────────────┐
+│  @xyflow/react 画布  │  Zustand 状态  │  Ant Design UI  │  SSE 实时事件       │
+└────────────────────────────────────────┬─────────────────────────────────────┘
+                                         │ 类型来自 @agenza/contracts
+┌────────────────────────────────────────▼─────────────────────────────────────┐
+│                            FastAPI（apps/api）                                │
+│  modules/<feature>/  router → service → repository → models                  │
+│  core/engine/        Kahn 调度器  │  执行器注册表  │  SSE 事件总线  │  变量解析  │
+│  core/providers/     模型适配 + ModelRouter；执行器不直接依赖厂商 SDK          │
+│  core/tenancy.py     ContextVar 租户上下文 + ORM 自动 workspace 过滤           │
+└────────────┬──────────────────────┬──────────────────────┬───────────────────┘
+             │                      │                      │
+     PostgreSQL                 Celery + Redis           SQLite
+    （自托管生产）            （可选，多实例）         （本地开发/桌面）
 ```
 
-数据持久化：PostgreSQL 在 `agentflow-pgdata` 卷，应用密钥 / 导出文件在 `agentflow-data` 卷（容器内 `/data`）。
+三层设计原则：
 
-> 单容器内后端直接托管前端产物，并默认使用**进程内执行**，适合个人 / 小团队单实例部署。
-> 多实例水平扩展需要 Redis + Celery 与共享存储，目前尚未作为默认部署路径验证。
+1. **边界写进目录**。前端按 feature 切，`shared` 不反向依赖 feature；后端禁止跨模块直接 import 对方 repository，只能走 service。目录结构不是口头约定，见 [AGENTS.md](AGENTS.md)。
+2. **引擎与业务解耦**。调度器只认 `NodeContext` 和 `NodeResult`，节点执行器注册在注册表里。加一种节点不改调度核心。
+3. **契约先行**。Pydantic 模型 → OpenAPI → TS 类型，前端不手写 interface，后端不手写 openapi.yaml。
 
-### 反向代理与 HTTPS
+---
 
-对外网开放时建议在 Compose 前加一层 Caddy / Nginx，并只暴露 443：
+## 技术栈
 
-```caddyfile
-agentflow.example.com {
-    reverse_proxy 127.0.0.1:8000
-}
-```
+| 层 | 选型 | 说明 |
+|---|---|---|
+| 前端 | React 18 · TypeScript · Vite 5 · @xyflow/react · Zustand · Ant Design 5 · ECharts | Vite 冷启动快，Zustand 细粒度订阅避免画布高频更新的全量重渲染 |
+| 后端 | Python 3.12 · FastAPI · Pydantic v2 · SQLAlchemy 2.0 · Alembic | Pydantic v2 作为契约唯一事实源；Alembic 显式迁移，禁止 `create_all` 兜底 |
+| 数据库 | PostgreSQL（生产）· SQLite（本地） | PostgreSQL 支持 UUID / JSONB / 部分索引；SQLite 让本地零配置启动 |
+| 异步 | Celery + Redis（可选） | 单实例进程内执行，多实例才启用，不让自托管的人先装中间件 |
+| 实时 | SSE | 单向推送够用，鉴权和代理比 WebSocket 简单 |
+| 鉴权 | JWT（access + refresh）· bcrypt · Fernet | 无状态便于水平扩展；密钥加密入库，明文仅创建时返回 |
+| 构建 | pnpm workspace + Turborepo + uv | monorepo 三包分离；uv 比 pip 快且锁文件确定 |
+| 部署 | 多阶段 Dockerfile · Docker Compose | 前端产物由 FastAPI 托管，单容器 + PostgreSQL 即可 |
 
-同时把 `CORS_ORIGINS` 保持为 `[]`（同源访问不需要放行跨域），并设置强随机 `JWT_SECRET`。
-
-## 本地开发
-
-环境要求：Node.js ≥ 20、pnpm 9.12、Python 3.12、uv。
-
-```bash
-pnpm install
-uv sync --directory apps/api --all-extras
-
-# 同时启动后端 127.0.0.1:8000 与前端 localhost:5174
-pnpm dev
-```
-
-只启动一半：`pnpm dev:api` / `pnpm dev:web`。端口被占用时换端口：
-
-```bash
-node tools/scripts/dev.mjs --api-port 8010 --web-port 5180
-```
-
-## 配置
-
-后端配置见 [`apps/api/.env.example`](apps/api/.env.example)，常用项：
-
-| 变量 | 说明 |
-|---|---|
-| `DATABASE_URL` | 留空使用 `data/agentflow.db`（SQLite）；生产建议 PostgreSQL |
-| `DATA_DIR` | 数据目录（SQLite、`.secret.key`、导出文件） |
-| `TENANCY_ENABLED` | `true` 启用登录与工作空间隔离；`false` 为单用户兼容模式 |
-| `ALLOW_REGISTRATION` | 首个用户之后是否允许继续注册（公网自托管建议 `false`） |
-| `JWT_SECRET` | JWT 签名密钥；多用户模式必须显式设置 |
-| `CORS_ORIGINS` | 跨域白名单；同源部署留 `[]` |
-| `ENGINE_MAX_CONCURRENCY` | 工作流节点并发上限 |
-| `DEFAULT_TIMEOUT` | 节点默认超时（秒） |
-| `CELERY_BROKER_URL` | 可选；配置 Redis 后任务投递到 Celery worker |
-
-前端 API 地址由 `VITE_API_BASE_URL` 决定；生产构建默认使用相对路径 `/api`，由同一个后端托管。
-
-## 常用命令
-
-```bash
-pnpm check            # lint + ruff + 格式 + 类型 + pytest + 前端单测 + 契约漂移/兼容性
-pnpm test             # 后端 pytest
-pnpm test:web         # 前端 vitest
-pnpm typecheck        # 前端 tsc
-pnpm lint             # 前端 ESLint
-pnpm lint:api         # 后端 Ruff
-pnpm build            # 前端生产构建
-pnpm e2e              # Playwright 浏览器走查
-
-pnpm contracts:generate   # 后端 → openapi.yaml
-pnpm contracts:build      # openapi.yaml → 前端类型
-pnpm contracts:check      # 契约漂移检测
-pnpm contracts:compat     # 破坏性变更检测
-```
+---
 
 ## 目录结构
 
 ```
-AgentFlow/
+Agenza/
 ├── apps/
-│   ├── web/              # React 前端（features/<feature>/）
-│   └── api/              # FastAPI 后端（modules/<feature>/）
-├── packages/contracts/   # OpenAPI 与生成的 TypeScript 类型
-├── deploy/               # Docker Compose 环境变量示例
-├── docs/                 # 工程记录与历史设计
-├── electron/             # 旧桌面壳（保留，不再演进）
+│   ├── web/            # React 前端 → src/features/<feature>/
+│   └── api/            # FastAPI 后端 → src/app/modules/<feature>/
+├── packages/contracts/ # OpenAPI 契约 → 单一事实源
+├── deploy/             # Docker Compose 环境变量示例
+├── tools/scripts/      # 辅助脚本
+├── docs/               # 规划与工程记录（含已归档的 SaaS 文档）
 ├── Dockerfile
-└── docker-compose.yml
+├── docker-compose.yml
+└── AGENTS.md           # 开发约束（新贡献者必读）
 ```
 
-分层与编码约束见 [`AGENTS.md`](AGENTS.md)。
+---
 
-## 测试与质量
+## 本地开发
 
-- 后端：pytest（含运行链路、租户隔离、Webhook、子工作流、迁移）
-- 前端：vitest（编辑器语义、运行层级、契约类型）
-- E2E：Playwright（含 100 节点性能基线）
-- CI：GitHub Actions（契约、后端、前端、E2E、依赖审计）
+### 依赖
 
-## 路线图 / 已知缺口
+- Node.js ≥ 20
+- Python ≥ 3.12 + [uv](https://docs.astral.sh/uv/)
 
-开源自托管优先，以下能力尚未完成或需要生产化验证：
+### 启动
 
-- **账号体系**：邮箱验证、邀请成员、找回密码、OIDC / SSO（当前仅邮箱密码 + 首用户初始化）
-- **权限**：更细粒度 RBAC（当前 owner / editor / viewer），以及团队级资源配额
-- **部署**：多实例水平扩展（Celery + Redis）、对象存储、备份 / 恢复脚本、HTTPS 一键示例
-- **运维**：指标 / 链路追踪、告警、审计导出、限流与滥用防护
-- **产品**：国际化、节点插件 SDK、模板市场、更多内置节点
-- **测试**：真实模型 Provider 的定期集成测试、长时间运行稳定性测试
+```bash
+# 前端 + 后端同时开发
+pnpm dev
 
-## 文档
+# 或分别启动
+pnpm dev:web          # Vite → http://localhost:5174
+uv run --directory apps/api python -m app.run  # FastAPI → http://localhost:8000
+```
 
-| 文件 | 内容 |
-|---|---|
-| [`AGENTS.md`](AGENTS.md) | 协作硬约束（目录、分层、工作空间隔离、契约、安全） |
-| [`docs/dev-environment.md`](docs/dev-environment.md) | 本机环境与常见问题 |
-| [`docs/v0.1-perf-baseline.md`](docs/v0.1-perf-baseline.md) | 100 节点性能基线 |
-| [`docs/dependency-audit-2026-11-01.md`](docs/dependency-audit-2026-11-01.md) | 依赖漏洞与许可证审计 |
-| [`docs/v0.2-provider-matrix.md`](docs/v0.2-provider-matrix.md) | Provider 验收矩阵 |
-| [`docs/saas-strategy-2026-11-03.md`](docs/saas-strategy-2026-11-03.md) | 历史：商业化战略（已暂停，仅作设计参考） |
-| [`docs/saas-product-design-2026-11-03.md`](docs/saas-product-design-2026-11-03.md) | 历史：SaaS 产品设计（已暂停） |
-| [`docs/saas-backlog-2026-11-03.md`](docs/saas-backlog-2026-11-03.md) | 历史：Sprint 执行清单（已归档） |
+默认 SQLite，数据落在 `data/agenza.db` 和 `data/.secret.key`。
 
-## 许可证
+### 常用命令
 
-[MIT](LICENSE) · Copyright (c) 2026 polarisz1
+```bash
+pnpm check            # lint + format + typecheck + pytest + 前端单测 + 契约校验
+pnpm build            # 前端 + 后端镜像构建验证
+pnpm contracts:generate    # 起后端抓 OpenAPI → yaml
+pnpm contracts:build       # yaml → TS 类型
+pnpm contracts:check       # CI 漂移检测
+pnpm contracts:compat      # 破坏性变更检测
+```
 
-如果希望加入专利授权条款，可改用 Apache-2.0；MIT 更适合希望被广泛采用和二次分发的个人项目。
+---
+
+## 已知缺口
+
+- **没有分布式执行**：多实例下没有任务去重与分布式锁，Celery 取消也是尽力而为。
+- **工作空间切换未完成**：登录固定取第一个工作空间，前端路由预留了 `/workspaces/:wsId`，后端没有换票接口。
+- **前端大图未优化**：节点数上千会卡，没有虚拟化。
+- **没有 CI 镜像发布**：Dockerfile 与 compose 已就绪，但没配 GHCR 推送。
+- **测试偏单元和集成**：没有 Playwright E2E 进 PR 级 CI（本地可以跑 `pnpm e2e`）。
+- **Docker 未做完整构建验证**：只跑过 `docker compose config` 校验，还没实际 `up --build`。
+
+下一步优先级：补工作空间切换 → 镜像 CI → E2E，分布式执行排最后。
+
+---
+
+## License
+
+MIT © polarisz1
