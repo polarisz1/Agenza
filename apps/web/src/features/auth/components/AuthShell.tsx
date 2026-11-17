@@ -19,7 +19,7 @@ export default function AuthShell({ title, subtitle, wide = false, children }: A
         <span className="af-auth__logo">
           <FlowArrow size={18} weight="bold" />
         </span>
-        <span>AgentFlow</span>
+        <span>Agenza</span>
       </div>
       <Card className={`af-auth__card${wide ? ' af-auth__card--wide' : ''}`} padded>
         <div className="af-auth__head">

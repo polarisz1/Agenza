@@ -3,13 +3,13 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: agentflow
-      POSTGRES_USER: agentflow
+      POSTGRES_DB: agenza
+      POSTGRES_USER: agenza
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 .env 中设置 POSTGRES_PASSWORD}
     volumes:
-      - agentflow-pgdata:/var/lib/postgresql/data
+      - agenza-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agentflow -d agentflow"]
+      test: ["CMD-SHELL", "pg_isready -U agenza -d agenza"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -23,7 +23,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+psycopg://agentflow:${POSTGRES_PASSWORD}@db:5432/agentflow
+      DATABASE_URL: postgresql+psycopg://agenza:${POSTGRES_PASSWORD}@db:5432/agenza
       DATA_DIR: /data
       RESOURCE_DIR: /app
       MOUNT_FRONTEND: "true"
@@ -39,8 +39,8 @@ services:
     ports:
       - "${APP_PORT:-8000}:8000"
     volumes:
-      - agentflow-data:/data
+      - agenza-data:/data
 
 volumes:
-  agentflow-pgdata:
-  agentflow-data:
+  agenza-pgdata:
+  agenza-data:

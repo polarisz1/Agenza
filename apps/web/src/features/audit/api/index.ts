@@ -1,5 +1,5 @@
-import { http } from '@/shared/lib/http';
-import type { components } from '@agentflow/contracts';
+﻿import { http } from '@/shared/lib/http';
+import type { components } from '@agenza/contracts';
 
 export type AuditLogItem = components['schemas']['AuditLogItem'];
 export type AuditLogListResponse = components['schemas']['AuditLogListResponse'];

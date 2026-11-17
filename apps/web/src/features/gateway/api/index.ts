@@ -1,5 +1,5 @@
-import { http } from '@/shared/lib/http';
-import type { ApiData, components } from '@agentflow/contracts';
+﻿import { http } from '@/shared/lib/http';
+import type { ApiData, components } from '@agenza/contracts';
 
 export type GatewayConfig = components['schemas']['GatewayConfigResponse'];
 export type GatewayConfigUpdate = components['schemas']['GatewayConfigUpdate'];

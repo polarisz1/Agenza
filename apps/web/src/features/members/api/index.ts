@@ -1,5 +1,5 @@
-import { http } from '@/shared/lib/http';
-import type { components } from '@agentflow/contracts';
+﻿import { http } from '@/shared/lib/http';
+import type { components } from '@agenza/contracts';
 
 export type WorkspaceMemberItem = components['schemas']['WorkspaceMemberItem'];
 export type MemberInviteRequest = components['schemas']['MemberInviteRequest'];

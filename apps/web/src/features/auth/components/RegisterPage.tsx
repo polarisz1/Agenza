@@ -36,7 +36,7 @@ export default function RegisterPage() {
   return (
     <AuthShell
       title="创建账号"
-      subtitle="加入 AgentFlow，开始构建 AI 工作流"
+      subtitle="加入 Agenza，开始构建 AI 工作流"
       wide
     >
       <Form<RegisterForm>

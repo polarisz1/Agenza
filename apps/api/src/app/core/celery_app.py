@@ -18,7 +18,7 @@ broker_url = getattr(settings, "CELERY_BROKER_URL", None) or os.getenv("CELERY_B
 
 if broker_url:
     celery_app = Celery(
-        "agentflow",
+        "agenza",
         broker=broker_url,
         backend=broker_url,
         include=["app.modules.runs.tasks"],

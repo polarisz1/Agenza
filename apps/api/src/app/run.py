@@ -45,7 +45,7 @@ class LaunchPlan:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="agentflow-api", description="AgentFlow 后端服务")
+    parser = argparse.ArgumentParser(prog="agenza-api", description="Agenza 后端服务")
     parser.add_argument("--host", help=f"监听地址（默认 {DEFAULT_HOST}）")
     parser.add_argument("--port", type=int, help=f"监听端口（默认 {DEFAULT_PORT}）")
     parser.add_argument("--data-dir", help="数据目录（库文件与主密钥），打包态必须显式指定")

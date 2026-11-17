@@ -1,5 +1,5 @@
 ﻿import { apiUrl, http } from '@/shared/lib/http';
-import type { ApiData, components } from '@agentflow/contracts';
+import type { ApiData, components } from '@agenza/contracts';
 
 export type SettingsResponse = components['schemas']['SettingsResponse'];
 export type SettingsUpdate = components['schemas']['SettingsUpdate'];

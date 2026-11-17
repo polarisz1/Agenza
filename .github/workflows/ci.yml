@@ -1,4 +1,4 @@
-name: AgentFlow CI
+name: Agenza CI
 
 on:
   push:
@@ -82,13 +82,13 @@ jobs:
       - name: pnpm install
         run: pnpm install --frozen-lockfile
       - name: lint
-        run: pnpm --filter @agentflow/web lint
+        run: pnpm --filter @agenza/web lint
       - name: format check
-        run: pnpm --filter @agentflow/web format:check
+        run: pnpm --filter @agenza/web format:check
       - name: unit tests
-        run: pnpm --filter @agentflow/web test
+        run: pnpm --filter @agenza/web test
       - name: build
-        run: pnpm --filter @agentflow/web build
+        run: pnpm --filter @agenza/web build
 
   # B3：E2E 进 PR 级 CI（此前只在本地跑）。构建 dist + 起后端 + Chromium 约 +3 分钟。
   e2e:

@@ -20,7 +20,7 @@ importers:
 
   apps/web:
     dependencies:
-      '@agentflow/contracts':
+      '@agenza/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@ant-design/icons':

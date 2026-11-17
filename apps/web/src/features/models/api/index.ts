@@ -1,5 +1,5 @@
 ﻿import { http } from '@/shared/lib/http';
-import type { ApiData, components } from '@agentflow/contracts';
+import type { ApiData, components } from '@agenza/contracts';
 
 export type ProviderResponse = components['schemas']['ProviderResponse'];
 export type ProviderCreate = components['schemas']['ProviderCreate'];

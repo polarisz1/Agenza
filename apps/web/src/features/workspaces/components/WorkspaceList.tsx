@@ -69,7 +69,7 @@ export default function WorkspaceList() {
           <span className="af-wsp__logo">
             <FlowArrow size={16} weight="bold" />
           </span>
-          <span>AgentFlow</span>
+          <span>Agenza</span>
         </div>
         <div className="af-wsp__user">
           <span>{user?.name || user?.email || '用户'}</span>

@@ -31,7 +31,7 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthShell title="登录 AgentFlow" subtitle="多租户 AI 工作流编排平台">
+    <AuthShell title="登录 Agenza" subtitle="自托管 AI 工作流编排平台">
       <Form<LoginForm>
         layout="vertical"
         onFinish={onFinish}

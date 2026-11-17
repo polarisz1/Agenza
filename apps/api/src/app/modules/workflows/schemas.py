@@ -1,6 +1,6 @@
 """Workflow Pydantic v2 schemas - OpenAPI 单一事实源。
 
-节点配置在这里定义成**判别联合**（`type` 为判别键）：前端由 `@agentflow/contracts`
+节点配置在这里定义成**判别联合**（`type` 为判别键）：前端由 `@agenza/contracts`
 生成类型，不再手写图结构。新增节点类型时必须同时在此登记，否则图校验不通过。
 """
 

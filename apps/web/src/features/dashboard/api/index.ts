@@ -1,5 +1,5 @@
 ﻿import { http } from '@/shared/lib/http';
-import type { components } from '@agentflow/contracts';
+import type { components } from '@agenza/contracts';
 
 export type RunListItem = components['schemas']['RunListItem'];
 export type WorkflowListItem = components['schemas']['WorkflowListItem'];

@@ -34,7 +34,7 @@ const DEFAULTS: Record<string, { base_url: string; default_model: string }> = {
 };
 
 const SAMPLE_INPUTS: Record<string, unknown> = {
-  text: 'AgentFlow 是一个本地 AI 工作流工具：过程可见、可复盘。',
+  text: 'Agenza 是一个本地 AI 工作流工具：过程可见、可复盘。',
   url: 'https://example.com',
   payload: '[1, null, 2, "a"]',
 };
@@ -182,7 +182,7 @@ export default function OnboardingWizard({ open, onClose, onOpenWorkflow }: Prop
     >
       <div className="afe-onb">
         <div className="afe-onb-head">
-          <h2>开始使用 AgentFlow</h2>
+          <h2>开始使用 Agenza</h2>
           <button type="button" className="afe-onb-skip" onClick={() => close(true)}>
             跳过
           </button>

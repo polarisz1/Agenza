@@ -1,5 +1,5 @@
-import type { Edge, Node } from '@xyflow/react';
-import type { components } from '@agentflow/contracts';
+﻿import type { Edge, Node } from '@xyflow/react';
+import type { components } from '@agenza/contracts';
 
 /**
  * 节点类型：**从后端契约派生**，不在前端手抄。
@@ -154,7 +154,7 @@ export const NODE_META: Record<EditorNodeType, NodeMeta> = {
 
 export const NODE_GROUPS = ['基础', '模型', '工具', '流程控制'] as const;
 
-export const NODE_DRAG_MIME = 'application/agentflow-node';
+export const NODE_DRAG_MIME = 'application/agenza-node';
 
 /** 通用设置在所有节点 config 里都存在 */
 const COMMON_CONFIG = {

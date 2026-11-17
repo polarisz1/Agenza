@@ -1,4 +1,4 @@
-import { App, Dropdown } from 'antd';
+﻿import { App, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   ArrowUpRight,
@@ -23,7 +23,7 @@ import {
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
-import type { components } from '@agentflow/contracts';
+import type { components } from '@agenza/contracts';
 
 import { http } from '@/shared/lib/http';
 import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
@@ -278,7 +278,7 @@ export default function AppLayout() {
     items: isDesktop
       ? [
           { key: 'open-data', label: '打开数据目录' },
-          { key: 'about', label: '关于 AgentFlow' },
+          { key: 'about', label: '关于 Agenza' },
         ]
       : [
           { key: 'profile', label: user?.email || user?.name || '账户', disabled: true },
@@ -296,7 +296,7 @@ export default function AppLayout() {
         window.location.href = '/login';
       }
       if (key === 'about') {
-        message.info('AgentFlow · 多租户 AI 工作流编排平台');
+        message.info('Agenza · 自托管 AI 工作流编排平台');
       }
     },
   };
@@ -310,7 +310,7 @@ export default function AppLayout() {
           <span className="af-brand__logo">
             <FlowArrow size={16} weight="bold" />
           </span>
-          <span className="af-brand__name">AgentFlow</span>
+          <span className="af-brand__name">Agenza</span>
           <Pill tone={plan === 'free' ? 'neutral' : 'brand'}>{planLabel}</Pill>
         </button>
 

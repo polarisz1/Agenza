@@ -1,5 +1,5 @@
 {
-  "name": "@agentflow/web",
+  "name": "@agenza/web",
   "version": "0.2.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\""
   },
   "dependencies": {
-    "@agentflow/contracts": "workspace:*",
+    "@agenza/contracts": "workspace:*",
     "@ant-design/icons": "^5.5.1",
     "@fontsource-variable/ibm-plex-sans": "^5.3.0",
     "@fontsource-variable/jetbrains-mono": "^5.3.0",

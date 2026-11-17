@@ -1,5 +1,5 @@
-import { http } from '@/shared/lib/http';
-import type { components } from '@agentflow/contracts';
+﻿import { http } from '@/shared/lib/http';
+import type { components } from '@agenza/contracts';
 
 export type LoginRequest = components['schemas']['LoginRequest'];
 export type RegisterRequest = components['schemas']['RegisterRequest'];

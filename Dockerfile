@@ -14,7 +14,7 @@ RUN pnpm install --frozen-lockfile
 
 COPY packages/contracts packages/contracts
 COPY apps/web apps/web
-RUN pnpm --filter @agentflow/web build
+RUN pnpm --filter @agenza/web build
 
 
 # ---------- 后端运行时 ----------
@@ -41,9 +41,9 @@ RUN uv sync --frozen --no-dev
 # 前端产物由 FastAPI 直接托管，单容器即可部署
 COPY --from=web /repo/apps/web/dist ./frontend-dist
 
-RUN useradd --create-home --uid 10001 agentflow \
+RUN useradd --create-home --uid 10001 agenza \
     && mkdir -p /data \
-    && chown -R agentflow:agentflow /data /app
+    && chown -R agenza:agenza /data /app
 
 ENV PATH="/app/.venv/bin:$PATH" \
     DATA_DIR=/data \
@@ -53,7 +53,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
     HOST=0.0.0.0 \
     PORT=8000
 
-USER agentflow
+USER agenza
 VOLUME ["/data"]
 EXPOSE 8000
 

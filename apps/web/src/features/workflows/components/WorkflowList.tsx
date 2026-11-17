@@ -34,7 +34,7 @@ import OnboardingWizard from './OnboardingWizard';
 import TemplateGallery from './TemplateGallery';
 import './WorkflowList.css';
 
-const ONBOARDING_KEY = 'agentflow.onboarded.v2';
+const ONBOARDING_KEY = 'agenza.onboarded.v2';
 
 const CARD_ICONS: ReactNode[] = [
   <Target size={18} key="target" />,

@@ -1,4 +1,4 @@
-"""AgentFlow config - pydantic-settings."""
+"""Agenza config - pydantic-settings."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from app.core.defaults import DEFAULT_HOST, DEFAULT_LOG_LEVEL, DEFAULT_PORT
 
 # config.py 位于 apps/api/src/app/core → parents[5] 才是仓库根
 # （此前写成 parents[4]，数据目录因此落在 apps/data，评审 S13）
-ROOT_DIR = Path(__file__).resolve().parents[5]  # AgentFlow/
+ROOT_DIR = Path(__file__).resolve().parents[5]  # repo root
 DATA_DIR = ROOT_DIR / "data"
 # `.env` 按**绝对路径**定位到 apps/api/.env（评审 G19）：
 # 相对路径依赖启动时的 cwd，`pnpm dev`、`uv run --directory`、Electron 拉起
@@ -27,7 +27,7 @@ def relocate_legacy_data_dir(legacy: Path, target: Path) -> bool:
     只在"新位置还没有库、旧位置有库"时动手，避免覆盖用户数据。
     返回是否发生了搬迁，便于调用方记录日志。
     """
-    if not legacy.is_dir() or (target / "agentflow.db").exists():
+    if not legacy.is_dir() or (target / "agenza.db").exists():
         return False
     target.mkdir(parents=True, exist_ok=True)
     for item in legacy.iterdir():
@@ -39,7 +39,7 @@ def relocate_legacy_data_dir(legacy: Path, target: Path) -> bool:
 
 class Settings(BaseSettings):
     # ---- Application ----
-    APP_NAME: str = "AgentFlow"
+    APP_NAME: str = "Agenza"
     APP_VERSION: str = "0.2.0"
     DEBUG: bool = True
 
@@ -150,8 +150,8 @@ class Settings(BaseSettings):
 
         secret_path = Path(self.secret_file)
         if secret_path.exists():
-            return secret_path.read_text(encoding="utf-8").strip() or "agentflow-local-dev-key"
-        return "agentflow-local-dev-key"
+            return secret_path.read_text(encoding="utf-8").strip() or "agenza-local-dev-key"
+        return "agenza-local-dev-key"
 
     # ---- Logging ----
     LOG_LEVEL: str = DEFAULT_LOG_LEVEL
@@ -184,7 +184,7 @@ class Settings(BaseSettings):
             return self.DATABASE_URL
         data = Path(self.DATA_DIR)
         data.mkdir(parents=True, exist_ok=True)
-        return f"sqlite:///{data / 'agentflow.db'}"
+        return f"sqlite:///{data / 'agenza.db'}"
 
     @property
     def is_packaged(self) -> bool:

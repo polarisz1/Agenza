@@ -51,7 +51,7 @@ jobs:
           }
 
       - name: Build frontend
-        run: pnpm --filter @agentflow/web build
+        run: pnpm --filter @agenza/web build
 
       # 走 pyinstaller/backend.spec + pyinstaller/build.py：
       # 单文件 exe 里必须带 alembic/、frontend-dist/、pyemb/，否则装完打不开（M4-T2）

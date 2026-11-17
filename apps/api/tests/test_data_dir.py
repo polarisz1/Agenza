@@ -43,12 +43,12 @@ def test_relocate_moves_files_once(tmp_path) -> None:
     legacy = tmp_path / "apps" / "data"
     target = tmp_path / "data"
     legacy.mkdir(parents=True)
-    (legacy / "agentflow.db").write_text("db")
+    (legacy / "agenza.db").write_text("db")
     (legacy / ".secret.key").write_text("key")
 
     assert relocate_legacy_data_dir(legacy, target) is True
 
-    assert (target / "agentflow.db").read_text() == "db"
+    assert (target / "agenza.db").read_text() == "db"
     assert (target / ".secret.key").exists()
     assert not legacy.exists()
 
@@ -58,11 +58,11 @@ def test_relocate_never_overwrites_existing_target(tmp_path) -> None:
     target = tmp_path / "data"
     legacy.mkdir(parents=True)
     target.mkdir(parents=True)
-    (legacy / "agentflow.db").write_text("old")
-    (target / "agentflow.db").write_text("new")
+    (legacy / "agenza.db").write_text("old")
+    (target / "agenza.db").write_text("new")
 
     assert relocate_legacy_data_dir(legacy, target) is False
-    assert (target / "agentflow.db").read_text() == "new"
+    assert (target / "agenza.db").read_text() == "new"
     assert legacy.exists(), "目标已存在时不应动旧目录"
 
 

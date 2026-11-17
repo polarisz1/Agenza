@@ -1,4 +1,4 @@
-"""AgentFlow - FastAPI Application Entry Point
+"""Agenza - FastAPI Application Entry Point
 
 SaaS 转型说明：
 - tenant_middleware 在 TENANCY_ENABLED=True 时注入租户上下文
@@ -35,14 +35,14 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    log.info("Shutting down AgentFlow")
+    log.info("Shutting down Agenza")
 
 
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description=(
-        "AgentFlow - "
+        "Agenza - "
         + (
             "Enterprise AI workflow orchestration"
             if settings.TENANCY_ENABLED

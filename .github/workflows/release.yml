@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: AgentFlow-Setup
+          name: Agenza-Setup
           path: ./dist
 
       - uses: softprops/action-gh-release@v2
